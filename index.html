@@ -868,10 +868,10 @@
     <div id="info-overlay">
         <div class="info-content">
             <div class="section-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <h2 style="margin:0; border:none; padding:0;">Tonnetz Improvisation Pro Manual</h2>
+                <h2 style="margin:0; border:none; padding:0;">Tonnetz Pro Manual</h2>
                 <button id="btnCloseInfo" class="close-btn-sm" title="Close">✕</button>
             </div>
-            <p>Welcome to the Tonnetz Synthesizer Pro. This workstation uses Euler's Tonnetz (tone network), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
+            <p>Welcome to the Tonnetz Pro synthesizer. This workstation uses Euler's Tonnetz (German for "tone network"), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
             
             <h3>🔺 1. Geometric Navigation & Chords</h3>
             <ul>
@@ -1406,7 +1406,7 @@
             const tArpR = document.getElementById('tapArpRandom'); if (tArpR) tArpR.classList.toggle('held', arpRandomHeld || (arpLocked && arpMode === 'random'));
         }
 
-        // Bug Fix #1: Added flag `shouldRetrigger` to prevent Sustain keys from double-striking held notes.
+        // Bug Fix: Added flag `shouldRetrigger` to prevent Sustain keys from double-striking held notes.
         function setupTapPad(id, onPress, onRelease, shouldRetrigger = true) {
             const el = document.getElementById(id);
             if (!el) return;
@@ -1871,7 +1871,7 @@
             });
         }
 
-        // Bug Fix #6: Improved dictionary mappings to properly acknowledge exact requests like "add13", Maj13 without 9ths etc.
+        // Chord Dictionary Mappings
         function updateChordDisplay() {
             const display = document.getElementById('chord-display');
             if (!display) return;
@@ -1910,7 +1910,6 @@
                 '0,2,3,6,10': 'm9b5', '0,1,3,6,10': 'm7b5b9', '0,2,4,8,10': '9#5', '0,1,4,8,10': '7b9#5', '0,2,4,6,10': '9b5',
                 '0,2,4,5,7,11': 'Maj11', '0,2,3,5,7,10': 'm11', '0,2,4,5,7,10': '11', '0,4,6,7,10': '7#11', '0,2,4,6,7,10': '9#11', '0,2,4,6,7,11': 'Maj9#11',
                 '0,2,4,7,9,11': 'Maj13', '0,2,3,5,7,9,10': 'm13', '0,2,4,7,9,10': '13', '0,4,7,8,10': '7b13', '0,2,4,7,8,10': '9b13',
-                // New comprehensive additions bridging missing combinations from performance pads (Add7 + Add13 etc)
                 '0,4,7,9,10': '13', '0,4,7,9,11': 'Maj13', '0,3,7,9,10': 'm13',
                 '0,2,4,7': 'add9', '0,2,3,7': 'madd9', '0,4,5,7': 'add11', '0,3,5,7': 'madd11',
                 '0,4,10': '7(no5)', '0,3,10': 'm7(no5)', '0,4,11': 'Maj7(no5)', '0,2,4,10': '9(no5)', '0,2,3,10': 'm9(no5)', '0,2,4,11': 'Maj9(no5)',
@@ -2656,7 +2655,7 @@
             }
         }
 
-        // Bug Fix #2: Implemented advanced sliding pointer logic for the drum pads
+        // Sliding pointer logic for the drum pads
         function setupDrumSliding() {
             const container = document.querySelector('.manual-drum-grid');
             if (!container) return;
