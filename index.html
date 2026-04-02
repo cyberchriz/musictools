@@ -205,10 +205,10 @@
         .dimmed-text { fill: var(--grid-line) !important; stroke: none !important; opacity: 0.8; }
         
         /* Highlight overlays (SVG) */
-        .highlight-overlay { transition: opacity 0.15s; pointer-events: none; }
+        .highlight-overlay { transition: opacity 0.1s ease-out; pointer-events: none; will-change: opacity; }
         .node-active { fill: #ffeb3b !important; stroke: #ff9800 !important; stroke-width: 3px !important; filter: drop-shadow(0 0 10px rgba(255, 235, 59, 0.9)) !important; }
-	.triad-active { fill: #fff59d !important; stroke: #ff9800 !important; stroke-width: 2px !important; opacity: 1 !important; }
-	.dark-theme .triad-active { fill: #827717 !important; stroke: #ff9800 !important; }
+		.triad-active { fill: #fff59d !important; stroke: #ff9800 !important; stroke-width: 2px !important; opacity: 1 !important; }
+		.dark-theme .triad-active { fill: #827717 !important; stroke: #ff9800 !important; }
         .extension-highlight { stroke: var(--ext-highlight-stroke) !important; stroke-width: 4px !important; fill: var(--ext-highlight-fill) !important; }
 
         .ripple { fill: rgba(255, 152, 0, 0.4); stroke: #ff9800; pointer-events: none; animation: ripple-anim 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
@@ -1798,12 +1798,15 @@ function hideNav() {
         const playingMidiNotes = new Set(); 
 
         let highlightUpdatePending = false;
+        let previousHighlightState = "";
         
         function updateHighlights() {
             if (highlightUpdatePending) return;
             highlightUpdatePending = true;
 
             requestAnimationFrame(() => {
+                highlightUpdatePending = false; // Reset immediately
+                
                 playingMidiNotes.clear();
                 pianoExtensionNotes.clear();
                 
@@ -1824,11 +1827,18 @@ function hideNav() {
                 });
                 
                 midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
+
+                // --- PERFORMANCE FIX: Only touch the DOM if the active notes actually changed! ---
+                const currentStateStr = Array.from(playingMidiNotes).sort().join(',') + "|" + showExtensions + "|" + showChordDegrees;
+                if (currentStateStr === previousHighlightState) return; 
+                previousHighlightState = currentStateStr;
+                // ---------------------------------------------------------------------------------
                 
                 const activeElements = new Set();
                 const extensionsToHighlight = new Set();
 
-                const highlightables = document.querySelectorAll('.highlightable');
+                // Skip piano keys here; they are handled separately in updatePianoVisuals()
+                const highlightables = document.querySelectorAll('.highlightable:not(.piano-key)');
                 for(let i = 0; i < highlightables.length; i++) {
                     let el = highlightables[i];
                     if(!el._st || el._st.length === 0) continue;
@@ -1860,38 +1870,45 @@ function hideNav() {
                 for(let i = 0; i < highlightables.length; i++) {
                     let el = highlightables[i];
                     const shouldBeActive = activeElements.has(el);
-                    const isActive = el.classList.contains(el._activeClass);
                     
-                    if (shouldBeActive && !isActive) {
-                        el.classList.add(el._activeClass);
-                        if(el._highlightEl) { el._highlightEl.classList.add(el._activeClass); el._highlightEl.style.opacity = '1'; }
-                    } else if (!shouldBeActive && isActive) {
-                        el.classList.remove(el._activeClass);
-                        if(el._highlightEl) { el._highlightEl.classList.remove(el._activeClass); if(!el.classList.contains('extension-highlight')) el._highlightEl.style.opacity = '0'; }
-                    }
-
-                    if (el._st && el._st.length === 1) {
-                        let extMidi = Math.round(12 * Math.log2(getFreqFromSt(snapStArray([el._st[0]])[0]) / masterTune) + 69);
-                        if (isOctUpOn()) extMidi += 12; if (isOctDownOn()) extMidi -= 12;
-                        
-                        const shouldBeExt = extensionsToHighlight.has(extMidi);
-                        const isExt = el.classList.contains('extension-highlight');
-                        if (shouldBeExt && !isExt) {
-                            el.classList.add('extension-highlight');
-                            if(el._highlightEl) { el._highlightEl.classList.add('extension-highlight'); el._highlightEl.style.opacity = '1'; }
-                        } else if (!shouldBeExt && isExt) {
-                            el.classList.remove('extension-highlight');
-                            if(el._highlightEl) { el._highlightEl.classList.remove('extension-highlight'); if(!el.classList.contains(el._activeClass)) el._highlightEl.style.opacity = '0'; }
+                    // Track state in a custom property to avoid querying DOM classList (which causes reflows)
+                    const isActive = el._isActiveState === true;
+                    
+                    if (el._highlightEl) {
+                        // COMPLETELY SEPARATED SVG SHADOW LAYER
+                        // We strictly manipulate the clone (_highlightEl), NOT the base element (el)
+                        if (shouldBeActive && !isActive) {
+                            el._isActiveState = true;
+                            el._highlightEl.classList.add(el._activeClass);
+                            el._highlightEl.style.opacity = '1';
+                        } else if (!shouldBeActive && isActive) {
+                            el._isActiveState = false;
+                            el._highlightEl.classList.remove(el._activeClass);
+                            if (!el._isExtState) el._highlightEl.style.opacity = '0';
                         }
-                    } else if (el.classList.contains('extension-highlight')) {
-                        el.classList.remove('extension-highlight');
-                        if(el._highlightEl) { el._highlightEl.classList.remove('extension-highlight'); if(!el.classList.contains(el._activeClass)) el._highlightEl.style.opacity = '0'; }
+
+                        if (el._st && el._st.length === 1) {
+                            let extMidi = Math.round(12 * Math.log2(getFreqFromSt(snapStArray([el._st[0]])[0]) / masterTune) + 69);
+                            if (isOctUpOn()) extMidi += 12; if (isOctDownOn()) extMidi -= 12;
+                            
+                            const shouldBeExt = extensionsToHighlight.has(extMidi);
+                            const isExt = el._isExtState === true;
+                            
+                            if (shouldBeExt && !isExt) {
+                                el._isExtState = true;
+                                el._highlightEl.classList.add('extension-highlight');
+                                el._highlightEl.style.opacity = '1';
+                            } else if (!shouldBeExt && isExt) {
+                                el._isExtState = false;
+                                el._highlightEl.classList.remove('extension-highlight');
+                                if (!el._isActiveState) el._highlightEl.style.opacity = '0';
+                            }
+                        }
                     }
                 }
 
                 updateChordDisplay();
                 updatePianoVisuals();
-                highlightUpdatePending = false;
             });
         }
 
@@ -2976,7 +2993,7 @@ if (looper.isArmed) {
 
         function getXY(i, j) { return { x: i * DX + j * (DX / 2), y: j * DY }; }
 
-        function setupSvgElement(el, stArray, isTriad, cloneLayer) {
+		function setupSvgElement(el, stArray, isTriad, cloneLayer) {
             el.classList.add('highlightable'); 
             el._st = stArray;
             el._activeClass = isTriad ? 'triad-active' : 'node-active';
@@ -2989,7 +3006,7 @@ if (looper.isArmed) {
 
             el._startAction = () => { playFrequencies(el, stArray.map(getFreqFromSt), stArray); physicallyHeldNodes.add(el); };
             el._stopAction = (f=false) => { stopFrequencies(el, f); physicallyHeldNodes.delete(el); };
-        }
+        }		
 
         const gridBuffer = 2; 
         const GRID_W = 1200;
