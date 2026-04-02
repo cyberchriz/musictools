@@ -677,12 +677,68 @@
         function isOctDownOn() { return octDownHeld || (octLocked && octMode === 'down'); }
         
         let currentKeyCenter = 0, currentScale = 'all', currentLabelType = 'absolute';
-        const physicallyHeldNodes = new Set();
+		
+		const physicallyHeldNodes = new Set();
+        
+        function getExtendedStArray(stArray) {
+            let res = [...stArray];
+            if (res.length >= 3) {
+                const root = res[0];
+                const isMajor = res.includes(root + 4);
+                if (is6thOn()) res.push(root + 9);
+                if (is7thOn()) res.push(root + (isMajor ? 11 : 10));
+                if (is9thOn()) res.push(root + 14);
+                if (is13thOn()) res.push(root + 21);
+            }
+            return res;
+        }
 
         function retriggerHeldNodes() {
-            const held = Array.from(physicallyHeldNodes);
-            held.forEach(el => { if(el._stopAction) el._stopAction(true); });
-            setTimeout(() => { held.forEach(el => { if(el._startAction) el._startAction(); }); }, 20);
+            if (!audioCtx) return;
+            physicallyHeldNodes.forEach(el => {
+                const nodeData = activeNodes.get(el);
+                if (!nodeData || !nodeData.originalStArray) return;
+                
+                let extendedSt = getExtendedStArray(nodeData.originalStArray);
+                let snapped = snapStArray(extendedSt);
+                let targetFreqs = snapped.map(st => getFreqFromSt(st));
+                if (isOctUpOn()) targetFreqs = targetFreqs.map(f => f * 2);
+                if (isOctDownOn()) targetFreqs = targetFreqs.map(f => f * 0.5);
+
+                if (nodeData.type === 'arp') {
+                    // Update Arp array so it picks up new notes on the fly
+                    nodeData.freqs = targetFreqs; 
+                    
+                    // Dynamically recalculate Arp step timing (Triplets vs Straight)
+                    const beatDuration = 60 / currentArpBPM;
+                    if (targetFreqs.length === 3) {
+                        nodeData.stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3);
+                    } else {
+                        nodeData.stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
+                    }
+                } else {
+                    let currentFreqs = nodeData.voices.map(v => v.freq);
+                    
+                    // Find new notes to add and old notes to remove
+                    let toAdd = targetFreqs.filter(f => !currentFreqs.some(cf => Math.abs(cf - f) < 0.1));
+                    let toRemoveVoices = nodeData.voices.filter(v => !targetFreqs.some(tf => Math.abs(tf - v.freq) < 0.1));
+                    
+                    // Seamlessly spawn new individual voices mid-chord
+                    toAdd.forEach(freq => {
+                        const voice = spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true);
+                        nodeData.voices.push(voice);
+                        nodeData.freqs.push(freq);
+                    });
+                    
+                    // Seamlessly fade out released extensions
+                    if (toRemoveVoices.length > 0) {
+                        beginRelease(toRemoveVoices, false);
+                        nodeData.voices = nodeData.voices.filter(v => !toRemoveVoices.includes(v));
+                        nodeData.freqs = nodeData.freqs.filter(f => !toRemoveVoices.some(rv => Math.abs(rv.freq - f) < 0.1));
+                    }
+                }
+            });
+            updateHighlights();
         }
 
         let activeOverlay = 'settings';
@@ -2000,59 +2056,42 @@ function hideNav() {
                 return st;
             });
         }
+function playFrequencies(element, freqs, originalStArray = null) {
+            initAudio(); if (activeNodes.has(element)) return;
 
-        function playFrequencies(element, freqs, originalStArray = null) {
-            initAudio();
-            if (activeNodes.has(element)) return;
-
-            if (!element.isLooper) {
-                activeUserNotes++;
-                if (uiHideDelay > 0) hideNav();
-            }
-
-	    if (looper.isArmed && !element.isLooper) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = audioCtx.currentTime; looper.recordingType = 'voice'; updateLooperUI(); }
-	    else if (looper.isRecording && !element.isLooper && looper.recordingType !== 'both') { if (looper.recordingType === 'drum') { looper.recordingType = 'both'; updateLooperUI(); } }
+            if (!element.isLooper) { activeUserNotes++; if (uiHideDelay > 0) hideNav(); }
+            if (looper.isArmed && !element.isLooper) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = audioCtx.currentTime; looper.recordingType = 'voice'; updateLooperUI(); }
+            else if (looper.isRecording && !element.isLooper && looper.recordingType !== 'both') { if (looper.recordingType === 'drum') { looper.recordingType = 'both'; updateLooperUI(); } }
 
             let finalFreqs = [...freqs];
             if (originalStArray) {
-                let snapped = snapStArray(originalStArray);
+                // Intercept the initial array and add active extensions!
+                let extendedSt = getExtendedStArray(originalStArray);
+                let snapped = snapStArray(extendedSt); 
                 finalFreqs = snapped.map(st => getFreqFromSt(st));
-                if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2);
+                if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2); 
                 if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
             }
             
-            let looperEvt = null;
-            if (looper.isRecording && !element.isLooper) {
-                looperEvt = recordLooperEvent(element, finalFreqs, 'play', originalStArray);
-            }
+            let looperEvt = null; if (looper.isRecording && !element.isLooper) { looperEvt = recordLooperEvent(element, finalFreqs, 'play', originalStArray); }
 
             if (isArpOn() && finalFreqs.length > 1) {
                 if (arpMode === 'down') { finalFreqs.reverse(); } 
                 else if (arpMode === 'updown') { const reversed = [...finalFreqs].reverse(); reversed.shift(); reversed.pop(); finalFreqs = finalFreqs.concat(reversed); } 
                 else if (arpMode === 'random') { for (let i = finalFreqs.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [finalFreqs[i], finalFreqs[j]] = [finalFreqs[j], finalFreqs[i]]; } }
-            }
-
-            if (isArpOn() && finalFreqs.length > 1) {
                 let stepDuration = 0; const beatDuration = 60 / currentArpBPM;
-                if (finalFreqs.length === 3) stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3);
-                else stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
+                if (finalFreqs.length === 3) stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3); else stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
                 
-                activeNodes.set(element, { type: 'arp', freqs: finalFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime });
-                scheduleArps(); 
+                // Note the addition of originalStArray to the node object so we can reference it later
+                activeNodes.set(element, { type: 'arp', freqs: finalFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray }); scheduleArps(); 
             } else {
-                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true));
-                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime });
+                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true)); activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray });
             }
 
             if(element.tagName === 'circle' || element.tagName === 'polygon') {
-                let x, y;
-                if (element.tagName === 'circle') { x = parseFloat(element.getAttribute('cx')); y = parseFloat(element.getAttribute('cy')); } 
-                else if (element.tagName === 'polygon') {
-                    const pts = element.getAttribute('points').trim().split(/\s+/).map(p => p.split(',').map(Number));
-                    x = (pts[0][0] + pts[1][0] + pts[2][0]) / 3; y = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
-                }
-                let parentG = element.parentNode;
-                if(parentG) triggerRipple(x, y, parentG);
+                let x, y; if (element.tagName === 'circle') { x = parseFloat(element.getAttribute('cx')); y = parseFloat(element.getAttribute('cy')); } 
+                else if (element.tagName === 'polygon') { const pts = element.getAttribute('points').trim().split(/\s+/).map(p => p.split(',').map(Number)); x = (pts[0][0] + pts[1][0] + pts[2][0]) / 3; y = (pts[0][1] + pts[1][1] + pts[2][1]) / 3; }
+                let parentG = element.parentNode; if(parentG) triggerRipple(x, y, parentG);
             }
             updateHighlights();
         }
