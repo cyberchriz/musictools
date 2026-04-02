@@ -1297,31 +1297,38 @@ function hideNav() {
         document.getElementById('lockOct')?.addEventListener('click', function() { octLocked = !octLocked; this.classList.toggle('active-btn', octLocked); if(octLocked && !octUpHeld && !octDownHeld) octMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
         document.getElementById('lockArp')?.addEventListener('click', function() { arpLocked = !arpLocked; this.classList.toggle('active-btn', arpLocked); if(arpLocked && !arpUpHeld && !arpDownHeld && !arpUpDownHeld && !arpRandomHeld) arpMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
 
-		document.addEventListener('keydown', (e) => { 
-		    if(e.repeat || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
-		    
-		    // Explicitly prevent browser default actions (Save, Bookmark, Find, etc.) when holding Ctrl/Cmd
-		    if ((e.ctrlKey || e.metaKey) && ['KeyS', 'KeyD', 'KeyF', 'KeyA', 'KeyW', 'KeyR', 'KeyE', 'KeyQ'].includes(e.code)) {
-		        e.preventDefault();
-		    }
+		// Catch Ctrl+S, Ctrl+D, etc. in the "Capture Phase" before the browser handles them
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                // Check both physical key code and logical key value just to be safe across all layouts
+                const key = e.key ? e.key.toLowerCase() : '';
+                if (['s', 'd', 'f', 'a', 'w', 'r', 'e', 'q'].includes(key) || 
+                    ['KeyS', 'KeyD', 'KeyF', 'KeyA', 'KeyW', 'KeyR', 'KeyE', 'KeyQ'].includes(e.code)) {
+                    e.preventDefault();
+                }
+            }
+        }, { capture: true });
 		
-		    let trigger = false; wakeNav();
-		    switch(e.code) {
-		        case 'KeyA': add6Held = true; trigger = true; break;
-		        case 'KeyS': add7Held = true; trigger = true; break;
-		        case 'KeyD': add9Held = true; trigger = true; break;
-		        case 'KeyF': add13Held = true; trigger = true; break;
-		        case 'AltLeft': dampenHeld = true; applyDampening(true); trigger = true; break;
-		        case 'Space': sustainHeld = true; trigger = true; break;
-		        case 'ShiftLeft': case 'ShiftRight': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
-		        case 'ControlLeft': case 'ControlRight': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
-		        case 'KeyQ': octDownHeld = true; octMode = 'down'; trigger = true; break;
-		        case 'KeyW': octUpHeld = true; octMode = 'up'; trigger = true; break;
-		        case 'KeyE': if (document.getElementById('lockOct')) document.getElementById('lockOct').click(); break;
-		        case 'KeyR': if (document.getElementById('lockArp')) document.getElementById('lockArp').click(); break;
-		    }
-		    if(trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
-		});
+		document.addEventListener('keydown', (e) => {
+            if(e.repeat || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+            let trigger = false; wakeNav();
+            switch(e.code) {
+                case 'KeyA': add6Held = true; trigger = true; break;
+                case 'KeyS': add7Held = true; trigger = true; break;
+                case 'KeyD': add9Held = true; trigger = true; break;
+                case 'KeyF': add13Held = true; trigger = true; break;
+                case 'AltLeft': dampenHeld = true; applyDampening(true); trigger = true; break;
+                case 'Space': sustainHeld = true; trigger = true; break;
+                case 'ShiftLeft': case 'ShiftRight': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
+                case 'ControlLeft': case 'ControlRight': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
+                case 'KeyQ': octDownHeld = true; octMode = 'down'; trigger = true; break;
+                case 'KeyW': octUpHeld = true; octMode = 'up'; trigger = true; break;
+                case 'KeyE': if (document.getElementById('lockOct')) document.getElementById('lockOct').click(); break;
+                case 'KeyR': if (document.getElementById('lockArp')) document.getElementById('lockArp').click(); break;
+            }
+            if(trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
+        });
+		
         document.addEventListener('keyup', (e) => { 
             if(e.target.tagName === 'INPUT') return;
             let trigger = false;
