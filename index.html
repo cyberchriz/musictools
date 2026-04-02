@@ -1088,6 +1088,18 @@ function hideNav() {
             return null;
         }
 
+		document.addEventListener('mousedown', e => {
+            if (e.button !== 0) return;
+            isMouseDownGlobal = true;
+            if (e.target.closest('#tonnetz-wrapper') && e.target.tagName === 'svg') {
+                t_isDragging = true; t_startX = e.clientX - t_panX; t_startY = e.clientY - t_panY; return;
+            }
+            // PERFORMANCE FIX: Grab direct target instead of elementFromPoint calculation
+            let el = e.target.closest('.highlightable, .manual-drum-btn, .big-tap-btn, .piano-key'); 
+            if (el) triggerElementStart(el, "mouse");
+        });
+
+		/* OLD CODE:
         document.addEventListener('mousedown', e => {
             if (e.button !== 0) return;
             isMouseDownGlobal = true;
@@ -1099,6 +1111,7 @@ function hideNav() {
             let el = getInteractiveElement(e.clientX, e.clientY);
             if (el) triggerElementStart(el, "mouse");
         });
+		*/
 
         document.addEventListener('mousemove', e => {
             if (t_isDragging) {
@@ -1127,6 +1140,23 @@ function hideNav() {
             triggerElementStop("mouse");
         });
 
+		document.addEventListener('touchstart', e => {
+            if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
+                if(e.cancelable) e.preventDefault();
+            }
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                if (e.touches.length === 1 && e.target.closest('#tonnetz-wrapper') && e.target.tagName === 'svg') {
+                    t_isDragging = true; t_startX = touch.clientX - t_panX; t_startY = touch.clientY - t_panY; panningPointerId = touch.identifier;
+                } else {
+                    // PERFORMANCE FIX: Use instant touch.target instead of heavy math hit-testing
+                    let el = touch.target.closest('.highlightable, .manual-drum-btn, .big-tap-btn, .piano-key'); 
+                    if (el) triggerElementStart(el, touch.identifier);
+                }
+            }
+        }, { passive: false });		
+
+		/* OLD CODE:
         document.addEventListener('touchstart', e => {
             if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
                 if(e.cancelable) e.preventDefault();
@@ -1143,6 +1173,7 @@ function hideNav() {
                 }
             }
         }, { passive: false });
+		*/
 
         document.addEventListener('touchmove', e => {
             if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
@@ -1685,8 +1716,8 @@ function hideNav() {
 
         // --- Oscilloscope Drawing ---
         function drawOscilloscope() {
-            requestAnimationFrame(drawOscilloscope);
-            if (!window.analyser) return;
+			requestAnimationFrame(drawOscilloscope);
+            if (!isLooperActive || !window.analyser) return; // PERFORMANCE FIX: Do not calculate or draw graphics if panel is hidden
             const oscCanvas = document.getElementById('oscilloscope');
             if (!oscCanvas) return;
             const oscCtx = oscCanvas.getContext('2d');
@@ -2139,22 +2170,24 @@ function hideNav() {
             updateHighlights();
         }
 
-        function beginRelease(voices, skipFade = false) {
-            if(!audioCtx) return;
-            const now = audioCtx.currentTime;
-            
+		function beginRelease(voices, skipFade = false) {
+            if(!audioCtx) return; 
+            const now = audioCtx.currentTime; 
             const relTime = dampenHeld ? Math.min(0.15, currentRelease) : currentRelease;
 
             voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, midiNote, isChord }) => {
                 try {
                     gainNode.gain.cancelScheduledValues(now);
-                    if (skipFade) {
-                        gainNode.gain.setValueAtTime(0.001, now);
-                        try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {}
-                    } else {
-                        gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now);
-                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime);
-                        setTimeout(() => { try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {} }, (relTime * 1000) + 100); 
+                    if (skipFade) { 
+                        gainNode.gain.setValueAtTime(0.001, now); 
+                        try { osc1.stop(now); osc2.stop(now); if(subOsc) subOsc.stop(now); if(noiseSrc) noiseSrc.stop(now); } catch (e) {} 
+                    } 
+                    else { 
+                        gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now); 
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime); 
+                        const stopTime = now + relTime + 0.1;
+                        // PERFORMANCE FIX: Delegated to native Audio Thread. No JS setTimeouts!
+                        try { osc1.stop(stopTime); osc2.stop(stopTime); if(subOsc) subOsc.stop(stopTime); if(noiseSrc) noiseSrc.stop(stopTime); } catch (e) {} 
                     }
                     if (midiOut && isChord) midiOut.send([0x80, midiNote, 0]);
                 } catch(e) {}
