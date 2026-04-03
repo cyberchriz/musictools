@@ -1816,7 +1816,8 @@
 
         const playingMidiNotes = new Set(); 
 
-        let highlightUpdatePending = false; let previousHighlightState = "";
+		let highlightUpdatePending = false;
+		let previousHighlightState = "";
         
         function updateHighlights() {
             if (highlightUpdatePending) return; highlightUpdatePending = true;
@@ -1830,7 +1831,7 @@
                 });
                 midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
 
-                // --- Track Pitch Classes (0-11) for octave-immune matching ---
+                // Track Pitch Classes (0-11) for octave-immune matching on the CoF
                 const playingPitchClasses = new Set();
                 playingMidiNotes.forEach(note => playingPitchClasses.add(((note % 12) + 12) % 12));
 
@@ -1839,14 +1840,14 @@
                 
                 const activeElements = new Set(); 
                 const extensionsToHighlight = new Set(); 
-                const extensionPitchClasses = new Set(); // NEW: Track pitch classes for extensions
+                const extensionPitchClasses = new Set(); 
 
                 const highlightables = document.querySelectorAll('.highlightable:not(.piano-key)');
                 for(let i = 0; i < highlightables.length; i++) {
                     let el = highlightables[i]; if(!el._st || el._st.length === 0) continue;
                     let mappedNotes = snapStArray(el._st).map(st => { let f = getFreqFromSt(st); if (isOctUpOn()) f *= 2; if (isOctDownOn()) f *= 0.5; return Math.round(12 * Math.log2(f / masterTune) + 69); });
                     
-                    // --- CoF checks Pitch Classes instead of absolute MIDI notes ---
+                    // CoF evaluates Pitch Classes instead of Absolute Octaves
                     let isCoF = el.closest('#cof-overlay') !== null;
                     let allActive = isCoF ? mappedNotes.every(m => playingPitchClasses.has(((m % 12) + 12) % 12)) : mappedNotes.every(m => playingMidiNotes.has(m));
                     
@@ -1856,8 +1857,6 @@
                             const rootMidi = mappedNotes[0]; const isMajor = el._st.includes(el._st[0]+4); const seventhMidi = rootMidi + (isMajor ? 11 : 10); const ninthMidi = rootMidi + 14;
                             pianoExtensionNotes.add(seventhMidi); pianoExtensionNotes.add(ninthMidi); 
                             extensionsToHighlight.add(seventhMidi); extensionsToHighlight.add(ninthMidi);
-                            
-                            // Log the pitch classes so CoF extension nodes can light up octave-free
                             extensionPitchClasses.add(((seventhMidi % 12) + 12) % 12); 
                             extensionPitchClasses.add(((ninthMidi % 12) + 12) % 12);
                         }
@@ -1874,7 +1873,7 @@
                             let extMidi = Math.round(12 * Math.log2(getFreqFromSt(snapStArray([el._st[0]])[0]) / masterTune) + 69);
                             if (isOctUpOn()) extMidi += 12; if (isOctDownOn()) extMidi -= 12;
                             
-                            // --- NEW: Route CoF extension checks to the Pitch Class set ---
+                            // Route CoF extension checks to the Pitch Class set
                             let isCoF = el.closest('#cof-overlay') !== null;
                             const shouldBeExt = isCoF ? extensionPitchClasses.has(((extMidi % 12) + 12) % 12) : extensionsToHighlight.has(extMidi); 
                             const isExt = el._isExtState === true;
