@@ -76,12 +76,20 @@
         .overlay.primary.active { transform: translateX(0); }
         @media (orientation: portrait) { .overlay.primary.active { transform: translateY(0); } }
 
-        #looper-overlay {
-            position: absolute; background: var(--panel-bg); z-index: 18; top: calc(max(15px, 2vh) + var(--active-overlay-height)); right: 15px; left: auto;
-            border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: max-content; max-width: calc(100vw - 30px);
-            transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), top 0.3s, right 0.3s, opacity 0.2s; transform: scale(0.9); opacity: 0; pointer-events: none; transform-origin: top right;
+		#looper-overlay {
+            position: absolute; background: var(--panel-bg); z-index: 25; 
+            top: 0; left: 0; right: auto;
+            border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); 
+            border-bottom-right-radius: 12px; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+            width: max-content; max-width: 100vw; max-height: 100vh; overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.2s; 
+            transform: translateX(-105%); opacity: 0; pointer-events: none;
         }
-        #looper-overlay.active { transform: scale(1); opacity: 1; pointer-events: auto; }
+        #looper-overlay.active { transform: translateX(0); opacity: 1; pointer-events: auto; }        
+        @media (orientation: portrait) { 
+            #looper-overlay { width: 100vw; border-right: none; border-bottom-left-radius: 12px; max-height: 65vh; transform: translateY(-105%); } 
+            #looper-overlay.active { transform: translateY(0); } 
+        }
 
         .looper-controls { display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
         .looper-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-bottom: 8px; }
@@ -90,11 +98,11 @@
         .looper-tracks-row { display: flex; gap: 5px; width: 100%; }
         .track-col { display: flex; flex-direction: column; gap: 4px; flex: 1; }
         .track-btn { width: 100%; height: 30px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--grid-line); font-size: 0.75rem; transition: all 0.15s; padding: 0;}
-	.track-btn.active { background: var(--bg-color); color: var(--text-main); border: 2px solid var(--main-node); }
-	.track-btn.has-data { border-bottom: 3px solid #4caf50; }
-	.track-btn.recording-track { background: #f44336 !important; color: white !important; border-color: #f44336 !important; animation: pulse-fast 0.5s infinite alternate; }
-	.track-btn.armed-track { background: #ffeb3b !important; color: #222 !important; border-color: #fbc02d !important; animation: pulse-fast 0.5s infinite alternate; }
-	.dark-theme .track-btn.armed-track { background: #fbc02d !important; color: #111 !important; border-color: #f57f17 !important; }
+		.track-btn.active { background: var(--bg-color); color: var(--text-main); border: 2px solid var(--main-node); }
+		.track-btn.has-data { border-bottom: 3px solid #4caf50; }
+		.track-btn.recording-track { background: #f44336 !important; color: white !important; border-color: #f44336 !important; animation: pulse-fast 0.5s infinite alternate; }
+		.track-btn.armed-track { background: #ffeb3b !important; color: #222 !important; border-color: #fbc02d !important; animation: pulse-fast 0.5s infinite alternate; }
+		.dark-theme .track-btn.armed-track { background: #fbc02d !important; color: #111 !important; border-color: #f57f17 !important; }
         .mute-btn { width: 100%; height: 20px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-muted); border: 1px solid var(--grid-line); font-size: 0.65rem; cursor: pointer; transition: all 0.1s; padding: 0;}
         .mute-btn:hover { filter: brightness(0.9); }
         .mute-btn.muted { background: #f44336; color: white; border-color: #f44336; }
@@ -431,7 +439,7 @@
                 </div>
                 <button class="drum-preset-btn active-btn" data-preset="none" style="width: 35px; height: auto !important; white-space: pre-line; line-height: 1.4; font-weight: bold; flex-shrink: 0; padding: 0;">N<br>O<br>N<br>E</button>
             </div>
-            <div style="margin-top: 10px; display:flex; align-items:center;">
+            <div style="margin-top: -10px; margin-bottom: 15px; display:flex; align-items:center;">
                 <label style="font-size:0.8rem; font-weight:bold; cursor:pointer;"><input type="checkbox" id="drum-embellish" checked style="vertical-align:middle;"> Auto-Embellish (Humanize / Variations)</label>
             </div>
             <div class="section-title" style="margin-top: 15px; display:flex; justify-content:space-between; align-items:center;">
@@ -496,43 +504,38 @@
             </div>
 
             <div class="looper-progress-bar"><div id="looper-progress-fill"></div></div>
-
-            <div class="looper-controls">
+			<div class="looper-controls">
                 <div class="looper-actions">
                     <button id="btnLooperRec" class="looper-btn">⏺ Record</button>
                     <button id="btnLooperPlay" class="looper-btn">▶ Play</button>
                     <button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button>
+                    <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold; padding-left: 10px;">
+                        <option value="1">1 Bar</option>
+						<option value="2">2 Bars</option>
+						<option value="4" selected>4 Bars</option>
+						<option value="8">8 Bars</option>
+                    </select>
                 </div>
-                <div class="control-group">
-                    <label>Loop Length (Bars)</label>
-                    <select id="looperLength"><option value="1">1 Bar</option><option value="2">2 Bars</option><option value="4" selected>4 Bars</option><option value="8">8 Bars</option></select>
-                </div>
-                <div style="font-size: 0.7rem; color: var(--text-muted); text-align: center;">Synced to Metronome BPM. Select a track to arm for recording.</div>
             </div>
 
             <!-- Master Recording Module -->
             <div class="looper-row" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="looper-row-label">Master Output Recording</div>
-                </div>
-                <div style="display:flex; gap: 5px; margin-top: 5px;">
-                    <select id="export-format" class="btn-sm" style="flex: 1;">
-                        <option value="audio/webm;codecs=opus">WebM</option>
-                        <option value="audio/mp4">MP4</option>
-                        <option value="audio/mpeg">MP3</option>
-                        <option value="audio/wav">WAV</option>
-                    </select>
-                    <select id="export-bitrate" class="btn-sm" style="flex: 1;">
-                        <option value="32000">32 kbps</option>
-                        <option value="64000">64 kbps</option>
-                        <option value="128000">128 kbps</option>
-                        <option value="256000" selected>256 kbps</option>
-                        <option value="320000">320 kbps</option>
-                    </select>
-                </div>
-                <div class="looper-actions" style="margin-top: 5px;">
-                    <button id="btn-master-rec" class="looper-btn">🔴 Start Rec</button>
-                    <button id="btn-master-stop" class="looper-btn" disabled>⏹ Stop</button>
+                <div class="looper-row-label" style="margin-bottom: 5px;">Master Output Recording</div>
+                <div class="looper-actions">
+                    <select id="export-format" class="looper-btn" style="flex: 1; font-size: 0.7rem; padding: 0 2px;">
+						<option value="audio/webm;codecs=opus">WebM</option>
+						<option value="audio/mp4">MP4</option>
+						<option value="audio/mpeg">MP3</option>
+						<option value="audio/wav">WAV</option></select>
+                    <select id="export-bitrate" class="looper-btn" style="flex: 1; font-size: 0.7rem; padding: 0 2px;">
+						<option value="32000">32 kbps</option>
+						<option value="64000">64 kbps</option>
+						<option value="128000">128 kbps</option>
+						<option value="256000" selected>256 kbps</option>
+						<option value="320000">320 kbps</option>
+					</select>
+                    <button id="btn-master-rec" class="looper-btn" style="flex: 1.5; font-size: 0.75rem;">🔴 Start</button>
+                    <button id="btn-master-stop" class="looper-btn" style="flex: 1.5; font-size: 0.75rem;" disabled>⏹ Stop</button>
                 </div>
                 <div class="looper-actions" id="download-container" style="display:none; margin-top: 5px;">
                     <a id="download-link" class="looper-btn" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; background:#4caf50; color:white;">⬇️ Download Mixdown</a>
@@ -567,7 +570,6 @@
                 <div class="looper-row-label">Master Oscilloscope</div>
                 <canvas id="oscilloscope" style="width: 100%; height: 80px; background: #111; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 5px;"></canvas>
             </div>
-
         </div>
     </div>
 
@@ -891,20 +893,21 @@
             if (isCofActive) { if (cofOverlay) cofOverlay.classList.add('active'); if (btn) btn.classList.add('toggled'); } 
             else { if (cofOverlay) cofOverlay.classList.remove('active'); if (btn) btn.classList.remove('toggled'); }
         }
-
-function wakeNav() { 
-    clearTimeout(navFadeTimeout); 
-    if(navEl) { navEl.style.opacity = '1'; navEl.style.pointerEvents = 'auto'; } 
-    const settingsOverlay = document.getElementById('settings-overlay');
-    if (settingsOverlay && activeOverlay === 'settings') { settingsOverlay.style.opacity = '1'; settingsOverlay.style.pointerEvents = 'auto'; }
-}
-
-function hideNav() { 
-    if (uiHideDelay === 0 || !navEl) return; 
-    navEl.style.opacity = '0'; navEl.style.pointerEvents = 'none'; 
-    const settingsOverlay = document.getElementById('settings-overlay');
-    if (settingsOverlay && activeOverlay === 'settings') { settingsOverlay.style.opacity = '0'; settingsOverlay.style.pointerEvents = 'none'; }
-}
+		
+		function wakeNav() { 
+		    if (activeUserNotes > 0 && !t_isDragging) return; // PERFORMANCE FIX: Prevent UI from randomly waking up due to micro-finger-movements during play
+		    clearTimeout(navFadeTimeout); 
+		    if(navEl) { navEl.style.opacity = '1'; navEl.style.pointerEvents = 'auto'; } 
+		    const settingsOverlay = document.getElementById('settings-overlay'); 
+		    if (settingsOverlay && activeOverlay === 'settings') { settingsOverlay.style.opacity = '1'; settingsOverlay.style.pointerEvents = 'auto'; }
+		}
+		
+		function hideNav() { 
+		    if (uiHideDelay === 0 || !navEl) return; 
+		    navEl.style.opacity = '0'; navEl.style.pointerEvents = 'none'; 
+		    const settingsOverlay = document.getElementById('settings-overlay');
+		    if (settingsOverlay && activeOverlay === 'settings') { settingsOverlay.style.opacity = '0'; settingsOverlay.style.pointerEvents = 'none'; }
+		}
 
         document.getElementById('btnToggleSettings')?.addEventListener('click', () => toggleOverlay('settings'));
         document.getElementById('btnTogglePads')?.addEventListener('click', () => toggleOverlay('pads'));
