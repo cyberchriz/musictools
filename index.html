@@ -8,7 +8,7 @@
         :root {
             --bg-color: #ffffff; --panel-bg: #f8f9fa; --border-color: #dddddd; --grid-line: #cccccc;
             --text-main: #222222; --text-muted: #555555; --main-node: #6a1b9a; --whole-step: #0277bd; 
-            --half-step: #c2185b; --passing-tone: #d4d4d4; --cof-maj3: #e65100; --cof-min3: #00897b; 
+            --half-step: #c2185b; --passing-tone: #d4d4d4; --cof-maj3: #e65100; --cof-min3: #00897b;
             --major-bg: rgba(255, 179, 0, 0.25); --minor-bg: rgba(3, 155, 229, 0.2); --dimmed-fill: #f0f0f0;
             --text-light: #ffffff; --text-dark: #333333; --text-accidental: rgba(255, 255, 255, 0.9);
             --text-triad-stroke: #ffffff; --ext-highlight-fill: #d4edda; --ext-highlight-stroke: #4caf50;
@@ -79,15 +79,22 @@
 		#looper-overlay {
             position: absolute; background: var(--panel-bg); z-index: 25; 
             top: 0; right: 0; left: auto;
-            border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); 
-            border-bottom-right-radius: 12px; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
-            width: max-content; max-width: 100vw; max-height: 100vh; overflow-y: auto;
+            border-left: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); 
+            border-bottom-left-radius: 12px; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+            /* PERFORMANCE/LAYOUT FIX: Fluid width constrained to screen boundaries */
+            width: clamp(320px, 90vw, 450px); max-height: 100vh; overflow-y: auto; overflow-x: hidden;
+            box-sizing: border-box; 
             transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.2s; 
-            transform: translateX(-105%); opacity: 0; pointer-events: none;
+            transform: translateX(105%); opacity: 0; pointer-events: none;
         }
-        #looper-overlay.active { transform: translateX(0); opacity: 1; pointer-events: auto; }        
+        #looper-overlay.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
+        
         @media (orientation: portrait) { 
-            #looper-overlay { width: 100vw; border-right: none; border-bottom-left-radius: 12px; max-height: 65vh; transform: translateY(-105%); } 
+            #looper-overlay { 
+                width: 100vw; max-width: 100vw; border-left: none; 
+                border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; 
+                max-height: 65vh; transform: translateY(-105%); 
+            } 
             #looper-overlay.active { transform: translateY(0); } 
         }
 
@@ -97,20 +104,20 @@
         .looper-row-label { font-size: 0.7rem; color: var(--text-muted); font-weight: bold; padding-left: 2px; }
         .looper-tracks-row { display: flex; gap: 5px; width: 100%; }
         .track-col { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-        .track-btn { width: 100%; height: 30px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--grid-line); font-size: 0.75rem; transition: all 0.15s; padding: 0;}
-		.track-btn.active { background: var(--bg-color); color: var(--text-main); border: 2px solid var(--main-node); }
-		.track-btn.has-data { border-bottom: 3px solid #4caf50; }
-		.track-btn.recording-track { background: #f44336 !important; color: white !important; border-color: #f44336 !important; animation: pulse-fast 0.5s infinite alternate; }
-		.track-btn.armed-track { background: #ffeb3b !important; color: #222 !important; border-color: #fbc02d !important; animation: pulse-fast 0.5s infinite alternate; }
-		.dark-theme .track-btn.armed-track { background: #fbc02d !important; color: #111 !important; border-color: #f57f17 !important; }
-        .mute-btn { width: 100%; height: 20px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-muted); border: 1px solid var(--grid-line); font-size: 0.65rem; cursor: pointer; transition: all 0.1s; padding: 0;}
+		.track-btn { width: 100%; height: 30px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--grid-line); font-size: clamp(0.65rem, 2.5vw, 0.75rem); transition: all 0.15s; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;}
+        .track-btn.active { background: var(--bg-color); color: var(--text-main); border: 2px solid var(--main-node); }
+        .track-btn.has-data { border-bottom: 3px solid #4caf50; }
+        .track-btn.recording-track { background: #f44336 !important; color: white !important; border-color: #f44336 !important; animation: pulse-fast 0.5s infinite alternate; }
+        .track-btn.armed-track { background: #ffeb3b !important; color: #222 !important; border-color: #fbc02d !important; animation: pulse-fast 0.5s infinite alternate; }
+        .dark-theme .track-btn.armed-track { background: #fbc02d !important; color: #111 !important; border-color: #f57f17 !important; }
+        .mute-btn { width: 100%; height: 20px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-muted); border: 1px solid var(--grid-line); font-size: clamp(0.55rem, 2vw, 0.65rem); cursor: pointer; transition: all 0.1s; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;}
         .mute-btn:hover { filter: brightness(0.9); }
         .mute-btn.muted { background: #f44336; color: white; border-color: #f44336; }
         .looper-progress-bar { width: 100%; height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
         .dark-theme .looper-progress-bar { background: rgba(255,255,255,0.1); }
         #looper-progress-fill { height: 100%; width: 0%; background: var(--main-node); }
         .looper-actions { display: flex; gap: 5px; width: 100%; }
-        .looper-btn { flex: 1; height: 35px; font-weight: bold; font-size: 0.85rem; border-radius: 4px; border: 1px solid var(--grid-line); background: var(--bg-color); color: var(--text-main); cursor: pointer; display: flex; justify-content: center; align-items: center;}
+        .looper-btn { flex: 1 1 0; min-width: 0; height: 35px; font-weight: bold; font-size: clamp(0.65rem, 2.5vw, 0.85rem); border-radius: 4px; border: 1px solid var(--grid-line); background: var(--bg-color); color: var(--text-main); cursor: pointer; display: flex; justify-content: center; align-items: center; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;}		
         .looper-btn.recording { background: #f44336 !important; color: white !important; border-color: #f44336; }
         .looper-btn.playing { background: #4caf50 !important; color: white !important; border-color: #4caf50; }
         .looper-btn.armed { background: #ff9800 !important; color: white !important; border-color: #ff9800; animation: pulse-fast 0.5s infinite alternate; }
@@ -547,11 +554,11 @@
                 <div class="looper-row-label" style="margin-bottom: 4px;">Import Audio Track</div>
                 <input type="file" id="import-audio-file" accept="audio/*" style="font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-main);">
                 
-                <div style="display:flex; gap: 8px; margin-top: 8px; align-items: center;">
-                    <button id="btn-import-rw" class="looper-btn" style="flex: 0 0 45px; height: 40px; font-size: 1.4rem; padding: 0;" title="Rewind 5s">⏪</button>
-                    <button id="btn-import-play" class="looper-btn" style="flex: 0 0 45px; height: 40px; font-size: 1.4rem; padding: 0;" title="Play/Pause">▶</button>
-                    <button id="btn-import-ff" class="looper-btn" style="flex: 0 0 45px; height: 40px; font-size: 1.4rem; padding: 0;" title="Fast Forward 5s">⏩</button>
-                    <input type="range" id="import-seeker" min="0" max="100" value="0" style="flex: 1; height: 20px; cursor: pointer; margin: 0;">
+			<div style="display:flex; gap: 8px; margin-top: 8px; align-items: center;">
+                    <button id="btn-import-rw" class="looper-btn" style="flex: 1; max-width: 45px; height: 40px; font-size: clamp(1rem, 4vw, 1.4rem); padding: 0;" title="Rewind 5s">⏪</button>
+                    <button id="btn-import-play" class="looper-btn" style="flex: 1; max-width: 45px; height: 40px; font-size: clamp(1rem, 4vw, 1.4rem); padding: 0;" title="Play/Pause">▶</button>
+                    <button id="btn-import-ff" class="looper-btn" style="flex: 1; max-width: 45px; height: 40px; font-size: clamp(1rem, 4vw, 1.4rem); padding: 0;" title="Fast Forward 5s">⏩</button>
+                    <input type="range" id="import-seeker" min="0" max="100" value="0" style="flex: 1; min-width: 0; height: 20px; cursor: pointer; margin: 0;">
                 </div>
                 <div style="display:flex; gap: 12px; margin-top: 8px; align-items: center; justify-content: space-between;">
                     <div style="display:flex; align-items: center; gap: 5px; flex: 1;">
@@ -583,7 +590,7 @@
                 <h2 style="margin:0; border:none; padding:0;">Tonnetz Pro: Manual</h2>
                 <button id="btnCloseInfo" class="close-btn-sm" title="Close">✕</button>
             </div>
-            <p>Welcome to the Tonnetz Synthesizer Pro. This workstation uses Euler's Tonnetz (tone network), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
+            <p>Welcome to the Tonnetz Pro. This workstation uses Euler's Tonnetz (tone network), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
             
             <h3>🔺 1. Geometric Navigation & Chords</h3>
             <ul>
@@ -925,44 +932,44 @@
         document.getElementById('btnCloseInfo')?.addEventListener('click', () => toggleOverlay('info'));
         document.getElementById('btnInfo')?.addEventListener('click', () => toggleOverlay('info'));
 
-	document.getElementById('btnSavePreset')?.addEventListener('click', () => {
-	    const s = {
-		keyCenter: document.getElementById('keyCenter').value, scaleOverlay: document.getElementById('scaleOverlay').value, labelType: document.getElementById('labelType').value,
-		transpose: document.getElementById('transpose').value, tuningMode: document.getElementById('tuningMode').value, arpBpm: document.getElementById('arpBpm').value,
-		arpRhythm: document.getElementById('arpRhythm').value, arpSwing: document.getElementById('arpSwing').value, arpLoop: document.getElementById('arpLoop').value,
-		metronomeMode: document.getElementById('metronomeMode').value, metronomeVol: document.getElementById('metronomeVol').value, masterTune: document.getElementById('masterTune').value,
-		uiHideDelay: document.getElementById('uiHideDelay').value, instrumentPreset: document.getElementById('instrumentPreset').value, volume: document.getElementById('volume').value,
-		attack: document.getElementById('attack').value, decay: document.getElementById('decay').value, sustain: document.getElementById('sustain').value, release: document.getElementById('release').value,
-		brightness: document.getElementById('brightness').value, resonance: document.getElementById('resonance').value, chorus: document.getElementById('chorus').value, distortion: document.getElementById('distortion').value,
-		echo: document.getElementById('echo').value, reverbMix: document.getElementById('reverbMix').value, lfoSpeed: document.getElementById('lfoSpeed').value, vibrato: document.getElementById('vibrato').value,
-		tremolo: document.getElementById('tremolo').value, sweep: document.getElementById('sweep').value, detune: document.getElementById('detune').value, subOsc: document.getElementById('subOsc').value,
-		noise: document.getElementById('noise').value, filterEnv: document.getElementById('filterEnv').value, padHeight: document.getElementById('padHeightSlider').value, drumHeight: document.getElementById('drumHeightSlider').value,
-		drumEmbellish: document.getElementById('drum-embellish').checked, showExtensions: showExtensions, showChordDegrees: showChordDegrees, isDarkMode: isDarkMode
-	    };
-	    const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob);
-	          const a = document.createElement('a'); a.href = url; a.download = 'TonnetzPro_Settings.json'; a.click(); URL.revokeObjectURL(url); showToast("Settings saved to file.");
-	});
+		document.getElementById('btnSavePreset')?.addEventListener('click', () => {
+		    const s = {
+			keyCenter: document.getElementById('keyCenter').value, scaleOverlay: document.getElementById('scaleOverlay').value, labelType: document.getElementById('labelType').value,
+			transpose: document.getElementById('transpose').value, tuningMode: document.getElementById('tuningMode').value, arpBpm: document.getElementById('arpBpm').value,
+			arpRhythm: document.getElementById('arpRhythm').value, arpSwing: document.getElementById('arpSwing').value, arpLoop: document.getElementById('arpLoop').value,
+			metronomeMode: document.getElementById('metronomeMode').value, metronomeVol: document.getElementById('metronomeVol').value, masterTune: document.getElementById('masterTune').value,
+			uiHideDelay: document.getElementById('uiHideDelay').value, instrumentPreset: document.getElementById('instrumentPreset').value, volume: document.getElementById('volume').value,
+			attack: document.getElementById('attack').value, decay: document.getElementById('decay').value, sustain: document.getElementById('sustain').value, release: document.getElementById('release').value,
+			brightness: document.getElementById('brightness').value, resonance: document.getElementById('resonance').value, chorus: document.getElementById('chorus').value, distortion: document.getElementById('distortion').value,
+			echo: document.getElementById('echo').value, reverbMix: document.getElementById('reverbMix').value, lfoSpeed: document.getElementById('lfoSpeed').value, vibrato: document.getElementById('vibrato').value,
+			tremolo: document.getElementById('tremolo').value, sweep: document.getElementById('sweep').value, detune: document.getElementById('detune').value, subOsc: document.getElementById('subOsc').value,
+			noise: document.getElementById('noise').value, filterEnv: document.getElementById('filterEnv').value, padHeight: document.getElementById('padHeightSlider').value, drumHeight: document.getElementById('drumHeightSlider').value,
+			drumEmbellish: document.getElementById('drum-embellish').checked, showExtensions: showExtensions, showChordDegrees: showChordDegrees, isDarkMode: isDarkMode
+		    };
+		    const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob);
+		          const a = document.createElement('a'); a.href = url; a.download = 'TonnetzPro_Settings.json'; a.click(); URL.revokeObjectURL(url); showToast("Settings saved to file.");
+		});
 
-	document.getElementById('btnLoadPreset')?.addEventListener('click', () => {
-	    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
-	    inp.onchange = e => {
-	    const file = e.target.files[0]; if (!file) return;
-	    const reader = new FileReader();
-	    reader.onload = ev => {
-		try {
-		    const s = JSON.parse(ev.target.result);
-		          const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
-	['keyCenter','scaleOverlay','labelType','transpose','tuningMode','arpBpm','arpRhythm','arpSwing','arpLoop','metronomeMode','metronomeVol','masterTune','uiHideDelay','instrumentPreset','volume','attack','decay','sustain','release','brightness','resonance','chorus','distortion','echo','reverbMix','lfoSpeed','vibrato','tremolo','sweep','detune','subOsc','noise','filterEnv'].forEach(k => av(k, s[k]));
-                				     av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
-		    if (s.drumEmbellish !== undefined) document.getElementById('drum-embellish').checked = s.drumEmbellish;
-		       if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `Show Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; 	document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
-                if (s.showChordDegrees !== undefined && showChordDegrees !== s.showChordDegrees) { showChordDegrees = s.showChordDegrees; document.getElementById('btnChordDegrees').textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; document.getElementById('btnChordDegrees').classList.toggle('active-btn', showChordDegrees); updatePianoVisuals(); }
-                if (s.isDarkMode !== undefined && isDarkMode !== s.isDarkMode) { isDarkMode = s.isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode); document.getElementById('btnTheme').textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; document.getElementById('btnTheme').classList.toggle('active-btn', isDarkMode); }
-                showToast("Settings loaded successfully.");
-            } catch (err) { showToast("Error loading preset file."); }
-        }; reader.readAsText(file);
-    }; inp.click();
-});
+		document.getElementById('btnLoadPreset')?.addEventListener('click', () => {
+		    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+		    inp.onchange = e => {
+		    const file = e.target.files[0]; if (!file) return;
+		    const reader = new FileReader();
+		    reader.onload = ev => {
+			try {
+			    const s = JSON.parse(ev.target.result);
+			          const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
+			['keyCenter','scaleOverlay','labelType','transpose','tuningMode','arpBpm','arpRhythm','arpSwing','arpLoop','metronomeMode','metronomeVol','masterTune','uiHideDelay','instrumentPreset','volume','attack','decay','sustain','release','brightness','resonance','chorus','distortion','echo','reverbMix','lfoSpeed','vibrato','tremolo','sweep','detune','subOsc','noise','filterEnv'].forEach(k => av(k, s[k]));
+		                				     av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
+				    if (s.drumEmbellish !== undefined) document.getElementById('drum-embellish').checked = s.drumEmbellish;
+				       if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `Show Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; 	document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
+		                if (s.showChordDegrees !== undefined && showChordDegrees !== s.showChordDegrees) { showChordDegrees = s.showChordDegrees; document.getElementById('btnChordDegrees').textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; document.getElementById('btnChordDegrees').classList.toggle('active-btn', showChordDegrees); updatePianoVisuals(); }
+		                if (s.isDarkMode !== undefined && isDarkMode !== s.isDarkMode) { isDarkMode = s.isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode); document.getElementById('btnTheme').textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; document.getElementById('btnTheme').classList.toggle('active-btn', isDarkMode); }
+		                showToast("Settings loaded successfully.");
+		            } catch (err) { showToast("Error loading preset file."); }
+		        }; reader.readAsText(file);
+		    }; inp.click();
+		});
 
         document.getElementById('btnFullscreen')?.addEventListener('click', () => {
             if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.warn(err)); else if (document.exitFullscreen) document.exitFullscreen();
@@ -1102,20 +1109,6 @@
             if (el) triggerElementStart(el, "mouse");
         });
 
-		/* OLD CODE:
-        document.addEventListener('mousedown', e => {
-            if (e.button !== 0) return;
-            isMouseDownGlobal = true;
-            if (e.target.closest('#tonnetz-wrapper') && e.target.tagName === 'svg') {
-                t_isDragging = true;
-                t_startX = e.clientX - t_panX; t_startY = e.clientY - t_panY;
-                return;
-            }
-            let el = getInteractiveElement(e.clientX, e.clientY);
-            if (el) triggerElementStart(el, "mouse");
-        });
-		*/
-
         document.addEventListener('mousemove', e => {
             if (t_isDragging) {
                 t_panX = e.clientX - t_startX; t_panY = e.clientY - t_startY;
@@ -1157,26 +1150,9 @@
                     if (el) triggerElementStart(el, touch.identifier);
                 }
             }
-        }, { passive: false });		
-
-		/* OLD CODE:
-        document.addEventListener('touchstart', e => {
-            if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
-                if(e.cancelable) e.preventDefault();
-            }
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                let touch = e.changedTouches[i];
-                if (e.touches.length === 1 && e.target.closest('#tonnetz-wrapper') && e.target.tagName === 'svg') {
-                    t_isDragging = true;
-                    t_startX = touch.clientX - t_panX; t_startY = touch.clientY - t_panY;
-                    panningPointerId = touch.identifier;
-                } else {
-                    let el = getInteractiveElement(touch.clientX, touch.clientY);
-                    if (el) triggerElementStart(el, touch.identifier);
-                }
-            }
         }, { passive: false });
-		*/
+
+		const lastTouchMap = new Map();
 
         document.addEventListener('touchmove', e => {
             if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
@@ -1193,6 +1169,13 @@
                     continue;
                 }
 
+                // PERFORMANCE FIX: Throttle elementFromPoint. Only query DOM if finger moved > 4px
+                let lastTouch = lastTouchMap.get(touch.identifier);
+                if (lastTouch && Math.abs(touch.clientX - lastTouch.x) < 4 && Math.abs(touch.clientY - lastTouch.y) < 4) {
+                    continue; 
+                }
+                lastTouchMap.set(touch.identifier, {x: touch.clientX, y: touch.clientY});
+
                 let el = getInteractiveElement(touch.clientX, touch.clientY);
                 if (el) {
                     triggerElementStart(el, touch.identifier);
@@ -1205,6 +1188,8 @@
         function endTouches(e) {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let touch = e.changedTouches[i];
+                lastTouchMap.delete(touch.identifier); // Clear throttle cache
+                
                 if (touch.identifier === panningPointerId) {
                     t_isDragging = false;
                     panningPointerId = null;
@@ -2173,24 +2158,24 @@
             updateHighlights();
         }
 
-		function beginRelease(voices, skipFade = false) {
-            if(!audioCtx) return; 
-            const now = audioCtx.currentTime; 
-            const relTime = dampenHeld ? Math.min(0.15, currentRelease) : currentRelease;
+		function beginRelease(voices, skipFade = false, isFastSwipe = false) {
+            if(!audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            // PERFORMANCE FIX: Drastically cut the release tail on fast glissandos to prevent CPU audio node overlap
+            const baseRel = isFastSwipe ? Math.min(0.05, currentRelease) : currentRelease;
+            const relTime = dampenHeld ? Math.min(0.15, baseRel) : baseRel;
 
             voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, midiNote, isChord }) => {
                 try {
                     gainNode.gain.cancelScheduledValues(now);
-                    if (skipFade) { 
-                        gainNode.gain.setValueAtTime(0.001, now); 
-                        try { osc1.stop(now); osc2.stop(now); if(subOsc) subOsc.stop(now); if(noiseSrc) noiseSrc.stop(now); } catch (e) {} 
-                    } 
-                    else { 
-                        gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now); 
-                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime); 
-                        const stopTime = now + relTime + 0.1;
-                        // PERFORMANCE FIX: Delegated to native Audio Thread. No JS setTimeouts!
-                        try { osc1.stop(stopTime); osc2.stop(stopTime); if(subOsc) subOsc.stop(stopTime); if(noiseSrc) noiseSrc.stop(stopTime); } catch (e) {} 
+                    if (skipFade) {
+                        gainNode.gain.setValueAtTime(0.001, now);
+                        try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {}
+                    } else {
+                        gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now);
+                        gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime);
+                        setTimeout(() => { try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {} }, (relTime * 1000) + 100); 
                     }
                     if (midiOut && isChord) midiOut.send([0x80, midiNote, 0]);
                 } catch(e) {}
@@ -2206,50 +2191,48 @@
                 activeUserNotes = Math.max(0, activeUserNotes - 1);
                 if (activeUserNotes === 0) {
                     clearTimeout(navFadeTimeout);
-                    if (uiHideDelay > 0) {
-                        navFadeTimeout = setTimeout(wakeNav, uiHideDelay);
-                    } else {
-                        wakeNav();
-                    }
+                    if (uiHideDelay > 0) navFadeTimeout = setTimeout(wakeNav, uiHideDelay); else wakeNav();
                 }
             }
 
             if (looper.isRecording && !element.isLooper) {
-                if (nodeData && nodeData.looperEvt) {
-                    nodeData.looperEvt.duration = Math.max(0.1, audioCtx.currentTime - nodeData.startTime);
-                }
+                if (nodeData && nodeData.looperEvt) nodeData.looperEvt.duration = Math.max(0.1, audioCtx.currentTime - nodeData.startTime);
             }
 
+            // Flag if this was a fast glissando swipe (held less than 80ms)
+            const timeHeld = audioCtx ? (audioCtx.currentTime - nodeData.startTime) : 0;
+            const isFastSwipe = timeHeld < 0.08;
+
             if (isSustainOn() && !forceInstant) sustainedVoices.add(nodeData);
-            else beginRelease(nodeData.voices, forceInstant);
+            else beginRelease(nodeData.voices, forceInstant, isFastSwipe);
             
             updateHighlights();
         }
 
         // --- 8-Track Looper System ---
-	const looper = { isRecording: false, isPlaying: false, isArmed: false, activeVoiceTrack: 0, activeDrumTrack: 4, activeTrackToClear: 0, tracks: [[], [], [], [], [], [], [], []], muted: [false, false, false, false, false, false, false, false], startTime: 0, recordingType: null };
+		const looper = { isRecording: false, isPlaying: false, isArmed: false, activeVoiceTrack: 0, activeDrumTrack: 4, activeTrackToClear: 0, tracks: [[], [], [], [], [], [], [], []], muted: [false, false, false, false, false, false, false, false], startTime: 0, recordingType: null };
 
-function updateLooperUI() {
-    const btnRec = document.getElementById('btnLooperRec'); const btnPlay = document.getElementById('btnLooperPlay'); const statusTxt = document.getElementById('looper-status-text');
-    if (looper.isArmed) { if(btnRec) { btnRec.classList.add('armed'); btnRec.classList.remove('recording'); btnRec.innerHTML = '⏱ Wait...'; } if(statusTxt) statusTxt.textContent = 'ARMED'; } 
-    else if (looper.isRecording) { if(btnRec) { btnRec.classList.add('recording'); btnRec.classList.remove('armed'); btnRec.innerHTML = '⏺ Rec/Dub'; } if(statusTxt) statusTxt.textContent = 'RECORDING'; } 
-    else { if(btnRec) { btnRec.classList.remove('recording', 'armed'); btnRec.innerHTML = '⏺ Record'; } if(statusTxt) statusTxt.textContent = looper.isPlaying ? 'PLAYING' : 'STOPPED'; }
-    if(btnPlay) btnPlay.classList.toggle('playing', looper.isPlaying);
-    
-    document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('recording-track', 'armed-track'));
-    
-    if (looper.isArmed) {
-        document.querySelector(`.track-btn[data-track="${looper.activeVoiceTrack}"]`)?.classList.add('armed-track');
-        document.querySelector(`.track-btn[data-track="${looper.activeDrumTrack}"]`)?.classList.add('armed-track');
-    } else if (looper.isRecording) {
-        if (looper.recordingType === 'voice' || looper.recordingType === 'both') {
-            document.querySelector(`.track-btn[data-track="${looper.activeVoiceTrack}"]`)?.classList.add('recording-track');
-        }
-        if (looper.recordingType === 'drum' || looper.recordingType === 'both') {
-            document.querySelector(`.track-btn[data-track="${looper.activeDrumTrack}"]`)?.classList.add('recording-track');
-        }
-    }
-}
+		function updateLooperUI() {
+		    const btnRec = document.getElementById('btnLooperRec'); const btnPlay = document.getElementById('btnLooperPlay'); const statusTxt = document.getElementById('looper-status-text');
+		    if (looper.isArmed) { if(btnRec) { btnRec.classList.add('armed'); btnRec.classList.remove('recording'); btnRec.innerHTML = '⏱ Wait...'; } if(statusTxt) statusTxt.textContent = 'ARMED'; } 
+		    else if (looper.isRecording) { if(btnRec) { btnRec.classList.add('recording'); btnRec.classList.remove('armed'); btnRec.innerHTML = '⏺ Rec/Dub'; } if(statusTxt) statusTxt.textContent = 'RECORDING'; } 
+		    else { if(btnRec) { btnRec.classList.remove('recording', 'armed'); btnRec.innerHTML = '⏺ Record'; } if(statusTxt) statusTxt.textContent = looper.isPlaying ? 'PLAYING' : 'STOPPED'; }
+		    if(btnPlay) btnPlay.classList.toggle('playing', looper.isPlaying);
+		    
+		    document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('recording-track', 'armed-track'));
+		    
+		    if (looper.isArmed) {
+		        document.querySelector(`.track-btn[data-track="${looper.activeVoiceTrack}"]`)?.classList.add('armed-track');
+		        document.querySelector(`.track-btn[data-track="${looper.activeDrumTrack}"]`)?.classList.add('armed-track');
+		    } else if (looper.isRecording) {
+		        if (looper.recordingType === 'voice' || looper.recordingType === 'both') {
+		            document.querySelector(`.track-btn[data-track="${looper.activeVoiceTrack}"]`)?.classList.add('recording-track');
+		        }
+		        if (looper.recordingType === 'drum' || looper.recordingType === 'both') {
+		            document.querySelector(`.track-btn[data-track="${looper.activeDrumTrack}"]`)?.classList.add('recording-track');
+		        }
+		    }
+		}
 
         document.querySelectorAll('.track-btn').forEach(btn => {
             btn.addEventListener('click', e => {
@@ -2279,8 +2262,8 @@ function updateLooperUI() {
             });
         });
 
-	document.getElementById('btnLooperRec')?.addEventListener('click', e => { if (!looper.isPlaying && !looper.isArmed) { looper.isArmed = true; looper.recordingType = null; } else if (looper.isArmed) { looper.isArmed = false; } else { looper.isRecording = !looper.isRecording; if(looper.isRecording) looper.recordingType = 'both'; } updateLooperUI(); });
-	document.getElementById('btnLooperPlay')?.addEventListener('click', e => { if(looper.isPlaying) { looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false; looper.recordingType = null; const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%'; } else { looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0; } updateLooperUI(); });
+		document.getElementById('btnLooperRec')?.addEventListener('click', e => { if (!looper.isPlaying && !looper.isArmed) { looper.isArmed = true; looper.recordingType = null; } else if (looper.isArmed) { looper.isArmed = false; } else { looper.isRecording = !looper.isRecording; if(looper.isRecording) looper.recordingType = 'both'; } updateLooperUI(); });
+		document.getElementById('btnLooperPlay')?.addEventListener('click', e => { if(looper.isPlaying) { looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false; looper.recordingType = null; const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%'; } else { looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0; } updateLooperUI(); });
 
         document.getElementById('btnLooperClear')?.addEventListener('click', () => { 
             looper.tracks[looper.activeTrackToClear] = []; 
@@ -2747,9 +2730,9 @@ function updateLooperUI() {
                 const swingDelay = isUpbeat ? (stepDuration * currentArpSwing * 0.6) : 0;
                 const playTime = nextMetroTime + swingDelay;
                 const s = metroStep % 16;
-
-		if (looper.isArmed) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = playTime; looper.recordingType = 'drum'; updateLooperUI(); }
-		else if (looper.isRecording && looper.recordingType !== 'both') { if (looper.recordingType === 'voice') { looper.recordingType = 'both'; updateLooperUI(); } }
+		
+				if (looper.isArmed) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = playTime; looper.recordingType = 'drum'; updateLooperUI(); }
+				else if (looper.isRecording && looper.recordingType !== 'both') { if (looper.recordingType === 'voice') { looper.recordingType = 'both'; updateLooperUI(); } }
                 
                 if (metroMode === 'click') {
                     if (s % 4 === 0) triggerSequencerDrum('click', playTime, s === 0 ? 1 : 0.5);
@@ -2832,7 +2815,7 @@ function updateLooperUI() {
         function triggerManualDrum(type, velocity = 1) {
             initAudio();
             playDrum(type, audioCtx.currentTime, velocity);
-if (looper.isArmed) {
+			if (looper.isArmed) {
                 looper.isArmed = false;
                 looper.isRecording = true;
                 looper.isPlaying = true;
