@@ -3067,12 +3067,10 @@
             const fifths = i <= 6 ? i : i - 12; const sigRad = (i * 30 - 90 - 12) * Math.PI / 180;
             const txt = document.createElementNS(svgNS, "text"); txt.setAttribute("x", 220*Math.cos(sigRad)); txt.setAttribute("y", 220*Math.sin(sigRad)); txt.setAttribute("class", "text-keysig"); txt.textContent = fifths > 0 ? fifths+"♯" : (fifths < 0 ? Math.abs(fifths)+"♭" : "♮"); cofLabels.appendChild(txt);
 
-            const placeCofNode = (r, fOffset, className, size, isRot) => {
+			const placeCofNode = (r, fOffset, className, size, isRot) => {
                 const uRad = isRot ? radRot : rad; const pc = (((fifths + fOffset) * 7) % 12 + 12) % 12;
                 const circle = createCircle(r*Math.cos(uRad), r*Math.sin(uRad), size, `${className} highlightable interactive-node`); cofNodes.appendChild(circle);
-                let notes = [pc + 60];
-                if (className.includes('min3')) notes = [pc + 60, pc + 3 + 60];
-                if (className.includes('maj3')) notes = [pc + 60, pc + 4 + 60];
+                let notes = [pc + 60]; 
                 setupSvgElement(circle, notes, false, cofHighlightNodes);
                 cofLabels.appendChild(createDynamicText(r*Math.cos(uRad), r*Math.sin(uRad), pc, fifths + fOffset, size > 25 ? "font-lg" : "font-md"));
             };
