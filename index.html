@@ -307,7 +307,25 @@
                     <select id="keyCenter"><option value="0">C</option><option value="1">Db / C#</option><option value="2">D</option><option value="3">Eb / D#</option><option value="4">E</option><option value="5">F</option><option value="6">F# / Gb</option><option value="7">G</option><option value="8">Ab / G#</option><option value="9">A</option><option value="10">Bb / A#</option><option value="11">B</option></select>
                 </div>
                 <div class="control-group"><label>Scale Overlay</label>
-                    <select id="scaleOverlay"><option value="all">All Notes (Chromatic)</option><option value="major">Major (Ionian)</option><option value="minor">Nat. Minor (Aeolian)</option><option value="dorian">Dorian</option><option value="phrygian">Phrygian</option><option value="lydian">Lydian</option><option value="mixolydian">Mixolydian</option><option value="locrian">Locrian</option><option value="harmonic">Harmonic Minor</option><option value="pent_maj">Major Pentatonic</option><option value="pent_min">Minor Pentatonic</option><option value="blues">Blues Scale</option></select>
+                    <select id="scaleOverlay">
+						<option value="all">All Notes (Chromatic)</option>
+		                <option value="major">Major (Ionian)</option>
+						<option value="minor">Nat. Minor (Aeolian)</option>
+		                <option value="dorian">Dorian</option>
+						<option value="phrygian">Phrygian</option>
+		                <option value="lydian">Lydian</option>
+						<option value="mixolydian">Mixolydian</option>
+						<option value="locrian">Locrian</option>
+		                <option value="harmonic">Harmonic Minor</option>
+						<option value="melodic">Melodic Minor</option>
+		                <option value="pent_maj">Major Pentatonic</option>
+						<option value="pent_min">Minor Pentatonic</option>
+		                <option value="blues">Blues Scale</option>
+						<option value="wholetone">Whole Tone</option>
+		                <option value="diminished">Diminished (Octatonic)</option>
+						<option value="acoustic">Acoustic (Lydian Dom)</option>
+		                <option value="hungarian">Hungarian Minor</option>
+					</select>
                 </div>
                 <div class="control-group"><label>Node Labels</label><select id="labelType"><option value="absolute">Absolute (C, D, E)</option><option value="degrees">Degrees (1, 2, 3)</option><option value="solfege">Solfege (Do, Re, Mi)</option></select></div>
                 <div class="control-group"><label>Transposition</label><select id="transpose"><option value="0">C (Concert)</option><option value="-2">Bb (Tenor Sax)</option><option value="3">Eb (Alto Sax)</option><option value="5">F (French Horn)</option></select></div>
@@ -347,9 +365,29 @@
         <div class="controls-section">
             <div class="section-title">Synthesizer Engine</div>
             <div class="control-row">
-                <div class="control-group"><label>Instrument</label>
-                    <select id="instrumentPreset"><option value="piano">Acoustic Piano</option><option value="epiano">Electric Piano</option><option value="organ">Hammond Organ</option><option value="pad">Synth Pad</option><option value="pluck">Plucked Harp</option><option value="guitar">Acoustic Guitar</option><option value="bass">Synth Bass</option><option value="synthlead">Synth Lead</option><option value="sax">Saxophone</option><option value="trumpet">Trumpet / Brass</option><option value="violin">Violin / Strings</option><option value="choir">Choir / Voices</option><option value="marimba">Marimba</option><option value="flute">Flute</option></select>
-                </div>
+			<div class="control-group"><label>Instrument</label>
+				<select id="instrumentPreset">
+	                <option value="piano">Acoustic Piano</option>
+					<option value="epiano">Electric Piano</option>
+	                <option value="lofi_keys">Lo-Fi Keys</option>
+					<option value="organ">Hammond Organ</option>
+	                <option value="pad">Synth Pad</option>
+					<option value="pluck">Plucked Harp</option>
+	                <option value="guitar">Acoustic Guitar</option>
+					<option value="bass">Synth Bass</option>
+	                <option value="synthlead">Synth Lead</option>
+					<option value="synthbrass">80s Synth Brass</option>
+	                <option value="sax">Saxophone</option>
+					<option value="trumpet">Trumpet / Brass</option>
+	                <option value="violin">Violin / Strings</option>
+					<option value="cello">Solo Cello</option>
+	                <option value="choir">Choir / Voices</option>
+					<option value="marimba">Marimba</option>
+	                <option value="vibraphone">Vibraphone</option>
+					<option value="flute">Flute</option>
+	                <option value="theremin">Theremin</option>
+            	</select>
+			</div>
                 <div class="control-group"><label id="lblVolume">Master Vol: 0.60</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.6"></div>
                 <div class="control-group"><label id="lblAttack">Attack: 0.03s</label><input type="range" id="attack" min="0.01" max="1" step="0.01" value="0.03"></div>
                 <div class="control-group"><label id="lblDecay">Decay: 0.20s</label><input type="range" id="decay" min="0.01" max="2" step="0.01" value="0.2"></div>
@@ -1418,21 +1456,26 @@
             e.target.classList.toggle('active-btn', midiOutMode === 'midi');
         });
 
-        const presets = {
-            piano:   { attack: 0.01, decay: 0.4, sustain: 0.2, release: 0.5, distortion: 0, brightness: 2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 3, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.05, noise: 0.02 },
-            epiano:  { attack: 0.03, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 0,  brightness: 3, resonance: 1, chorus: 7, echo: 0.12, reverbMix: 0.1, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 7, subOsc: 0.2, noise: 0 },
-            organ:   { attack: 0.01, decay: 0.15, sustain: 0.85, release: 0.1, distortion: 2, brightness: 7, resonance: 1.5, chorus: 18, echo: 0, reverbMix: 0.25, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, filterEnv: 0, lfoSpeed: 6.8, vibrato: 5, sweep: 0, tremolo: 0.3, detune: 16, subOsc: 0.8, noise: 0.02 }, 
-            pad:     { attack: 0.5,  decay: 1.0, sustain: 0.7, release: 1.5, distortion: 0,  brightness: 2.5, resonance: 4, chorus: 20, echo: 0.3, reverbMix: 0.5, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 1, lfoSpeed: 0.5, vibrato: 5, sweep: 800, tremolo: 0, detune: 20, subOsc: 0.5, noise: 0.05 },
-            pluck:   { attack: 0.01, decay: 0.3, sustain: 0.1, release: 1.5, distortion: 0,  brightness: 1.5, resonance: 5, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 6, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.1 }, 
-            guitar:  { attack: 0.01, decay: 0.5, sustain: 0.3, release: 1.2, distortion: 1,  brightness: 1.2, resonance: 2, chorus: 3, echo: 0.15, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 0.5, filterEnv: 5, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.1, noise: 0.15 }, 
-            bass:    { attack: 0.01, decay: 0.3, sustain: 0.2, release: 0.2, distortion: 10, brightness: 1.5, resonance: 6, chorus: 5, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 4, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 1.0, noise: 0 }, 
-            synthlead: { attack: 0.05, decay: 0.3, sustain: 0.8, release: 0.5, distortion: 5, brightness: 4, resonance: 8, chorus: 12, echo: 0.25, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 2, lfoSpeed: 4.0, vibrato: 8, sweep: 1200, tremolo: 0, detune: 12, subOsc: 0.5, noise: 0 },
-            sax:     { attack: 0.06, decay: 0.2, sustain: 0.8, release: 0.25, distortion: 6,  brightness: 3.5, resonance: 2, chorus: 4, echo: 0.15, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 0.5, lfoSpeed: 5.0, vibrato: 18, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.2, noise: 0.25 }, 
-            trumpet: { attack: 0.05, decay: 0.1, sustain: 0.8, release: 0.15, distortion: 4,  brightness: 2.5, resonance: 3, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 4, lfoSpeed: 5.5, vibrato: 12, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.1 }, 
-            violin:  { attack: 0.3,  decay: 0.4, sustain: 0.9, release: 0.6, distortion: 0,  brightness: 3.5, resonance: 1, chorus: 8, echo: 0.25, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoSpeed: 6.0, vibrato: 28, sweep: 0, tremolo: 0, detune: 8, subOsc: 0, noise: 0.15 }, 
-            choir:   { attack: 0.5,  decay: 0.5, sustain: 0.8, release: 1.0, distortion: 0,  brightness: 2,  resonance: 1, chorus: 15, echo: 0.2, reverbMix: 0.6, osc1: 'sine', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoSpeed: 4.5, vibrato: 10, sweep: 0, tremolo: 0, detune: 15, subOsc: 0.3, noise: 0.2 },
-            marimba: { attack: 0.01, decay: 0.2, sustain: 0.0, release: 0.3, distortion: 0,  brightness: 2,  resonance: 3, chorus: 0, echo: 0.1, reverbMix: 0.1, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 2, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0.2, noise: 0.1 },
-            flute:   { attack: 0.15, decay: 0.2, sustain: 0.7, release: 0.3, distortion: 0,  brightness: 1.5, resonance: 1, chorus: 0, echo: 0.2, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0, lfoSpeed: 5.0, vibrato: 15, sweep: 0, tremolo: 0, detune: 0, subOsc: 0, noise: 0.35 } 
+		const presets = {
+            piano:      { attack: 0.01, decay: 0.4, sustain: 0.2, release: 0.3, distortion: 0, brightness: 2.2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 3, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.05, noise: 0.03 },
+            epiano:     { attack: 0.02, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 0, brightness: 3.5, resonance: 1.5, chorus: 10, echo: 0.12, reverbMix: 0.15, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1, lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.2, noise: 0 },
+            lofi_keys:  { attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.5, distortion: 6, brightness: 0.8, resonance: 1, chorus: 20, echo: 0.2, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoSpeed: 3.2, vibrato: 28, sweep: 0, tremolo: 0.15, detune: 18, subOsc: 0.1, noise: 0.5 },
+            organ:      { attack: 0.01, decay: 0.15, sustain: 0.85, release: 0.1, distortion: 3, brightness: 7, resonance: 1.5, chorus: 18, echo: 0, reverbMix: 0.25, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, filterEnv: 0, lfoSpeed: 6.8, vibrato: 6, sweep: 0, tremolo: 0.3, detune: 16, subOsc: 0.8, noise: 0.02 }, 
+            pad:        { attack: 0.6,  decay: 1.0, sustain: 0.8, release: 1.8, distortion: 0, brightness: 2.0, resonance: 3, chorus: 25, echo: 0.3, reverbMix: 0.6, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 1.5, lfoSpeed: 0.4, vibrato: 5, sweep: 1000, tremolo: 0, detune: 22, subOsc: 0.5, noise: 0.05 },
+            pluck:      { attack: 0.01, decay: 0.25, sustain: 0.05, release: 1.2, distortion: 0, brightness: 1.5, resonance: 5, chorus: 2, echo: 0.15, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 7, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.1, noise: 0.1 }, 
+            guitar:     { attack: 0.01, decay: 0.4, sustain: 0.2, release: 1.0, distortion: 1, brightness: 1.5, resonance: 3, chorus: 4, echo: 0.1, reverbMix: 0.15, osc1: 'triangle', osc2: 'square', osc2Mult: 0.5, filterEnv: 6, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.1, noise: 0.2 }, 
+            bass:       { attack: 0.01, decay: 0.3, sustain: 0.3, release: 0.2, distortion: 12, brightness: 1.5, resonance: 7, chorus: 5, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 5, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0 }, 
+            synthlead:  { attack: 0.05, decay: 0.3, sustain: 0.8, release: 0.5, distortion: 6, brightness: 4.5, resonance: 8, chorus: 15, echo: 0.3, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3, lfoSpeed: 4.5, vibrato: 10, sweep: 1500, tremolo: 0, detune: 14, subOsc: 0.5, noise: 0 },
+            synthbrass: { attack: 0.18, decay: 0.4, sustain: 0.7, release: 0.5, distortion: 0, brightness: 3.5, resonance: 2.5, chorus: 18, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 6, lfoSpeed: 5.0, vibrato: 4, sweep: 0, tremolo: 0, detune: 15, subOsc: 0.3, noise: 0 },
+            sax:        { attack: 0.08, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 8, brightness: 3.0, resonance: 3, chorus: 5, echo: 0.15, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 1.0, lfoSpeed: 5.2, vibrato: 20, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.2, noise: 0.3 }, 
+            trumpet:    { attack: 0.06, decay: 0.15, sustain: 0.8, release: 0.2, distortion: 5, brightness: 3.5, resonance: 3.5, chorus: 3, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 4.5, lfoSpeed: 5.8, vibrato: 14, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.1 }, 
+            violin:     { attack: 0.25, decay: 0.4, sustain: 0.9, release: 0.7, distortion: 0, brightness: 3.0, resonance: 1.5, chorus: 10, echo: 0.25, reverbMix: 0.45, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0.5, lfoSpeed: 6.2, vibrato: 26, sweep: 0, tremolo: 0, detune: 10, subOsc: 0, noise: 0.15 }, 
+            cello:      { attack: 0.2,  decay: 0.3, sustain: 0.8, release: 0.6, distortion: 1, brightness: 1.8, resonance: 2.5, chorus: 6, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 0.5, filterEnv: 2.5, lfoSpeed: 5.5, vibrato: 16, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.3, noise: 0.08 },
+            choir:      { attack: 0.6,  decay: 0.5, sustain: 0.8, release: 1.2, distortion: 0, brightness: 1.8, resonance: 1.5, chorus: 22, echo: 0.2, reverbMix: 0.7, osc1: 'sine', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoSpeed: 4.2, vibrato: 12, sweep: 0, tremolo: 0, detune: 18, subOsc: 0.4, noise: 0.25 },
+            marimba:    { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.25, distortion: 0, brightness: 2.5, resonance: 4, chorus: 0, echo: 0.15, reverbMix: 0.15, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 2.5, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0.2, noise: 0.12 },
+            vibraphone: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 0, brightness: 2.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoSpeed: 5.8, vibrato: 0, sweep: 0, tremolo: 0.45, detune: 1, subOsc: 0, noise: 0 },
+            flute:      { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.35, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 3, echo: 0.2, reverbMix: 0.35, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0, lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.4 },
+            theremin:   { attack: 0.25, decay: 0.1, sustain: 1.0, release: 0.5, distortion: 0, brightness: 1.2, resonance: 1, chorus: 5, echo: 0.25, reverbMix: 0.6, osc1: 'sine', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoSpeed: 6.5, vibrato: 36, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.1, noise: 0 } 
         };
 
         function makeDistortionCurve(amount) {
@@ -2873,9 +2916,10 @@
         // ==========================================
         // 4. MUSIC THEORY LOGIC (Labels & Scales)
         // ==========================================
-        const labelAbsoluteFlat = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+		const labelAbsoluteFlat = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
         const labelAbsoluteSharp = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
         const labelSolfege = ["Do", "Ra", "Re", "Me", "Mi", "Fa", "Fi", "Sol", "Le", "La", "Te", "Ti"];
+        const labelDegrees = ["1", "b2", "2", "b3", "3", "4", "b5", "5", "b6", "6", "b7", "7"]; // BUG FIX
         
         const scaleMasks = {
             'all': [0,1,2,3,4,5,6,7,8,9,10,11],
@@ -2887,9 +2931,14 @@
             'mixolydian': [0,2,4,5,7,9,10],
             'locrian': [0,1,3,5,6,8,10],
             'harmonic': [0,2,3,5,7,8,11],
+            'melodic': [0,2,3,5,7,9,11],
             'pent_maj': [0,2,4,7,9],
             'pent_min': [0,3,5,7,10],
-            'blues': [0,3,5,6,7,10]
+            'blues': [0,3,5,6,7,10],
+            'wholetone': [0,2,4,6,8,10],
+            'diminished': [0,1,3,4,6,7,9,10],
+            'acoustic': [0,2,4,6,7,9,10],
+            'hungarian': [0,2,3,6,7,8,11]
         };
 
         document.getElementById('keyCenter')?.addEventListener('change', e => { currentKeyCenter = parseInt(e.target.value); updateScaleOverlay(); updateLabels(); });
