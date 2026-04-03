@@ -1816,118 +1816,75 @@
 
         const playingMidiNotes = new Set(); 
 
-        let highlightUpdatePending = false;
-        let previousHighlightState = "";
+        let highlightUpdatePending = false; let previousHighlightState = "";
         
         function updateHighlights() {
-            if (highlightUpdatePending) return;
-            highlightUpdatePending = true;
-
+            if (highlightUpdatePending) return; highlightUpdatePending = true;
             requestAnimationFrame(() => {
-                highlightUpdatePending = false; // Reset immediately
-                
-                playingMidiNotes.clear();
-                pianoExtensionNotes.clear();
-                
-                const now = audioCtx ? audioCtx.currentTime : 0;
+                highlightUpdatePending = false; playingMidiNotes.clear(); pianoExtensionNotes.clear(); const now = audioCtx ? audioCtx.currentTime : 0;
                 
                 activeNodes.forEach((nodeData) => {
-                    if (nodeData.type === 'arp') {
-                        nodeData.voices.forEach(v => {
-                            if (now >= v.startTime && now < v.startTime + nodeData.stepDuration) {
-                                playingMidiNotes.add(v.midiNote);
-                            }
-                        });
-                    } else if (nodeData.voices) { 
-                        nodeData.voices.forEach(v => playingMidiNotes.add(v.midiNote)); 
-                    } else if (nodeData.freqs) { 
-                        nodeData.freqs.forEach(freq => playingMidiNotes.add(Math.round(12 * Math.log2(freq / masterTune) + 69))); 
-                    }
+                    if (nodeData.type === 'arp') { nodeData.voices.forEach(v => { if (now >= v.startTime && now < v.startTime + nodeData.stepDuration) { playingMidiNotes.add(v.midiNote); } }); } 
+                    else if (nodeData.voices) { nodeData.voices.forEach(v => playingMidiNotes.add(v.midiNote)); } 
+                    else if (nodeData.freqs) { nodeData.freqs.forEach(freq => playingMidiNotes.add(Math.round(12 * Math.log2(freq / masterTune) + 69))); }
                 });
-                
                 midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
 
-                // --- PERFORMANCE FIX: Only touch the DOM if the active notes actually changed! ---
-                const currentStateStr = Array.from(playingMidiNotes).sort().join(',') + "|" + showExtensions + "|" + showChordDegrees;
-                if (currentStateStr === previousHighlightState) return; 
-                previousHighlightState = currentStateStr;
-                // ---------------------------------------------------------------------------------
-                
-                const activeElements = new Set();
-                const extensionsToHighlight = new Set();
+                // --- Track Pitch Classes (0-11) for octave-immune matching ---
+                const playingPitchClasses = new Set();
+                playingMidiNotes.forEach(note => playingPitchClasses.add(((note % 12) + 12) % 12));
 
-                // Skip piano keys here; they are handled separately in updatePianoVisuals()
+                const currentStateStr = Array.from(playingMidiNotes).sort().join(',') + "|" + showExtensions + "|" + showChordDegrees;
+                if (currentStateStr === previousHighlightState) return; previousHighlightState = currentStateStr;
+                
+                const activeElements = new Set(); 
+                const extensionsToHighlight = new Set(); 
+                const extensionPitchClasses = new Set(); // NEW: Track pitch classes for extensions
+
                 const highlightables = document.querySelectorAll('.highlightable:not(.piano-key)');
                 for(let i = 0; i < highlightables.length; i++) {
-                    let el = highlightables[i];
-                    if(!el._st || el._st.length === 0) continue;
+                    let el = highlightables[i]; if(!el._st || el._st.length === 0) continue;
+                    let mappedNotes = snapStArray(el._st).map(st => { let f = getFreqFromSt(st); if (isOctUpOn()) f *= 2; if (isOctDownOn()) f *= 0.5; return Math.round(12 * Math.log2(f / masterTune) + 69); });
                     
-                    let snappedSt = snapStArray(el._st);
-                    let mappedNotes = snappedSt.map(st => {
-                        let f = getFreqFromSt(st);
-                        if (isOctUpOn()) f *= 2;
-                        if (isOctDownOn()) f *= 0.5;
-                        return Math.round(12 * Math.log2(f / masterTune) + 69);
-                    });
-                    
-                    let allActive = mappedNotes.every(m => playingMidiNotes.has(m));
+                    // --- CoF checks Pitch Classes instead of absolute MIDI notes ---
+                    let isCoF = el.closest('#cof-overlay') !== null;
+                    let allActive = isCoF ? mappedNotes.every(m => playingPitchClasses.has(((m % 12) + 12) % 12)) : mappedNotes.every(m => playingMidiNotes.has(m));
                     
                     if (allActive) {
                         activeElements.add(el);
                         if (showExtensions && mappedNotes.length >= 3) {
-                            const rootMidi = mappedNotes[0]; const isMajor = el._st.includes(el._st[0]+4);
-                            const seventhMidi = rootMidi + (isMajor ? 11 : 10);
-                            const ninthMidi = rootMidi + 14;
-                            pianoExtensionNotes.add(seventhMidi);
-                            pianoExtensionNotes.add(ninthMidi);
-                            extensionsToHighlight.add(seventhMidi);
-                            extensionsToHighlight.add(ninthMidi);
+                            const rootMidi = mappedNotes[0]; const isMajor = el._st.includes(el._st[0]+4); const seventhMidi = rootMidi + (isMajor ? 11 : 10); const ninthMidi = rootMidi + 14;
+                            pianoExtensionNotes.add(seventhMidi); pianoExtensionNotes.add(ninthMidi); 
+                            extensionsToHighlight.add(seventhMidi); extensionsToHighlight.add(ninthMidi);
+                            
+                            // Log the pitch classes so CoF extension nodes can light up octave-free
+                            extensionPitchClasses.add(((seventhMidi % 12) + 12) % 12); 
+                            extensionPitchClasses.add(((ninthMidi % 12) + 12) % 12);
                         }
                     }
                 }
-
+                
                 for(let i = 0; i < highlightables.length; i++) {
-                    let el = highlightables[i];
-                    const shouldBeActive = activeElements.has(el);
-                    
-                    // Track state in a custom property to avoid querying DOM classList (which causes reflows)
-                    const isActive = el._isActiveState === true;
-                    
+                    let el = highlightables[i]; const shouldBeActive = activeElements.has(el); const isActive = el._isActiveState === true;
                     if (el._highlightEl) {
-                        // COMPLETELY SEPARATED SVG SHADOW LAYER
-                        // We strictly manipulate the clone (_highlightEl), NOT the base element (el)
-                        if (shouldBeActive && !isActive) {
-                            el._isActiveState = true;
-                            el._highlightEl.classList.add(el._activeClass);
-                            el._highlightEl.style.opacity = '1';
-                        } else if (!shouldBeActive && isActive) {
-                            el._isActiveState = false;
-                            el._highlightEl.classList.remove(el._activeClass);
-                            if (!el._isExtState) el._highlightEl.style.opacity = '0';
-                        }
+                        if (shouldBeActive && !isActive) { el._isActiveState = true; el._highlightEl.classList.add(el._activeClass); el._highlightEl.style.opacity = '1'; } 
+                        else if (!shouldBeActive && isActive) { el._isActiveState = false; el._highlightEl.classList.remove(el._activeClass); if (!el._isExtState) el._highlightEl.style.opacity = '0'; }
 
                         if (el._st && el._st.length === 1) {
                             let extMidi = Math.round(12 * Math.log2(getFreqFromSt(snapStArray([el._st[0]])[0]) / masterTune) + 69);
                             if (isOctUpOn()) extMidi += 12; if (isOctDownOn()) extMidi -= 12;
                             
-                            const shouldBeExt = extensionsToHighlight.has(extMidi);
+                            // --- NEW: Route CoF extension checks to the Pitch Class set ---
+                            let isCoF = el.closest('#cof-overlay') !== null;
+                            const shouldBeExt = isCoF ? extensionPitchClasses.has(((extMidi % 12) + 12) % 12) : extensionsToHighlight.has(extMidi); 
                             const isExt = el._isExtState === true;
                             
-                            if (shouldBeExt && !isExt) {
-                                el._isExtState = true;
-                                el._highlightEl.classList.add('extension-highlight');
-                                el._highlightEl.style.opacity = '1';
-                            } else if (!shouldBeExt && isExt) {
-                                el._isExtState = false;
-                                el._highlightEl.classList.remove('extension-highlight');
-                                if (!el._isActiveState) el._highlightEl.style.opacity = '0';
-                            }
+                            if (shouldBeExt && !isExt) { el._isExtState = true; el._highlightEl.classList.add('extension-highlight'); el._highlightEl.style.opacity = '1'; } 
+                            else if (!shouldBeExt && isExt) { el._isExtState = false; el._highlightEl.classList.remove('extension-highlight'); if (!el._isActiveState) el._highlightEl.style.opacity = '0'; }
                         }
                     }
                 }
-
-                updateChordDisplay();
-                updatePianoVisuals();
+                updateChordDisplay(); updatePianoVisuals();
             });
         }
 
