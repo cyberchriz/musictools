@@ -119,7 +119,8 @@
         .looper-row { display: flex; flex-direction: column; gap: 4px; }
         .looper-row-label { font-size: 0.7rem; color: var(--text-muted); font-weight: bold; padding-left: 2px; }
         .looper-tracks-row { display: flex; gap: 5px; width: 100%; }
-        .track-col { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .track-col { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+        .inst-label { font-size: 0.55rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 10px; margin-top: -2px; margin-bottom: -2px; pointer-events: none; }
 		.track-btn { width: 100%; height: 30px; border-radius: 4px; font-weight: bold; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--grid-line); font-size: clamp(0.65rem, 2.5vw, 0.75rem); transition: all 0.15s; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;}
         .track-btn.active { background: var(--bg-color); color: var(--text-main); border: 2px solid var(--main-node); }
         .track-btn.has-data { border-bottom: 3px solid #4caf50; }
@@ -542,11 +543,11 @@
             <div class="looper-grid">
                 <div class="looper-row">
                     <div class="looper-row-label">Synth / Voice Tracks</div>
-                    <div class="looper-tracks-row">
-                        <div class="track-col"><button class="track-btn active" data-track="0" data-type="voice">V1</button><button class="mute-btn" data-track="0">Mute</button></div>
-                        <div class="track-col"><button class="track-btn" data-track="1" data-type="voice">V2</button><button class="mute-btn" data-track="1">Mute</button></div>
-                        <div class="track-col"><button class="track-btn" data-track="2" data-type="voice">V3</button><button class="mute-btn" data-track="2">Mute</button></div>
-                        <div class="track-col"><button class="track-btn" data-track="3" data-type="voice">V4</button><button class="mute-btn" data-track="3">Mute</button></div>
+					<div class="looper-tracks-row">
+                        <div class="track-col"><button class="track-btn active" data-track="0" data-type="voice">V1</button><div class="inst-label" id="inst-label-0"></div><button class="mute-btn" data-track="0">Mute</button></div>
+                        <div class="track-col"><button class="track-btn" data-track="1" data-type="voice">V2</button><div class="inst-label" id="inst-label-1"></div><button class="mute-btn" data-track="1">Mute</button></div>
+                        <div class="track-col"><button class="track-btn" data-track="2" data-type="voice">V3</button><div class="inst-label" id="inst-label-2"></div><button class="mute-btn" data-track="2">Mute</button></div>
+                        <div class="track-col"><button class="track-btn" data-track="3" data-type="voice">V4</button><div class="inst-label" id="inst-label-3"></div><button class="mute-btn" data-track="3">Mute</button></div>
                     </div>
                 </div>
                 <div class="looper-row">
@@ -801,7 +802,7 @@
                     let toRemoveVoices = nodeData.voices.filter(v => !targetFreqs.some(tf => Math.abs(tf - v.freq) < 0.1));
                     
                     toAdd.forEach(freq => {
-                        const voice = spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true);
+                        const voice = spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true, nodeData.synthState);
                         nodeData.voices.push(voice); nodeData.freqs.push(freq);
                     });
                     
@@ -825,7 +826,7 @@
                         nodeData.nextNoteTime = audioCtx.currentTime; nodeData.noteIndex = 0;
                     } else {
                         nodeData.type = 'chord'; nodeData.freqs = targetFreqs;
-                        nodeData.voices = targetFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true));
+                        nodeData.voices = targetFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true, nodeData.synthState));
                     }
                 }
             };
@@ -2173,7 +2174,7 @@
             display.style.opacity = '1';
         }
 
-        function spawnVoice(freq, startTime, index, totalNotes, isChord) {
+		function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null) {
             const midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69); 
             
             let isAccent = false;
@@ -2181,32 +2182,40 @@
             else { isAccent = true; }
             const accentMult = isAccent ? 1.4 : 0.8; 
             
-            const osc1 = audioCtx.createOscillator(); osc1.type = currentOsc1; osc1.frequency.value = freq;
-            const osc2 = audioCtx.createOscillator(); osc2.type = currentOsc2; osc2.frequency.value = freq * Math.pow(2, currentDetune / 1200) * currentOsc2Mult; 
+            // 🎵 NEW: Load historical parameters if this is a looper track, otherwise use live UI
+            const s = synthState || {
+                osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
+                subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
+                brightness: currentBrightness, filterEnv: currentFilterEnv,
+                attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease
+            };
+
+            const osc1 = audioCtx.createOscillator(); osc1.type = s.osc1; osc1.frequency.value = freq;
+            const osc2 = audioCtx.createOscillator(); osc2.type = s.osc2; osc2.frequency.value = freq * Math.pow(2, s.detune / 1200) * s.osc2Mult; 
             
             let subOsc = null; let subGain = null;
-            if (currentSubOsc > 0) {
+            if (s.subOsc > 0) {
                 subOsc = audioCtx.createOscillator(); subOsc.type = 'sine'; subOsc.frequency.value = freq / 2;
-                subGain = audioCtx.createGain(); subGain.gain.value = currentSubOsc;
+                subGain = audioCtx.createGain(); subGain.gain.value = s.subOsc;
             }
 
             let noiseSrc = null; let noiseGain = null;
-            if (currentNoise > 0 && sharedNoiseBuffer) {
+            if (s.noise > 0 && sharedNoiseBuffer) {
                 noiseSrc = audioCtx.createBufferSource(); noiseSrc.buffer = sharedNoiseBuffer; noiseSrc.loop = true;
-                noiseGain = audioCtx.createGain(); noiseGain.gain.value = currentNoise;
+                noiseGain = audioCtx.createGain(); noiseGain.gain.value = s.noise;
             }
 
             const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass';
-            filter.Q.value = currentResonance;
-            const targetBaseCutoff = Math.min(freq * currentBrightness, 12000);
+            filter.Q.value = s.resonance;
+            const targetBaseCutoff = Math.min(freq * s.brightness, 12000);
             
             const baseCutoff = dampenHeld ? 600 : targetBaseCutoff;
             
-            if (currentFilterEnv !== 0 && !dampenHeld) {
-                const peakCutoff = currentFilterEnv > 0 ? Math.min(baseCutoff * (1 + currentFilterEnv), 20000) : Math.max(baseCutoff * (1 + currentFilterEnv), 50);
+            if (s.filterEnv !== 0 && !dampenHeld) {
+                const peakCutoff = s.filterEnv > 0 ? Math.min(baseCutoff * (1 + s.filterEnv), 20000) : Math.max(baseCutoff * (1 + s.filterEnv), 50);
                 filter.frequency.setValueAtTime(baseCutoff, startTime);
-                filter.frequency.linearRampToValueAtTime(peakCutoff, startTime + currentAttack * 0.5);
-                filter.frequency.exponentialRampToValueAtTime(Math.max(0.001, baseCutoff), startTime + currentAttack + currentDecay);
+                filter.frequency.linearRampToValueAtTime(peakCutoff, startTime + s.attack * 0.5);
+                filter.frequency.exponentialRampToValueAtTime(Math.max(0.001, baseCutoff), startTime + s.attack + s.decay);
             } else { 
                 filter.frequency.value = baseCutoff; 
             }
@@ -2225,18 +2234,17 @@
 
             filter.connect(gainNode); gainNode.connect(ampLfoGain); ampLfoGain.connect(preDistortionGain);
             
-			if (midiOutMode === 'midi') {
+            if (midiOutMode === 'midi') {
                 gainNode.gain.setValueAtTime(0, startTime); 
             } else {
                 gainNode.gain.setValueAtTime(0, startTime); 
                 
-                // MOBILE FIX: Drastically cut oscillator baseline volume on phones to prevent sum-clipping
                 const baseVolume = isMobileDevice ? 0.045 : 0.085;
                 const peak = dampenHeld ? 0.015 : (baseVolume * accentMult); 
-                const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * currentSustain);
+                const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * s.sustain);
                 
-                gainNode.gain.linearRampToValueAtTime(peak, startTime + currentAttack); 
-                gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + currentAttack + currentDecay);
+                gainNode.gain.linearRampToValueAtTime(peak, startTime + s.attack); 
+                gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + s.attack + s.decay);
             }
             
             osc1.start(startTime); osc2.start(startTime);
@@ -2251,7 +2259,8 @@
                 }, timeToStart * 1000);
             }
 
-            return { osc1, osc2, subOsc, noiseSrc, gainNode, filter, freq, midiNote, isChord, startTime, accentMult }; 
+            // Export the specific releaseTime so the cleanup engine knows how long the tail is!
+            return { osc1, osc2, subOsc, noiseSrc, gainNode, filter, freq, midiNote, isChord, startTime, accentMult, releaseTime: s.release }; 
         }
 
         const tunings = {
@@ -2280,7 +2289,7 @@
             });
         }
 		
-		function playFrequencies(element, freqs, originalStArray = null) {
+		function playFrequencies(element, freqs, originalStArray = null, synthState = null) {
             initAudio(); if (activeNodes.has(element)) return;
 
             if (!element.isLooper) { activeUserNotes++; if (uiHideDelay > 0) hideNav(); }
@@ -2289,7 +2298,6 @@
 
             let finalFreqs = [...freqs];
             if (originalStArray) {
-                // Intercept the initial array and add active extensions before playing!
                 let extendedSt = getExtendedStArray(originalStArray);
                 let snapped = snapStArray(extendedSt); 
                 finalFreqs = snapped.map(st => getFreqFromSt(st));
@@ -2299,36 +2307,38 @@
             
             let looperEvt = null; if (looper.isRecording && !element.isLooper) { looperEvt = recordLooperEvent(element, finalFreqs, 'play', originalStArray); }
 
+            // NEW: Forward the synthState to the node data and the voice spawner
             if (isArpOn() && finalFreqs.length > 1) {
                 let arpFreqs = applyArpMode(finalFreqs);
                 let stepDuration = 0; const beatDuration = 60 / currentArpBPM;
                 if (finalFreqs.length === 3) stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3); else stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
-                activeNodes.set(element, { type: 'arp', freqs: arpFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray }); scheduleArps(); 
+                activeNodes.set(element, { type: 'arp', freqs: arpFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState }); scheduleArps(); 
             } else {
-                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true)); activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray });
+                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, synthState)); 
+                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState });
             }
-			
+            
             updateHighlights();
         }
 
 		function beginRelease(voices, skipFade = false, isFastSwipe = false) {
             if(!audioCtx) return;
             const now = audioCtx.currentTime;
-            
-            const relTime = dampenHeld ? Math.min(0.15, currentRelease) : currentRelease;
 
-            voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, midiNote, isChord }) => {
+            voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, midiNote, isChord, releaseTime }) => {
                 try {
                     gainNode.gain.cancelScheduledValues(now);
                     
-                    // CPU FIX: Instant kill for fast swipes to prevent buffer underruns on Android Chrome
+                    // NEW: Retrieve specific release time for this track, or fall back to global
+                    const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
+                    const relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
+                    
                     if (skipFade || isFastSwipe) {
-                        gainNode.gain.setTargetAtTime(0.001, now, 0.015); // Fast 15ms fade avoids pop
+                        gainNode.gain.setTargetAtTime(0.001, now, 0.015); 
                         setTimeout(() => { 
                             try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {} 
                         }, 30); 
                     } else {
-                        // Normal gentle release for deliberately played notes
                         gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now);
                         gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime);
                         setTimeout(() => { 
@@ -2423,13 +2433,17 @@
 		document.getElementById('btnLooperRec')?.addEventListener('click', e => { if (!looper.isPlaying && !looper.isArmed) { looper.isArmed = true; looper.recordingType = null; } else if (looper.isArmed) { looper.isArmed = false; } else { looper.isRecording = !looper.isRecording; if(looper.isRecording) looper.recordingType = 'both'; } updateLooperUI(); });
 		document.getElementById('btnLooperPlay')?.addEventListener('click', e => { if(looper.isPlaying) { looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false; looper.recordingType = null; const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%'; } else { looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0; } updateLooperUI(); });
 
-        document.getElementById('btnLooperClear')?.addEventListener('click', () => { 
+		document.getElementById('btnLooperClear')?.addEventListener('click', () => { 
             looper.tracks[looper.activeTrackToClear] = []; 
             const trackBtn = document.querySelector(`.track-btn[data-track="${looper.activeTrackToClear}"]`);
             if (trackBtn) trackBtn.classList.remove('has-data');
+            
+            // Clear the instrument label if it's a voice track
+            const labelEl = document.getElementById(`inst-label-${looper.activeTrackToClear}`);
+            if (labelEl) labelEl.textContent = '';
         });
 
-        function recordLooperEvent(element, freqs, type, originalStArray, drumType = null, velocity = 1, exactTime = null) {
+		function recordLooperEvent(element, freqs, type, originalStArray, drumType = null, velocity = 1, exactTime = null) {
             if (!audioCtx) return null;
             const lenEl = document.getElementById('looperLength');
             let bars = lenEl ? parseInt(lenEl.value) : 4;
@@ -2443,14 +2457,29 @@
 
             if (type === 'drum') {
                 const isDuplicate = looper.tracks[targetTrack].some(evt => 
-                    evt.type === 'drum' && 
-                    evt.drumType === drumType && 
-                    Math.abs(evt.timeOffset - offset) < 0.05
+                    evt.type === 'drum' && evt.drumType === drumType && Math.abs(evt.timeOffset - offset) < 0.05
                 );
                 if (isDuplicate) return null;
             }
 
-            const evt = { id: Math.random(), freqs: freqs, timeOffset: offset, type: type, stArray: originalStArray, drumType: drumType, velocity: velocity, duration: 0.5 };
+            // 🎵 NEW: Snapshot the current synth state for this specific event
+            let synthState = null;
+            if (type === 'play') {
+                synthState = {
+                    osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
+                    subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
+                    brightness: currentBrightness, filterEnv: currentFilterEnv,
+                    attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease
+                };
+                
+                // Write the instrument name to the track's label
+                const instSelect = document.getElementById('instrumentPreset');
+                const instName = instSelect ? instSelect.options[instSelect.selectedIndex].text : '';
+                const labelEl = document.getElementById(`inst-label-${targetTrack}`);
+                if (labelEl) labelEl.textContent = instName;
+            }
+
+            const evt = { id: Math.random(), freqs: freqs, timeOffset: offset, type: type, stArray: originalStArray, drumType: drumType, velocity: velocity, duration: 0.5, synthState: synthState };
             looper.tracks[targetTrack].push(evt);
             
             const btn = document.querySelector(`.track-btn[data-track="${targetTrack}"]`);
@@ -2460,6 +2489,7 @@
         }
 
         let lastLoopPhase = 0;
+		
         function processLooperPlayback() {
             if (!looper.isPlaying || !audioCtx) return;
             const lenEl = document.getElementById('looperLength');
@@ -2475,11 +2505,13 @@
                 if (looper.muted[idx]) return; 
                 track.forEach(evt => {
                     if (evt.timeOffset > lastLoopPhase && evt.timeOffset <= phase) {
-                        if (evt.type === 'play') {
+						if (evt.type === 'play') {
                             let dummy = { _st: evt.stArray || [], isLooper: true };
-                            playFrequencies(dummy, evt.freqs);
+                            // Pass the historical synthState into the playback engine
+                            playFrequencies(dummy, evt.freqs, evt.stArray, evt.synthState);
                             setTimeout(() => stopFrequencies(dummy), (evt.duration || 0.5) * 1000); 
-                        } else if (evt.type === 'drum') {
+                        }
+                        else if (evt.type === 'drum') {
                             let exactTime = audioCtx.currentTime + (evt.timeOffset - phase);
                             if (exactTime < audioCtx.currentTime) exactTime = audioCtx.currentTime;
                             playDrum(evt.drumType, exactTime, evt.velocity);
@@ -2741,7 +2773,7 @@
                         }
 
                         const startTime = nodeData.nextNoteTime + swingDelay;
-                        const voice = spawnVoice(freq, startTime, index, nodeData.freqs.length, false);
+                        const voice = spawnVoice(freq, startTime, index, nodeData.freqs.length, false, nodeData.synthState); // NEW: Arps now use their parent track's synth state!
                         voice.midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
                         nodeData.voices.push(voice);
                         if (nodeData.voices.length > 30) nodeData.voices.shift();
