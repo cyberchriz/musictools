@@ -64,7 +64,7 @@
         
         .manual-drum-btn { 
             transition: all 0.1s; display: flex; align-items: center; justify-content: center; 
-            user-select: none; touch-action: none; height: 100% !important; min-height: 70px; margin: 0; font-size: 0.9rem;
+            user-select: none; touch-action: none; height: 100% !important; min-height: 30px; margin: 0; font-size: 0.9rem;
         }
         .manual-drum-btn:active, .manual-drum-btn.active-btn { transform: scale(0.92); filter: brightness(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
@@ -913,15 +913,23 @@
             });
         }
 
-        function centerOnRoot(animate = false) {
-            let targetX = 0, targetY = 0; const w = window.innerWidth, h = window.innerHeight;
-            if (activeOverlay) {
-                const el = document.getElementById(activeOverlay + '-overlay');
-                if (el) { if (w > h) targetX = el.offsetWidth / 2; else targetY = el.offsetHeight / 2; }
+		function centerOnRoot(animate = false) {
+            let targetX = 0, targetY = 0; 
+
+            // Universally accommodate the Piano at the bottom (if active)
+            const pianoEl = document.getElementById('piano-overlay');
+            if (pianoEl && pianoEl.classList.contains('active')) {
+                targetY -= pianoEl.offsetHeight / 2;
             }
-            targetPanX = targetX; targetPanY = targetY;
-            if (animate) { if(!isAnimatingPan) { isAnimatingPan = true; animatePan(); } } 
-            else { t_panX = targetPanX; t_panY = targetPanY; applyTransform(); }
+
+            targetPanX = targetX; 
+            targetPanY = targetY;
+            
+            if (animate) { 
+                if(!isAnimatingPan) { isAnimatingPan = true; animatePan(); } 
+            } else { 
+                t_panX = targetPanX; t_panY = targetPanY; applyTransform(); 
+            }
         }
 
         const overlayObserver = new ResizeObserver(() => updateOverlayCSSVars());
@@ -3208,7 +3216,7 @@
         updateLabels = function() { originalUpdateLabels(); document.querySelectorAll('.minor-triad-label').forEach(el => el.textContent += "⁻"); }
 
 		document.documentElement.style.setProperty('--piano-h', isPianoActive ? 'clamp(80px, 16vh, 140px)' : '0px');
-        updateLabels(); updateScaleOverlay(); applyTransform(); drawEnvelope();
+        updateLabels(); updateScaleOverlay(); applyTransform(); drawEnvelope(); centerOnRoot(false);
     </script>
 </body>
 </html>
