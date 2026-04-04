@@ -1540,11 +1540,34 @@
         const sustainedVoices = new Set(); 
         const pianoExtensionNotes = new Set();
         
-        let masterGain, compressor, delayNode, feedbackGain, delayMix;
+		let masterGain, compressor, delayNode, feedbackGain, delayMix;
         let preDistortionGain, distortionNode;
         let globalLFO, lfoPitchGain, lfoFilterGain, lfoAmpGain;
         let convolver, reverbGain;
         let sharedNoiseBuffer = null;
+        
+        let safetyClipper = null;
+		
+        // --- HARDWARE DETECTION ---
+		// 1. Check User Agent (catches standard mobile browsers)
+		let isMobileDevice = /Mobi|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+		
+		// 2. Hardware Fallback: Catch mobile browsers spoofing "Desktop Site" mode
+		// If it claims to be a desktop, but has a touchscreen and a portable resolution, it is a mobile device in disguise.
+		if (!isMobileDevice && navigator.maxTouchPoints > 0 && (window.innerWidth <= 1366 || window.screen.width <= 1366)) {
+			isMobileDevice = true;
+		}
+
+        // Creates a warm, analog-style soft-clipper to absolutely prevent DAC crackling
+        function makeSafetyCurve() {
+            const curve = new Float32Array(44100);
+            for (let i = 0; i < 44100; i++) {
+                const x = (i * 2) / 44100 - 1;
+                // Gently compress loud signals, absolutely cap at -0.5dBFS (0.95)
+                curve[i] = Math.tanh(x) * 0.95; 
+            }
+            return curve;
+        }
         
         let currentTranspose = 0; 
         let currentEcho = 0.12, currentBrightness = 3, currentDistortion = 0, currentReverb = 0;
@@ -1730,13 +1753,10 @@
             if (audioCtx) { activeNodes.forEach(nodeData => nodeData.voices.forEach(({ filter }) => filter.Q.setTargetAtTime(currentResonance, audioCtx.currentTime, 0.05))); }
             updateLabel('resonance', currentResonance.toFixed(1), 'Resonance');
         });
-		document.getElementById('distortion')?.addEventListener('input', e => { 
+		document.getElementById('distortion')?.addEventListener('input', e => {
             currentDistortion = parseFloat(e.target.value); 
             if(distortionNode) {
                 distortionNode.curve = makeDistortionCurve(currentDistortion); 
-                
-                // Detect mobile and throttle oversampling to save CPU
-                const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
                 distortionNode.oversample = isMobileDevice ? (currentDistortion > 0 ? '2x' : 'none') : '4x';
             }
             updateLabel('distortion', currentDistortion, 'Distortion');
@@ -1910,25 +1930,32 @@
             if (!audioCtx) {
                 audioCtx = new AudioContext();
                 
-                // 1. UNIVERSAL FIX: Brickwall Limiter to prevent clipping on chords
+                // 1. SMART COMPRESSOR: Aggressive on mobile, gentle on desktop
                 compressor = audioCtx.createDynamicsCompressor(); 
-                compressor.threshold.value = -3.0; // Catch peaks early
-                compressor.knee.value = 0.0;       // Hard knee
-                compressor.ratio.value = 20.0;     // Brickwall ratio
+                compressor.threshold.value = isMobileDevice ? -15.0 : -6.0; // Grab transients much earlier on phones
+                compressor.knee.value = 12.0;      // Soft analog knee for natural sound
+                compressor.ratio.value = 12.0;     // Strong glue compression
                 compressor.attack.value = 0.002;   // Fast attack
-                compressor.release.value = 0.1;    // Fast recovery
+                compressor.release.value = 0.05;   // Very fast recovery
+                
+                // 2. ABSOLUTE CEILING: Analog Soft-Clipper to prevent Android DAC crackling
+                safetyClipper = audioCtx.createWaveShaper();
+                safetyClipper.curve = makeSafetyCurve();
+                safetyClipper.oversample = 'none';
                 
                 window.analyser = audioCtx.createAnalyser();
                 window.analyser.fftSize = 2048;
-                compressor.connect(window.analyser);
+                
+                // Route: Compressor -> Safety Clipper -> Analyser -> Destination
+                compressor.connect(safetyClipper);
+                safetyClipper.connect(window.analyser);
                 window.analyser.connect(audioCtx.destination);
                 
                 window.mediaStreamDest = audioCtx.createMediaStreamDestination();
-                compressor.connect(window.mediaStreamDest);
+                safetyClipper.connect(window.mediaStreamDest); // Stream the protected audio too
                 
                 drawOscilloscope();
                 
-                // Refresh imported audio routing if it was loaded before click
                 if(importedAudioEl.src) setupImportedAudioRouting();
                 
                 const bufferSize = audioCtx.sampleRate * 2; 
@@ -1939,9 +1966,6 @@
                 const volEl = document.getElementById('volume');
                 masterGain = audioCtx.createGain(); 
                 masterGain.gain.value = volEl ? parseFloat(volEl.value) : 0.6;
-                
-                // --- HARDWARE DETECTION ---
-                const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                 
                 // 2. SMART REVERB: 2.5s for Desktop luxury, 1.5s for Mobile CPU safety
                 convolver = audioCtx.createConvolver();
@@ -2206,9 +2230,10 @@
             } else {
                 gainNode.gain.setValueAtTime(0, startTime); 
                 
-                // UNIVERSAL FIX: Lower base peak from 0.12 to 0.085 to create safe headroom for dense polyphony
-                const peak = dampenHeld ? 0.03 : (0.085 * accentMult); 
-                const sustainLevel = dampenHeld ? 0.015 : Math.max(0.001, peak * currentSustain);
+                // MOBILE FIX: Drastically cut oscillator baseline volume on phones to prevent sum-clipping
+                const baseVolume = isMobileDevice ? 0.045 : 0.085;
+                const peak = dampenHeld ? 0.015 : (baseVolume * accentMult); 
+                const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * currentSustain);
                 
                 gainNode.gain.linearRampToValueAtTime(peak, startTime + currentAttack); 
                 gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + currentAttack + currentDecay);
