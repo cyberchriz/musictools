@@ -752,9 +752,7 @@
         
         let currentKeyCenter = 0, currentScale = 'all', currentLabelType = 'absolute';
 		
-		const physicallyHeldNodes = new Set();
-
-        function getExtendedStArray(stArray) {
+		function getExtendedStArray(stArray) {
             let res = [...stArray];
             if (res.length >= 3) {
                 const root = res[0]; const isMajor = res.includes(root + 4);
@@ -776,8 +774,8 @@
 
         function retriggerHeldNodes() {
             if (!audioCtx) return;
-            physicallyHeldNodes.forEach(el => {
-                const nodeData = activeNodes.get(el);
+            
+            const processNode = (nodeData) => {
                 if (!nodeData || !nodeData.originalStArray) return;
                 
                 let extendedSt = getExtendedStArray(nodeData.originalStArray);
@@ -790,7 +788,6 @@
                 const wasArp = nodeData.type === 'arp';
 
                 if (shouldBeArp && wasArp) {
-                    // Update Arp array so it picks up new notes on the fly seamlessly
                     nodeData.freqs = applyArpMode(targetFreqs); 
                     const beatDuration = 60 / currentArpBPM;
                     nodeData.stepDuration = targetFreqs.length === 3 ? 
@@ -798,7 +795,7 @@
                         (currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2));
                 } 
                 else if (!shouldBeArp && !wasArp) {
-                    // Seamless Chord <-> Chord Transitions (Spawning/Fading Extensions without restarting)
+                    // Seamless Transitions: Only spawn missing notes, gently fade out removed notes
                     let currentFreqs = nodeData.voices.map(v => v.freq);
                     let toAdd = targetFreqs.filter(f => !currentFreqs.some(cf => Math.abs(cf - f) < 0.1));
                     let toRemoveVoices = nodeData.voices.filter(v => !targetFreqs.some(tf => Math.abs(tf - v.freq) < 0.1));
@@ -815,7 +812,7 @@
                     }
                 } 
                 else {
-                    // Mode Switch: Chord <-> Arp
+                    // Force complete retrigger only when switching between Chord and Arp modes
                     if (nodeData.voices.length > 0) beginRelease(nodeData.voices, false);
                     nodeData.voices = [];
                     
@@ -831,7 +828,12 @@
                         nodeData.voices = targetFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true));
                     }
                 }
-            });
+            };
+
+            // Process all live notes (Tonnetz, Piano, and Sustained chords)
+            activeNodes.forEach(processNode);
+            sustainedVoices.forEach(processNode);
+            
             updateHighlights();
         }
 
@@ -1243,17 +1245,20 @@
             t_isDragging = false;
             triggerElementStop("mouse");
         });
-
+		
 		document.addEventListener('touchstart', e => {
             if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
                 if(e.cancelable) e.preventDefault();
             }
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let touch = e.changedTouches[i];
+                
+                // TOUCHSCREEN FIX: Register the coordinates immediately so micro-wobbles don't instantly cancel the touch
+                lastTouchMap.set(touch.identifier, {x: touch.clientX, y: touch.clientY});
+                
                 if (e.touches.length === 1 && e.target.closest('#tonnetz-wrapper') && e.target.tagName === 'svg') {
                     t_isDragging = true; t_startX = touch.clientX - t_panX; t_startY = touch.clientY - t_panY; panningPointerId = touch.identifier;
                 } else {
-                    // PERFORMANCE FIX: Use instant touch.target instead of heavy math hit-testing
                     let el = touch.target.closest('.highlightable, .manual-drum-btn, .big-tap-btn, .piano-key'); 
                     if (el) triggerElementStart(el, touch.identifier);
                 }
@@ -1439,22 +1444,25 @@
             sustainedVoices.forEach(adjustNodeData);
         }
 
-		function setupTapPad(id, onPress, onRelease) { 
-            const el = document.getElementById(id); 
-            if (!el) return; 
+		// Connect the HTML Performance Pads to the modifier engine
+        function setupTapPad(id, onPress, onRelease) {
+            const el = document.getElementById(id);
+            if (!el) return;
             el.classList.add('highlightable'); 
-            el._startAction = () => { wakeNav(); onPress(); updatePadVisuals(); retriggerHeldNodes(); }; 
-            el._stopAction = () => { onRelease(); updatePadVisuals(); retriggerHeldNodes(); }; 
+            el._startAction = () => { wakeNav(); onPress(); updatePadVisuals(); retriggerHeldNodes(); };
+            el._stopAction = () => { onRelease(); updatePadVisuals(); retriggerHeldNodes(); };
         }
 
         setupTapPad('tapSustain', () => { sustainHeld = true; }, () => { sustainHeld = false; checkSustainRelease(); });
         setupTapPad('tapDampen', () => { dampenHeld = true; applyDampening(true); }, () => { dampenHeld = false; applyDampening(false); });
         setupTapPad('tapOctDown', () => { octDownHeld = true; octMode = 'down'; }, () => { octDownHeld = false; });
         setupTapPad('tapOctUp', () => { octUpHeld = true; octMode = 'up'; }, () => { octUpHeld = false; });
+        
         setupTapPad('tap6th', () => { add6Held = true; }, () => { add6Held = false; });
         setupTapPad('tap7th', () => { add7Held = true; }, () => { add7Held = false; });
         setupTapPad('tap9th', () => { add9Held = true; }, () => { add9Held = false; });
         setupTapPad('tap13th', () => { add13Held = true; }, () => { add13Held = false; });
+        
         setupTapPad('tapArpUp', () => { arpUpHeld = true; arpMode = 'up'; }, () => { arpUpHeld = false; });
         setupTapPad('tapArpDown', () => { arpDownHeld = true; arpMode = 'down'; }, () => { arpDownHeld = false; });
         setupTapPad('tapArpUpDown', () => { arpUpDownHeld = true; arpMode = 'updown'; }, () => { arpUpDownHeld = false; });
@@ -3012,13 +3020,13 @@
             }
         }
 
-        const midiDummyElements = new Map();
+		const midiDummyElements = new Map();
         function playMidiNote(midiNote) {
             if (!midiDummyElements.has(midiNote)) {
                 const dummy = { _st: [midiNote], isMidi: true }; 
                 midiDummyElements.set(midiNote, dummy);
                 const freq = masterTune * Math.pow(2, (midiNote - 69) / 12); 
-                playFrequencies(dummy, [freq]); 
+                playFrequencies(dummy, [freq], [midiNote]); 
             }
         }
         function stopMidiNote(midiNote, forceInstant = false) {
@@ -3147,9 +3155,9 @@
             cloneLayer.appendChild(clone);
             el._highlightEl = clone;
 
-            el._startAction = () => { playFrequencies(el, stArray.map(getFreqFromSt), stArray); physicallyHeldNodes.add(el); };
-            el._stopAction = (f=false) => { stopFrequencies(el, f); physicallyHeldNodes.delete(el); };
-        }		
+            el._startAction = () => { playFrequencies(el, stArray.map(getFreqFromSt), stArray); };
+            el._stopAction = (f=false) => { stopFrequencies(el, f); };
+        }	
 
         const gridBuffer = 2; 
         const GRID_W = 1200;
