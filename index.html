@@ -2315,20 +2315,25 @@
             if(!audioCtx) return;
             const now = audioCtx.currentTime;
             
-            // PERFORMANCE FIX: Drastically cut the release tail on fast glissandos to prevent CPU audio node overlap
-            const baseRel = isFastSwipe ? Math.min(0.05, currentRelease) : currentRelease;
-            const relTime = dampenHeld ? Math.min(0.15, baseRel) : baseRel;
+            const relTime = dampenHeld ? Math.min(0.15, currentRelease) : currentRelease;
 
             voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, midiNote, isChord }) => {
                 try {
                     gainNode.gain.cancelScheduledValues(now);
-                    if (skipFade) {
-                        gainNode.gain.setValueAtTime(0.001, now);
-                        try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {}
+                    
+                    // CPU FIX: Instant kill for fast swipes to prevent buffer underruns on Android Chrome
+                    if (skipFade || isFastSwipe) {
+                        gainNode.gain.setTargetAtTime(0.001, now, 0.015); // Fast 15ms fade avoids pop
+                        setTimeout(() => { 
+                            try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {} 
+                        }, 30); 
                     } else {
+                        // Normal gentle release for deliberately played notes
                         gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now);
                         gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime);
-                        setTimeout(() => { try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {} }, (relTime * 1000) + 100); 
+                        setTimeout(() => { 
+                            try { osc1.stop(); osc2.stop(); if(subOsc) subOsc.stop(); if(noiseSrc) noiseSrc.stop(); } catch (e) {} 
+                        }, (relTime * 1000) + 100); 
                     }
                     if (midiOut && isChord) midiOut.send([0x80, midiNote, 0]);
                 } catch(e) {}
