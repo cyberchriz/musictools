@@ -45,7 +45,7 @@
         @media (orientation: landscape) {
             .drum-preset-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
             .manual-drum-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
-            .overlay.primary { top: 0; left: 0; height: auto; max-height: 100vh; width: auto; min-width: 450px; max-width: 500px; border-right: 1px solid var(--border-color); border-bottom: none; border-bottom-right-radius: 0; transform: translateX(-105%); }
+			.overlay.primary { top: 0; left: 0; height: auto; max-height: 100vh; width: clamp(320px, 90vw, 450px); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-bottom-right-radius: 12px; transform: translateX(-105%); }
             .overlay.primary .control-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .overlay.primary .pad-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, minmax(6vh, 1fr)); }
             .overlay.primary .lock-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vmin; }
@@ -53,7 +53,7 @@
         @media (orientation: portrait) {
             .drum-preset-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(4, 1fr); }
             .manual-drum-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
-            .overlay.primary { top: 0; left: 0; width: 100vw; height: auto; max-height: 55vh; border-bottom: 1px solid var(--border-color); border-right: none; transform: translateY(-105%); }
+			.overlay.primary { top: 0; left: 0; width: 100vw; height: auto; max-height: 55vh; border-bottom: 1px solid var(--border-color); border-right: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; transform: translateY(-105%); }
             .overlay.primary .control-row { grid-template-columns: repeat(4, 1fr); gap: 6px; }
             .overlay.primary .pad-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, minmax(6vh, 1fr)); }
             .overlay.primary .lock-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vmin; }
@@ -813,11 +813,25 @@
         let isInfoActive = false;
 		let isSettingsActive = true, isSynthActive = false, isPadsActive = false, isDrumsActive = false;
         
-        function updateOverlayCSSVars() {
+		function updateOverlayCSSVars() {
             const settingsEl = document.getElementById('settings-overlay');
             const sH = (isSettingsActive && settingsEl) ? settingsEl.offsetHeight : 0;
             document.documentElement.style.setProperty('--settings-height', `${sH}px`);
-            document.documentElement.style.setProperty('--synth-gap', (sH > 0 && isSynthActive) ? '10px' : '0px');
+            
+            // 1. Remove the vertical gap
+            document.documentElement.style.setProperty('--synth-gap', '0px');
+
+            // 2. Dynamically drop rounded corners and border so stacked panels look like one continuous unit
+            if (isSettingsActive && isSynthActive && settingsEl) {
+                settingsEl.style.borderBottomRightRadius = '0px';
+                settingsEl.style.borderBottomLeftRadius = '0px';
+                // Using transparent color instead of 'none' prevents 1px height jumps that would crash the ResizeObserver
+                settingsEl.style.borderBottomColor = 'transparent'; 
+            } else if (settingsEl) {
+                settingsEl.style.borderBottomRightRadius = '';
+                settingsEl.style.borderBottomLeftRadius = '';
+                settingsEl.style.borderBottomColor = '';
+            }
 
             let activeH = 0;
             document.querySelectorAll('.overlay.primary.active').forEach(el => {
