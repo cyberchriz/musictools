@@ -16,6 +16,7 @@
             --c-sus-bg: #e0f2f1; --c-sus-txt: #00796b; --c-oct-bg: #e3f2fd; --c-oct-txt: #1976d2;
             --c-add-bg: #f3e5f5; --c-add-txt: #7b1fa2; --c-arp-bg: #fff3e0; --c-arp-txt: #f57c00;
             --c-loc-bg: #eceff1; --c-loc-txt: #546e7a;
+			--settings-height: 0px; --synth-gap: 0px;
         }
 
         body.dark-theme {
@@ -72,9 +73,13 @@
         .svg-wrapper:active { cursor: grabbing; }
         svg { width: 100%; height: 100%; display: block; user-select: none; touch-action: none; }
 
-        .overlay.primary { position: absolute; background: var(--panel-bg); z-index: 20; overflow-y: auto; transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1); box-shadow: 0 0 2vw rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; padding: 15px; box-sizing: border-box; }
-        .overlay.primary.active { transform: translateX(0); }
-        @media (orientation: portrait) { .overlay.primary.active { transform: translateY(0); } }
+		.overlay.primary { position: absolute; background: var(--panel-bg); z-index: 20; overflow-y: auto; transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.4s ease, top 0.3s cubic-bezier(0.1, 0.8, 0.3, 1); box-shadow: 0 0 2vw rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; padding: 15px; box-sizing: border-box; }
+        .overlay.primary.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
+        @media (orientation: portrait) { .overlay.primary.active { transform: translateY(0); opacity: 1; } }
+
+        /* Dynamic Vertical Stacking for Settings & Synth */
+        #settings-overlay { top: 0; }
+        #synth-overlay { top: calc(var(--settings-height, 0px) + var(--synth-gap, 0px)); }
 
 		#looper-overlay {
             position: absolute; background: var(--panel-bg); z-index: 25; 
@@ -262,17 +267,17 @@
     <div id="chord-display" class="piano-active"></div>
     <div id="toast-container">Message</div>
 
-    <div class="canvas-controls" id="canvas-controls">
+	<div class="canvas-controls" id="canvas-controls">
         <div class="nav-grid">
             <button id="btnZoomIn" class="nav-btn" title="Zoom In">+</button>
             <button id="btnPanUp" class="nav-btn" title="Pan Up">▲</button>
             <button id="btnZoomOut" class="nav-btn" title="Zoom Out">−</button>
-            <button id="btnToggleSettings" class="nav-btn toggled" title="Settings (F2)">⚙️</button>
+            <button id="btnToggleSettings" class="nav-btn toggled" title="General Settings (F2)">⚙️</button>
             <button id="btnPanLeft" class="nav-btn" title="Pan Left">◀</button>
             <button id="btnHome" class="nav-btn" title="Center on Root">◎</button>
             <button id="btnPanRight" class="nav-btn" title="Pan Right">▶</button>
             <button id="btnTogglePads" class="nav-btn" title="Performance Pads (F3)">🎛️</button>
-            <button id="btnToggleEnv" class="nav-btn" title="ADSR Envelope">📈</button>
+            <button id="btnToggleSynth" class="nav-btn" title="Synth Engine">🎚️</button>
             <button id="btnPanDown" class="nav-btn" title="Pan Down">▼</button>
             <button id="btnToggleLooper" class="nav-btn" title="Live Looper">🔁</button>
             <button id="btnToggleDrums" class="nav-btn" title="Drum Machine">🥁</button>
@@ -281,19 +286,9 @@
             <button id="btnTogglePiano" class="nav-btn toggled" title="Piano Keyboard">🎹</button>
             <button id="btnInfo" class="nav-btn" title="Info & Theory (F1)">ℹ️</button>
         </div>
-        
-        <div id="env-widget" class="env-widget">
-            <canvas id="envCanvas"></canvas>
-            <div class="env-sliders">
-                <input type="range" id="envA" min="0.01" max="2" step="0.01" value="0.03" title="Attack">
-                <input type="range" id="envD" min="0.01" max="2" step="0.01" value="0.2" title="Decay">
-                <input type="range" id="envS" min="0" max="1" step="0.01" value="0.8" title="Sustain">
-                <input type="range" id="envR" min="0.05" max="3" step="0.05" value="0.4" title="Release">
-            </div>
-        </div>
     </div>
 
-    <!-- OVERLAY 1: Unified Settings & Synth Engine -->
+    <!-- OVERLAY 1.1: General Settings -->
     <div id="settings-overlay" class="overlay primary active">
         <div class="controls-section">
             <div class="section-title">
@@ -363,64 +358,68 @@
                 <div class="control-group"><label>&nbsp;</label><button id="btnMidiOutput">MIDI OUT: MIDI + BROWSER</button></div>
             </div>
         </div>
-
-        <div class="controls-section">
-            <div class="section-title">Synthesizer Engine</div>
-            <div class="control-row">
-			<div class="control-group"><label>Instrument</label>
-				<select id="instrumentPreset">
-	                <option value="piano">Acoustic Piano</option>
-					<option value="epiano">Electric Piano</option>
-	                <option value="lofi_keys">Lo-Fi Keys</option>
-					<option value="organ">Hammond Organ</option>
-	                <option value="pad">Synth Pad</option>
-					<option value="pluck">Plucked Harp</option>
-	                <option value="guitar">Acoustic Guitar</option>
-					<option value="bass">Synth Bass</option>
-	                <option value="synthlead">Synth Lead</option>
-					<option value="synthbrass">80s Synth Brass</option>
-	                <option value="sax">Saxophone</option>
-					<option value="trumpet">Trumpet / Brass</option>
-	                <option value="violin">Violin / Strings</option>
-					<option value="cello">Solo Cello</option>
-	                <option value="choir">Choir / Voices</option>
-					<option value="marimba">Marimba</option>
-	                <option value="vibraphone">Vibraphone</option>
-					<option value="flute">Flute</option>
-	                <option value="theremin">Theremin</option>
-            	</select>
-			</div>
-                <div class="control-group"><label id="lblVolume">Master Vol: 0.60</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.6"></div>
-                <div class="control-group"><label id="lblAttack">Attack: 0.03s</label><input type="range" id="attack" min="0.01" max="1" step="0.01" value="0.03"></div>
-                <div class="control-group"><label id="lblDecay">Decay: 0.20s</label><input type="range" id="decay" min="0.01" max="2" step="0.01" value="0.2"></div>
-            </div>
-            <div class="control-row">
-                <div class="control-group"><label id="lblSustain">Sustain: 0.80</label><input type="range" id="sustain" min="0" max="1" step="0.01" value="0.8"></div>
-                <div class="control-group"><label id="lblRelease">Release: 0.40s</label><input type="range" id="release" min="0.05" max="3" step="0.05" value="0.4"></div>
-                <div class="control-group"><label id="lblBrightness">Brightness: 3.0</label><input type="range" id="brightness" min="1" max="8" step="0.1" value="3"></div>
-                <div class="control-group"><label id="lblResonance">Resonance: 1.0</label><input type="range" id="resonance" min="0" max="20" step="0.1" value="1"></div>
-            </div>
-            <div class="control-row">
-                <div class="control-group"><label id="lblChorus">Chorus: 7</label><input type="range" id="chorus" min="0" max="30" step="1" value="7"></div>
-                <div class="control-group"><label id="lblDistortion">Distortion: 0</label><input type="range" id="distortion" min="0" max="100" step="1" value="0"></div>
-                <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
-                <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
-            </div>
-            <div class="control-row">
-                <div class="control-group"><label id="lblLfoSpeed">LFO Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
-                <div class="control-group"><label id="lblVibrato">Vibrato: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
-                <div class="control-group"><label id="lblTremolo">Tremolo: 0.00</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
-                <div class="control-group"><label id="lblSweep">Sweep: 0</label><input type="range" id="sweep" min="0" max="2400" step="10" value="0"></div>
-            </div>
-            <div class="control-row">
-                <div class="control-group"><label id="lblDetune">Detune: 2</label><input type="range" id="detune" min="0" max="30" step="1" value="2"></div>
-                <div class="control-group"><label id="lblSubOsc">Sub Osc: 0.00</label><input type="range" id="subOsc" min="0" max="1" step="0.01" value="0"></div>
-                <div class="control-group"><label id="lblNoise">Noise: 0.00</label><input type="range" id="noise" min="0" max="0.5" step="0.01" value="0"></div>
-                <div class="control-group"><label id="lblFilterEnv">Filter Env: 3.0</label><input type="range" id="filterEnv" min="0" max="10" step="0.1" value="3"></div>
-            </div>
-        </div>
     </div>
 
+	<!-- OVERLAY 1.2: Synthesizer Engine (Stackable) -->
+	<div id="synth-overlay" class="overlay primary">
+	    <div class="controls-section">
+	        <div class="section-title">Synthesizer Engine <button id="btnCloseSynth" class="close-btn-sm" title="Close">✕</button></div>
+	        <div class="control-row">
+	            <div class="control-group"><label>Instrument</label>
+	                <select id="instrumentPreset">
+	                    <option value="piano">Acoustic Piano</option>
+						<option value="epiano">Electric Piano</option>
+	                    <option value="lofi_keys">Lo-Fi Keys</option>
+						<option value="organ">Hammond Organ</option>
+	                    <option value="pad">Synth Pad</option>
+						<option value="pluck">Plucked Harp</option>
+	                    <option value="guitar">Acoustic Guitar</option>
+						<option value="bass">Synth Bass</option>
+	                    <option value="synthlead">Synth Lead</option>
+						<option value="synthbrass">80s Synth Brass</option>
+	                    <option value="sax">Saxophone</option>
+						<option value="trumpet">Trumpet / Brass</option>
+	                    <option value="violin">Violin / Strings</option>
+						<option value="cello">Solo Cello</option>
+	                    <option value="choir">Choir / Voices</option>
+						<option value="marimba">Marimba</option>
+	                    <option value="vibraphone">Vibraphone</option>
+						<option value="flute">Flute</option>
+	                    <option value="theremin">Theremin</option>
+	                </select>
+	            </div>
+	            <div class="control-group"><label id="lblVolume">Master Vol: 0.60</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.6"></div>
+	            <div class="control-group"><label id="lblAttack">Attack: 0.03s</label><input type="range" id="attack" min="0.01" max="1" step="0.01" value="0.03"></div>
+	            <div class="control-group"><label id="lblDecay">Decay: 0.20s</label><input type="range" id="decay" min="0.01" max="2" step="0.01" value="0.2"></div>
+	        </div>
+	        <div class="control-row">
+	            <div class="control-group"><label id="lblSustain">Sustain: 0.80</label><input type="range" id="sustain" min="0" max="1" step="0.01" value="0.8"></div>
+	            <div class="control-group"><label id="lblRelease">Release: 0.40s</label><input type="range" id="release" min="0.05" max="3" step="0.05" value="0.4"></div>
+	            <div class="control-group"><label id="lblBrightness">Brightness: 3.0</label><input type="range" id="brightness" min="1" max="8" step="0.1" value="3"></div>
+	            <div class="control-group"><label id="lblResonance">Resonance: 1.0</label><input type="range" id="resonance" min="0" max="20" step="0.1" value="1"></div>
+	        </div>
+	        <div class="control-row">
+	            <div class="control-group"><label id="lblChorus">Chorus: 7</label><input type="range" id="chorus" min="0" max="30" step="1" value="7"></div>
+	            <div class="control-group"><label id="lblDistortion">Distortion: 0</label><input type="range" id="distortion" min="0" max="100" step="1" value="0"></div>
+	            <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
+	            <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
+	        </div>
+	        <div class="control-row">
+	            <div class="control-group"><label id="lblLfoSpeed">LFO Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
+	            <div class="control-group"><label id="lblVibrato">Vibrato: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
+	            <div class="control-group"><label id="lblTremolo">Tremolo: 0.00</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
+	            <div class="control-group"><label id="lblSweep">Sweep: 0</label><input type="range" id="sweep" min="0" max="2400" step="10" value="0"></div>
+	        </div>
+	        <div class="control-row">
+	            <div class="control-group"><label id="lblDetune">Detune: 2</label><input type="range" id="detune" min="0" max="30" step="1" value="2"></div>
+	            <div class="control-group"><label id="lblSubOsc">Sub Osc: 0.00</label><input type="range" id="subOsc" min="0" max="1" step="0.01" value="0"></div>
+	            <div class="control-group"><label id="lblNoise">Noise: 0.00</label><input type="range" id="noise" min="0" max="0.5" step="0.01" value="0"></div>
+	            <div class="control-group"><label id="lblFilterEnv">Filter Env: 3.0</label><input type="range" id="filterEnv" min="0" max="10" step="0.1" value="3"></div>
+	        </div>
+	        <canvas id="envCanvas" style="width: 100%; height: 60px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 8px;"></canvas>
+	    </div>
+	</div>
+	
     <!-- OVERLAY 2: Performance Pads -->
     <div id="pads-overlay" class="overlay primary">
         <div class="pads-content-wrapper">
@@ -812,16 +811,20 @@
 
         let activeOverlay = 'settings';
         let isInfoActive = false;
+		let isSettingsActive = true, isSynthActive = false, isPadsActive = false, isDrumsActive = false;
         
         function updateOverlayCSSVars() {
-            const activeEl = activeOverlay ? document.getElementById(activeOverlay + '-overlay') : null;
-            let activeW = 0, activeH = 0;
-            if (activeEl) {
-                if (window.innerWidth > window.innerHeight) { activeW = activeEl.offsetWidth; } 
-                else { activeH = activeEl.offsetHeight; }
-            }
+            const settingsEl = document.getElementById('settings-overlay');
+            const sH = (isSettingsActive && settingsEl) ? settingsEl.offsetHeight : 0;
+            document.documentElement.style.setProperty('--settings-height', `${sH}px`);
+            document.documentElement.style.setProperty('--synth-gap', (sH > 0 && isSynthActive) ? '10px' : '0px');
+
+            let activeH = 0;
+            document.querySelectorAll('.overlay.primary.active').forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (window.innerHeight > window.innerWidth) { if (rect.bottom > activeH) activeH = rect.bottom; }
+            });
             document.documentElement.style.setProperty('--active-overlay-height', `${activeH}px`);
-            document.documentElement.style.setProperty('--active-overlay-width', `${activeW}px`);
 
             const looperEl = document.getElementById('looper-overlay');
             let looperH = 0;
@@ -897,39 +900,37 @@
         }
 
         const overlayObserver = new ResizeObserver(() => updateOverlayCSSVars());
-        ['settings-overlay', 'pads-overlay', 'drums-overlay', 'looper-overlay'].forEach(id => { const el = document.getElementById(id); if (el) overlayObserver.observe(el); });
+        ['settings-overlay', 'synth-overlay', 'pads-overlay', 'drums-overlay', 'looper-overlay'].forEach(id => { const el = document.getElementById(id); if (el) overlayObserver.observe(el); });
 
         let activeUserNotes = 0, navFadeTimeout = null, uiHideDelay = 1000;
         const navEl = document.getElementById('canvas-controls');
 	
 
-        function toggleOverlay(type) {
+		function toggleOverlay(type) {
             wakeNav();
-            if (type === 'info') {
-                isInfoActive = !isInfoActive; document.getElementById('info-overlay')?.classList.toggle('active', isInfoActive); document.getElementById('btnInfo')?.classList.toggle('toggled', isInfoActive); return; 
-            }
-            if (type === 'env') {
-                isEnvActive = !isEnvActive; document.getElementById('env-widget')?.classList.toggle('active', isEnvActive);
-		document.getElementById('btnToggleEnv')?.classList.toggle('toggled', isEnvActive); if (isEnvActive) drawEnvelope(); return;
-            }
-            if (type === 'piano') {
-                isPianoActive = !isPianoActive; document.getElementById('piano-overlay')?.classList.toggle('active', isPianoActive);
-		document.getElementById('btnTogglePiano')?.classList.toggle('toggled', isPianoActive); document.getElementById('chord-display')?.classList.toggle('piano-active', isPianoActive); return;
-            }
-            if (type === 'looper') {
-                isLooperActive = !isLooperActive; document.getElementById('looper-overlay')?.classList.toggle('active', isLooperActive);
-		document.getElementById('btnToggleLooper')?.classList.toggle('toggled', isLooperActive); updateOverlayCSSVars(); return;
-            }
+            if (type === 'info') { isInfoActive = !isInfoActive; document.getElementById('info-overlay')?.classList.toggle('active', isInfoActive); document.getElementById('btnInfo')?.classList.toggle('toggled', isInfoActive); return; }
+            if (type === 'piano') { isPianoActive = !isPianoActive; document.getElementById('piano-overlay')?.classList.toggle('active', isPianoActive); document.getElementById('btnTogglePiano')?.classList.toggle('toggled', isPianoActive); document.getElementById('chord-display')?.classList.toggle('piano-active', isPianoActive); return; }
+            if (type === 'looper') { isLooperActive = !isLooperActive; document.getElementById('looper-overlay')?.classList.toggle('active', isLooperActive); document.getElementById('btnToggleLooper')?.classList.toggle('toggled', isLooperActive); updateOverlayCSSVars(); return; }
 
-            ['settings', 'pads', 'drums'].forEach(id => {
-                document.getElementById(`${id}-overlay`)?.classList.remove('active'); document.getElementById(`btnToggle${id.charAt(0).toUpperCase() + id.slice(1)}`)?.classList.remove('toggled');
-            });
-
-            if (activeOverlay === type) { activeOverlay = null; } 
-            else {
-                activeOverlay = type;
-                document.getElementById(`${type}-overlay`)?.classList.add('active');
-                document.getElementById(`btnToggle${type.charAt(0).toUpperCase() + type.slice(1)}`)?.classList.add('toggled');
+            if (type === 'settings') {
+                isSettingsActive = !isSettingsActive;
+                document.getElementById('settings-overlay')?.classList.toggle('active', isSettingsActive);
+                document.getElementById('btnToggleSettings')?.classList.toggle('toggled', isSettingsActive);
+            } else if (type === 'synth') {
+                isSynthActive = !isSynthActive;
+                document.getElementById('synth-overlay')?.classList.toggle('active', isSynthActive);
+                document.getElementById('btnToggleSynth')?.classList.toggle('toggled', isSynthActive);
+                if (isSynthActive) drawEnvelope();
+            } else if (type === 'pads') {
+                isPadsActive = !isPadsActive; isDrumsActive = false;
+                document.getElementById('pads-overlay')?.classList.toggle('active', isPadsActive);
+                document.getElementById('btnTogglePads')?.classList.toggle('toggled', isPadsActive);
+                document.getElementById('drums-overlay')?.classList.remove('active'); document.getElementById('btnToggleDrums')?.classList.remove('toggled');
+            } else if (type === 'drums') {
+                isDrumsActive = !isDrumsActive; isPadsActive = false;
+                document.getElementById('drums-overlay')?.classList.toggle('active', isDrumsActive);
+                document.getElementById('btnToggleDrums')?.classList.toggle('toggled', isDrumsActive);
+                document.getElementById('pads-overlay')?.classList.remove('active'); document.getElementById('btnTogglePads')?.classList.remove('toggled');
             }
             updateOverlayCSSVars();
         }
@@ -942,29 +943,34 @@
         }
 		
 		function wakeNav() { 
-		    if (activeUserNotes > 0 && !t_isDragging) return; // PERFORMANCE FIX: Prevent UI from randomly waking up due to micro-finger-movements during play
-		    clearTimeout(navFadeTimeout); 
-		    if(navEl) { navEl.style.opacity = '1'; navEl.style.pointerEvents = 'auto'; } 
-		    const settingsOverlay = document.getElementById('settings-overlay'); 
-		    if (settingsOverlay && activeOverlay === 'settings') { settingsOverlay.style.opacity = '1'; settingsOverlay.style.pointerEvents = 'auto'; }
-		}
-		
-		function hideNav() { 
-		    if (uiHideDelay === 0 || !navEl) return; 
-		    navEl.style.opacity = '0'; navEl.style.pointerEvents = 'none'; 
-		    const settingsOverlay = document.getElementById('settings-overlay');
-		    if (settingsOverlay && activeOverlay === 'settings') { settingsOverlay.style.opacity = '0'; settingsOverlay.style.pointerEvents = 'none'; }
-		}
+            if (activeUserNotes > 0 && !t_isDragging) return; 
+            clearTimeout(navFadeTimeout); 
+            if(navEl) { navEl.style.opacity = '1'; navEl.style.pointerEvents = 'auto'; } 
+            ['settings-overlay', 'synth-overlay'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && (id === 'settings-overlay' ? isSettingsActive : isSynthActive)) { el.style.opacity = '1'; el.style.pointerEvents = 'auto'; }
+            });
+        }
+        
+        function hideNav() { 
+            if (uiHideDelay === 0 || !navEl) return; 
+            navEl.style.opacity = '0'; navEl.style.pointerEvents = 'none'; 
+            ['settings-overlay', 'synth-overlay'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && (id === 'settings-overlay' ? isSettingsActive : isSynthActive)) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; }
+            });
+        }
 
-        document.getElementById('btnToggleSettings')?.addEventListener('click', () => toggleOverlay('settings'));
+		document.getElementById('btnToggleSettings')?.addEventListener('click', () => toggleOverlay('settings'));
+        document.getElementById('btnToggleSynth')?.addEventListener('click', () => toggleOverlay('synth'));
         document.getElementById('btnTogglePads')?.addEventListener('click', () => toggleOverlay('pads'));
         document.getElementById('btnToggleDrums')?.addEventListener('click', () => toggleOverlay('drums'));
         document.getElementById('btnToggleLooper')?.addEventListener('click', () => toggleOverlay('looper'));
-        document.getElementById('btnToggleEnv')?.addEventListener('click', () => toggleOverlay('env'));
         document.getElementById('btnTogglePiano')?.addEventListener('click', () => toggleOverlay('piano'));
         document.getElementById('btnToggleCOF')?.addEventListener('click', toggleCof);
         
         document.getElementById('btnCloseSettings')?.addEventListener('click', () => toggleOverlay('settings'));
+        document.getElementById('btnCloseSynth')?.addEventListener('click', () => toggleOverlay('synth'));
         document.getElementById('btnClosePads')?.addEventListener('click', () => toggleOverlay('pads'));
         document.getElementById('btnCloseDrums')?.addEventListener('click', () => toggleOverlay('drums'));
         document.getElementById('btnCloseLooper')?.addEventListener('click', () => toggleOverlay('looper'));
@@ -1522,15 +1528,12 @@
             drawEnvelope();
         });
 
-        const syncADSR = (id, val) => {
+		const syncADSR = (id, val) => {
             if (id === 'attack') { currentAttack = val; updateLabel(id, val.toFixed(2), 'Attack', 's'); }
             if (id === 'decay') { currentDecay = val; updateLabel(id, val.toFixed(2), 'Decay', 's'); }
             if (id === 'sustain') { currentSustain = val; updateLabel(id, val.toFixed(2), 'Sustain', ''); }
             if (id === 'release') { currentRelease = val; updateLabel(id, val.toFixed(2), 'Release', 's'); }
             
-            const twinId = id.charAt(0).toUpperCase() + id.slice(1);
-            const envEl = document.getElementById(`env${twinId.charAt(0)}`);
-            if(envEl) envEl.value = val;
             const mainEl = document.getElementById(id);
             if(mainEl) mainEl.value = val;
             drawEnvelope();
@@ -1539,9 +1542,6 @@
         ['attack', 'decay', 'sustain', 'release'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.addEventListener('input', e => syncADSR(id, parseFloat(e.target.value)));
-            const envId = `env${id.charAt(0).toUpperCase()}`;
-            const envEl = document.getElementById(envId);
-            if(envEl) envEl.addEventListener('input', e => syncADSR(id, parseFloat(e.target.value)));
         });
 
         function drawEnvelope() {
