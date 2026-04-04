@@ -640,14 +640,14 @@
                 <h2 style="margin:0; border:none; padding:0;">Tonnetz Pro: Manual</h2>
                 <button id="btnCloseInfo" class="close-btn-sm" title="Close">✕</button>
             </div>
-            <p>Welcome to Tonnetz Pro. This workstation uses Euler's Tonnetz (tone network), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
+            <p>Welcome to Tonnetz Pro. This workstation uses Euler's Tonnetz (German for "tone network"), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
             
             <h3>🔺 1. Geometric Navigation & Chords</h3>
             <ul>
                 <li><strong>Horizontal Axis:</strong> Moving left to right moves in perfect fifths (C -> G -> D).</li>
                 <li><strong>Diagonal Axes:</strong> Moving along diagonals steps in major and minor thirds.</li>
-                <li><strong>Triangles = Triads:</strong> Click any upward-facing triangle to play a Major chord. Click any downward-facing triangle to play a Minor chord. Hovering highlights the exact keys being triggered on the Piano roll.</li>
-                <li>Move the camera by clicking and dragging on empty space, or use the on-screen <strong>D-Pad</strong>. Zoom with your scroll wheel or pinch gestures.</li>
+                <li><strong>Triangles = Triads:</strong> Click any upward-facing triangle to play a Major chord. Click any downward-facing triangle to play a Minor chord.</li>
+                <li>Move (=pan) the Tonnetz grid by clicking and dragging on empty space (desktop), or use the on-screen <strong>D-Pad</strong> buttons. Zoom with your scroll wheel (desktop) or the <strong>+</strong> / <strong>-</strong> buttons.</li>
             </ul>
             
             <h3>🎛️ 2. Performance Pads & Arpeggiator</h3>
@@ -1439,6 +1439,27 @@
             sustainedVoices.forEach(adjustNodeData);
         }
 
+		function setupTapPad(id, onPress, onRelease) { 
+            const el = document.getElementById(id); 
+            if (!el) return; 
+            el.classList.add('highlightable'); 
+            el._startAction = () => { wakeNav(); onPress(); updatePadVisuals(); retriggerHeldNodes(); }; 
+            el._stopAction = () => { onRelease(); updatePadVisuals(); retriggerHeldNodes(); }; 
+        }
+
+        setupTapPad('tapSustain', () => { sustainHeld = true; }, () => { sustainHeld = false; checkSustainRelease(); });
+        setupTapPad('tapDampen', () => { dampenHeld = true; applyDampening(true); }, () => { dampenHeld = false; applyDampening(false); });
+        setupTapPad('tapOctDown', () => { octDownHeld = true; octMode = 'down'; }, () => { octDownHeld = false; });
+        setupTapPad('tapOctUp', () => { octUpHeld = true; octMode = 'up'; }, () => { octUpHeld = false; });
+        setupTapPad('tap6th', () => { add6Held = true; }, () => { add6Held = false; });
+        setupTapPad('tap7th', () => { add7Held = true; }, () => { add7Held = false; });
+        setupTapPad('tap9th', () => { add9Held = true; }, () => { add9Held = false; });
+        setupTapPad('tap13th', () => { add13Held = true; }, () => { add13Held = false; });
+        setupTapPad('tapArpUp', () => { arpUpHeld = true; arpMode = 'up'; }, () => { arpUpHeld = false; });
+        setupTapPad('tapArpDown', () => { arpDownHeld = true; arpMode = 'down'; }, () => { arpDownHeld = false; });
+        setupTapPad('tapArpUpDown', () => { arpUpDownHeld = true; arpMode = 'updown'; }, () => { arpUpDownHeld = false; });
+        setupTapPad('tapArpRandom', () => { arpRandomHeld = true; arpMode = 'random'; }, () => { arpRandomHeld = false; });
+		
         document.getElementById('lockSustain')?.addEventListener('click', function() { sustainLocked = !sustainLocked; this.classList.toggle('active-btn', sustainLocked); checkSustainRelease(); updatePadVisuals(); });
         document.getElementById('lock7th')?.addEventListener('click', function() { add7Locked = !add7Locked; this.classList.toggle('active-btn', add7Locked); updatePadVisuals(); retriggerHeldNodes(); });
         document.getElementById('lockOct')?.addEventListener('click', function() { octLocked = !octLocked; this.classList.toggle('active-btn', octLocked); if(octLocked && !octUpHeld && !octDownHeld) octMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
