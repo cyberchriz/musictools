@@ -634,57 +634,72 @@
     <div id="piano-overlay" class="piano-overlay active"></div>
 
     <!-- Info Overlay -->
-    <div id="info-overlay">
+	<div id="info-overlay">
         <div class="info-content">
             <div class="section-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
                 <h2 style="margin:0; border:none; padding:0;">Tonnetz Pro: Manual</h2>
                 <button id="btnCloseInfo" class="close-btn-sm" title="Close">✕</button>
             </div>
-            <p>Welcome to the Tonnetz Pro. This workstation uses Euler's Tonnetz (tone network), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
+            <p>Welcome to Tonnetz Pro. This workstation uses Euler's Tonnetz (tone network), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
             
             <h3>🔺 1. Geometric Navigation & Chords</h3>
             <ul>
                 <li><strong>Horizontal Axis:</strong> Moving left to right moves in perfect fifths (C -> G -> D).</li>
                 <li><strong>Diagonal Axes:</strong> Moving along diagonals steps in major and minor thirds.</li>
                 <li><strong>Triangles = Triads:</strong> Click any upward-facing triangle to play a Major chord. Click any downward-facing triangle to play a Minor chord. Hovering highlights the exact keys being triggered on the Piano roll.</li>
-                <li>Move the camera by clicking and dragging on empty space, or use the on-screen <strong>D-Pad</strong>. Zoom with your scroll wheel.</li>
+                <li>Move the camera by clicking and dragging on empty space, or use the on-screen <strong>D-Pad</strong>. Zoom with your scroll wheel or pinch gestures.</li>
             </ul>
             
             <h3>🎛️ 2. Performance Pads & Arpeggiator</h3>
             <p>You don't need to stretch your mouse across the grid to play complex jazz chords. Use the Performance Pads (or keyboard shortcuts) to instantly modify any note or triad you click:</p>
             <ul>
-                <li><strong>Extensions:</strong> Hold <code>A</code>, <code>S</code>, <code>D</code>, or <code>F</code> to instantly add a 6th, 7th, 9th, or 13th to your chord. When <i>Show Ext. Highlights</i> is ON, extended notes light up with a green border on the grid and piano.</li>
+                <li><strong>Extensions:</strong> Hold <code>A</code>, <code>S</code>, <code>D</code>, or <code>F</code> to instantly add a 6th, 7th, 9th, or 13th to your chord. When <i>Show Ext. Highlights</i> is ON, extended notes light up with a green border on the grid and piano. Use the 'Lock' buttons to keep extensions permanently active.</li>
                 <li><strong>Octave Jumps:</strong> Hold <code>Q</code> or <code>W</code> to drop or raise your playing by a full octave instantly.</li>
-                <li><strong>Arpeggiator:</strong> Hold <code>Shift</code> (Up), <code>Ctrl</code> (Down), or lock the Arp via the menu to automatically step through the notes of the shapes you press. The speed syncs to the global BPM setting.</li>
+                <li><strong>Arpeggiator:</strong> Hold <code>Shift</code> (Up), <code>Ctrl</code> (Down), or lock the Arp via the menu to automatically step through the notes of the shapes you press. Control the speed and rhythm via the <strong>Arp/Metron BPM</strong> slider. You can also apply a <strong>Swing Effect</strong> or toggle continuous looping.</li>
                 <li><strong>Dampen:</strong> Hold the <code>Left Alt</code> key or press the Dampen pad to smoothly muffle and quiet actively sustaining voices (simulating an 'una corda' pedal).</li>
             </ul>
 
-            <h3>🔁 3. Live 8-Track Looper & Sequencer</h3>
+            <h3>🔁 3. Live 8-Track Looper & Audio Processing</h3>
             <p>The built-in looper separates your recordings into 4 Voice tracks (Synth/Piano) and 4 Drum tracks:</p>
             <ul>
-                <li>Select a Voice track (V1-V4) AND a Drum track (D1-D4). They are handled independently.</li>
-                <li>Press <strong>⏺ Record</strong>. The looper enters an "Armed" state (flashing orange).</li>
-                <li><strong>Manual Play:</strong> The moment you play a note on the Tonnetz, or finger-drum a hit on the Drum Machine, the loop clock starts and records exactly to the respective active track.</li>
-                <li><strong>Preset Recording:</strong> If a Drum Machine preset (like 'House') is playing, hitting Record will instantly sync to the next downbeat and perfectly record the preset's sequence into your active Drum track!</li>
+                <li>Select a Voice track (V1-V4) AND a Drum track (D1-D4). They are handled independently and can be muted at any time.</li>
+                <li>Press <strong>⏺ Record</strong>. The looper enters an "Armed" state (flashing orange). The moment you play a note on the Tonnetz or trigger a drum, the loop clock starts and records exactly to the respective active track.</li>
+                <li><strong>Preset Sync:</strong> If a Drum Machine preset is playing, hitting Record instantly syncs to the next downbeat and perfectly records the preset's sequence into your active Drum track.</li>
+                <li><strong>Master Recording:</strong> Use the "Master Output Recording" section to bounce your entire jam session (synths, loops, and drums) to a downloadable WebM, MP4, MP3, or uncompressed WAV file.</li>
+                <li><strong>Audio Import:</strong> Import any backing track or audio sample via the file picker, adjust its volume, route it to the master mix, and play along with it.</li>
             </ul>
 
             <h3>🥁 4. Drum Machine & Metronome</h3>
-            <p>Select from 16 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova. These play automatically and sync perfectly with the Looper. To build up custom drum patterns, use the <strong>Manual Triggers</strong> grid to finger-drum your own beats.</p>
-
-            <h3>📈 5. Synthesizer Engine & LFOs</h3>
-            <p>Shape your sound deeply using the dual-oscillator synth engine. Use the <strong>ADSR Envelope</strong> widget to visually sculpt your Attack, Decay, Sustain, and Release times.</p>
             <ul>
-                <li><strong>Brightness & Resonance:</strong> Controls the built-in low-pass filter to make sounds darker or sharper. Add <strong>Filter Env</strong> to let the ADSR envelope sweep the filter cutoff.</li>
-                <li><strong>Chorus & Detune:</strong> Thickens the sound by detuning the secondary oscillator against the primary one.</li>
-                <li><strong>Sub Osc & Noise:</strong> Blend in a deep sub-bass octave, or add white noise for authentic acoustic emulation.</li>
-                <li><strong>Multi-LFO System:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch wobble), <strong>Tremolo</strong> (Volume pulsing), and <strong>Sweep</strong> (Auto-Wah filter movement).</li>
+                <li>Select from 16 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova.</li>
+                <li><strong>Auto-Embellish:</strong> When enabled, the drum machine intelligently adds humanized ghost notes, varying hi-hat velocities, and occasional fills to keep static presets sounding alive and organic.</li>
+                <li><strong>Manual Triggers:</strong> Use the on-screen drum pads to finger-drum custom beats into the looper. You can adjust the vertical height of these buttons to fit your screen perfectly.</li>
             </ul>
 
-            <h3>⚙️ 6. Advanced Music Theory</h3>
+            <h3>📈 5. Synthesizer Engine & Modulations</h3>
+            <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from 19 perfectly calibrated acoustic and retro analog presets (Piano, Lo-Fi Keys, 80s Brass, Theremin, Solo Cello, etc.).</p>
             <ul>
-                <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive Circle of Fifths minimap to guide your harmonic progressions.</li>
-                <li><strong>Tuning Systems:</strong> By default, the synth uses Equal Temperament. Switch to <strong>Just Intonation</strong> or <strong>Pythagorean Tuning</strong> to hear chords with mathematically perfect, beatless tuning ratios. You can also adjust the Master Tune frequency up or down from standard 440 Hz.</li>
-                <li><strong>Snap to Scale:</strong> Locks the entire grid so that any note you press is forcefully snapped to the nearest note in your chosen Key and Mode.</li>
+                <li><strong>ADSR Envelope:</strong> Visually sculpt your Attack, Decay, Sustain, and Release times to create anything from sharp rhythmic plucks to slowly swelling cinematic pads.</li>
+                <li><strong>Brightness & Resonance:</strong> Controls the built-in low-pass filter to make sounds darker or sharper. Add <strong>Filter Env</strong> to let the ADSR envelope sweep the filter cutoff automatically.</li>
+                <li><strong>Sub Osc & Noise:</strong> Blend in a deep sub-bass octave to thicken the low-end, or add white noise to emulate authentic acoustic breath or bow-scrape elements.</li>
+                <li><strong>Multi-LFO System:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch wobble), <strong>Tremolo</strong> (Volume pulsing), and <strong>Sweep</strong> (Auto-Wah filter movement).</li>
+                <li><strong>Effects:</strong> Add analog warmth with Distortion (which dynamically optimizes oversampling on mobile), width with Chorus, or vast spaces with Echo and Reverb.</li>
+            </ul>
+
+            <h3>⚙️ 6. Advanced Music Theory & Setup</h3>
+            <ul>
+                <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive minimap of the Circle of Fifths to guide your harmonic progressions. It actively highlights your current chord structures in an octave-immune format.</li>
+                <li><strong>Snap to Scale:</strong> Locks the entire grid so that any note you press is forcefully snapped to the nearest valid note in your chosen Key and Scale/Mode (e.g., Dorian, Lydian Dominant, Hungarian Minor).</li>
+                <li><strong>Node Labels:</strong> Switch between Absolute notes (C, D, E), Scale Degrees (1, 2, 3), Roman Numerals (I, II, III), or Solfege (Do, Re, Mi).</li>
+                <li><strong>Transposition:</strong> Easily transpose the grid to accommodate transposing physical instruments (Bb Tenor Sax, Eb Alto Sax, F Horn) if you are using Tonnetz Pro as an accompaniment tool.</li>
+                <li><strong>Tuning Systems:</strong> Switch from standard Equal Temperament to <strong>Just Intonation</strong> or <strong>Pythagorean Tuning</strong> to hear chords with mathematically perfect, beatless tuning ratios.</li>
+                <li><strong>Settings Presets:</strong> Found the perfect synth tone, scale, and layout? Use the Save/Load Preset buttons in the General Settings to export your entire app state to a JSON file.</li>
+            </ul>
+
+            <h3>🔌 7. MIDI Connectivity</h3>
+            <ul>
+                <li><strong>MIDI IN:</strong> Connect any USB MIDI keyboard to play the Tonnetz Pro synthesizer using physical keys. The app responds dynamically to pitch, velocity, and sustain pedal events.</li>
+                <li><strong>MIDI OUT:</strong> Use Tonnetz Pro as an interactive geometric MIDI controller! The chords, arpeggios, and complex extensions you click on the Tonnetz will be sent out to your external hardware synthesizers or your favorite DAW. Toggle between "Browser + MIDI" or "MIDI Only" to save CPU when controlling external gear.</li>
             </ul>
         </div>
     </div>
@@ -826,17 +841,16 @@
         
 		function updateOverlayCSSVars() {
             const settingsEl = document.getElementById('settings-overlay');
+            const synthEl = document.getElementById('synth-overlay');
+            
             const sH = (isSettingsActive && settingsEl) ? settingsEl.offsetHeight : 0;
             document.documentElement.style.setProperty('--settings-height', `${sH}px`);
             
-            // 1. Remove the vertical gap
             document.documentElement.style.setProperty('--synth-gap', '0px');
 
-            // 2. Dynamically drop rounded corners and border so stacked panels look like one continuous unit
             if (isSettingsActive && isSynthActive && settingsEl) {
                 settingsEl.style.borderBottomRightRadius = '0px';
                 settingsEl.style.borderBottomLeftRadius = '0px';
-                // Using transparent color instead of 'none' prevents 1px height jumps that would crash the ResizeObserver
                 settingsEl.style.borderBottomColor = 'transparent'; 
             } else if (settingsEl) {
                 settingsEl.style.borderBottomRightRadius = '';
@@ -844,11 +858,19 @@
                 settingsEl.style.borderBottomColor = '';
             }
 
+            // FIX: Calculate exact target heights for portrait overlays instead of checking mid-animation positions
             let activeH = 0;
-            document.querySelectorAll('.overlay.primary.active').forEach(el => {
-                const rect = el.getBoundingClientRect();
-                if (window.innerHeight > window.innerWidth) { if (rect.bottom > activeH) activeH = rect.bottom; }
-            });
+            if (window.innerHeight > window.innerWidth) { // Portrait
+                if (isSettingsActive || isSynthActive) {
+                    activeH = sH + (isSynthActive && synthEl ? synthEl.offsetHeight : 0);
+                } else if (isPadsActive) {
+                    const padsEl = document.getElementById('pads-overlay');
+                    if (padsEl) activeH = padsEl.offsetHeight;
+                } else if (isDrumsActive) {
+                    const drumsEl = document.getElementById('drums-overlay');
+                    if (drumsEl) activeH = drumsEl.offsetHeight;
+                }
+            }
             document.documentElement.style.setProperty('--active-overlay-height', `${activeH}px`);
 
             const looperEl = document.getElementById('looper-overlay');
