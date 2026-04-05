@@ -1082,13 +1082,70 @@
 		    }; inp.click();
 		});
 
-        document.getElementById('btnFullscreen')?.addEventListener('click', () => {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.warn(err)); else if (document.exitFullscreen) document.exitFullscreen();
-        });
-        document.addEventListener('fullscreenchange', () => {
-            const btn = document.getElementById('btnFullscreen');
-            if (btn) { if (document.fullscreenElement) { btn.textContent = '🗗'; btn.classList.add('toggled'); } else { btn.textContent = '⛶'; btn.classList.remove('toggled'); } }
-        });
+		// ==========================================
+        // CAPACITOR / FULLSCREEN / PANIC LOGIC
+        // ==========================================
+        const isNativeApp = window.Capacitor && window.Capacitor.isNative;
+        const btnFs = document.getElementById('btnFullscreen');
+
+        function executePanic() {
+            wakeNav();
+            
+            // 1. Instantly kill all active audio nodes and clear arrays
+            activeNodes.forEach(nodeData => { if (nodeData.voices) beginRelease(nodeData.voices, true, true); });
+            sustainedVoices.forEach(nodeData => { if (nodeData.voices) beginRelease(nodeData.voices, true, true); });
+            activeNodes.clear(); 
+            sustainedVoices.clear();
+            playingMidiNotes.clear(); 
+            pianoExtensionNotes.clear();
+            activeUserNotes = 0;
+
+            // 2. Stop the Looper
+            looper.isPlaying = false; 
+            looper.isRecording = false; 
+            looper.isArmed = false;
+            updateLooperUI();
+
+            // 3. Clear runaway Delay/Echo loops
+            if (feedbackGain && audioCtx) {
+                const fbVol = parseFloat(document.getElementById('echo')?.value || 0.12);
+                feedbackGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                feedbackGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                // Keep it dead for 0.5s to let the buffer empty, then restore
+                feedbackGain.gain.setTargetAtTime(fbVol, audioCtx.currentTime + 0.5, 0.05); 
+            }
+
+            // 4. Send MIDI 'All Notes Off' (CC 123) to all 16 channels
+            if (midiOut) {
+                for (let c = 0; c < 16; c++) {
+                    midiOut.send([0xB0 + c, 123, 0]); 
+                }
+            }
+
+            updateHighlights();
+            showToast("Panic: All Notes Stopped");
+        }
+
+        if (isNativeApp && btnFs) {
+            // Transform the button for Native Mobile Apps
+            btnFs.id = 'btnPanic';
+            btnFs.title = 'Panic / All Notes Off';
+            btnFs.textContent = '🔇';
+            btnFs.addEventListener('click', executePanic);
+        } else if (btnFs) {
+            // Keep standard Fullscreen logic for Web Browsers
+            btnFs.addEventListener('click', () => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => console.warn(err)); 
+                else if (document.exitFullscreen) document.exitFullscreen();
+            });
+            document.addEventListener('fullscreenchange', () => {
+                const btn = document.getElementById('btnFullscreen');
+                if (btn) { 
+                    if (document.fullscreenElement) { btn.textContent = '🗗'; btn.classList.add('toggled'); } 
+                    else { btn.textContent = '⛶'; btn.classList.remove('toggled'); } 
+                }
+            });
+        }
 
         window.addEventListener('resize', () => { updateOverlayCSSVars(); });
         
