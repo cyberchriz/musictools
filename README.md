@@ -1,6 +1,20 @@
+#Tonnetz Pro
+<div align="center">
+  <br>
+    <img src="./Screenshot 2006-04-05 182741.png" alt="App Screenshot" width="900" height="350"/>
+  <br>
+  <p align="center">
+      Tonnetz Pro is an advanced music theory workstation and performance environment
+      based on Euler’s Tonnetz (German for "tone network").
+      It offers a geometric representation of tonal space where harmonic relationships
+      become physical connections, allowing musicians to visualize and play complex structures with mathematical precision.
+  </p>
+</div>
+
+---
 Tonnetz Pro
 
-Tonnetz Pro is an advanced music theory workstation and performance environment based on Euler’s Tonnetz (German for "tone network"). It offers a geometric representation of tonal space where harmonic relationships become physical connections, allowing musicians to visualize and play complex structures with mathematical precision.
+
 🔺 1. Geometric Navigation & Chords
 
 Experience music theory through a tactile, geometric lens.
