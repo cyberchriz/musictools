@@ -1,7 +1,7 @@
-#Tonnetz Pro
+# Tonnetz Pro
 <div align="center">
   <br>
-    <img src="./Screenshot 2006-04-05 182741.png" alt="App Screenshot" width="900" height="350"/>
+    <img src="Screenshot 2026-04-05 182741.png" alt="App Screenshot" width="1000" height="500"/>
   <br>
   <p align="center">
       Tonnetz Pro is an advanced music theory workstation and performance environment
@@ -12,8 +12,6 @@
 </div>
 
 ---
-Tonnetz Pro
-
 
 🔺 1. Geometric Navigation & Chords
 
