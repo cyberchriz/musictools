@@ -12,74 +12,82 @@
 </div>
 
 ---
+Run directly in browser at:
 
-🔺 1. Geometric Navigation & Chords
+### https://cyberchriz.github.io/musictools/index.html
+---
 
-Experience music theory through a tactile, geometric lens.
+## 🔺 Geometric Navigation & Chords
 
-    Horizontal Axis: Moving left to right moves in perfect fifths (C -> G -> D).
-    Diagonal Axes: Moving along diagonals steps in major and minor thirds.
-    Triangles = Triads: Click any upward-facing triangle to play a Major chord.
+Experience music theory through a geometric lens. Make harmony visible!
+
+    - Horizontal Axis: Moving left to right moves in perfect fifths (C -> G -> D).
+    - Diagonal Axes: Moving along diagonals steps in major and minor thirds.
+    - Triangles = Triads: Click any upward-facing triangle to play a Major chord.
       Click any downward-facing triangle to play a Minor chord.
-    Navigation: Move the grid by clicking and dragging (desktop) or using the
+    - Navigation: Move the grid by clicking and dragging (desktop) or using the
       on-screen D-Pad. Zoom with the scroll wheel or the + / - buttons.
+---
+## 🎛️ Performance Pads & Arpeggiator
 
-🎛️ 2. Performance Pads & Arpeggiator
+Play complex jazz chords and textures without leaving the grid: use keyboard shortcuts
+to modify chords or the corresponding tap buttons on touchscreens.
 
-Play complex jazz chords and textures without leaving the grid.
-
-    Extensions: Hold A, S, D, or F to add a 6th, 7th, 9th, or 13th to your chord.
-    Use 'Lock' buttons for permanent extensions.
-    Octave Jumps: Use Q or W to shift octaves instantly.
-    Arpeggiator: Hold Shift (Up) or Ctrl (Down) to step through notes.
-      Control speed, rhythm, and Swing Effect via the BPM slider.
-    Dampen: Hold Left Alt to smoothly muffle sustaining voices
+    - Extensions: Hold A, S, D, F or G to add a 6th, 7th, 9th, 11th or 13th to your chord.
+    - Use 'Lock' buttons for permanent extensions.
+    - Special Chords: use keyboard rows QWERT or YXCVB / ZXCVB for all that jazzy stuff.
+    - Octave Jumps: Use key 1/2 shift octaves instantly up/down
+    - Arpeggiator: Hold Shift (Up) or Ctrl (Down) to step through notes.
+      Control arpeggio speed, rhythm, and Swing Effect
+      via the BPM and Swing slider in the main settings menu.
+      Use buttons 3, 4 or 5 to change arpeggio direction (up, down, random)
+    - Dampen / Sustain: Hold Space Bar or Left Alt to smoothly sustain or muffle voices
       (una corda simulation).
-
-🔁 3. Live 8-Track Looper & Audio Processing
+---
+## 🔁 Live 8-Track Looper & Audio Processing
 
 A built-in workstation for capturing your performance in real-time.
 
-    Independent Tracks: 4 Voice tracks (Synth/Piano) and 4 Drum tracks.
-    Smart Recording: The ⏺ Record button arms the looper;
+    - Independent Tracks: 4 Voice tracks (Synth/Piano) and 4 Drum tracks.
+    - Smart Recording: The ⏺ Record button arms the looper
       recording begins the moment you trigger a note.
-    Preset Sync: Synchronize drum machine presets to the downbeat
-      for perfect loop timing.
-    Master Bounce: Export your entire session to WebM, MP4, MP3, or WAV.
-    Audio Import: Load backing tracks to play along with the internal engine.
+    - Preset Sync: Synchronize drum machine presets to the downbeat for perfect loop timing.
+    - Master Bounce: Export your entire session to WebM, MP4, MP3, or WAV.
+    - Audio Import: Load backing tracks to play along with the internal engine.
+---
+## 🥁 Drum Machine & Metronome
 
-🥁 4. Drum Machine & Metronome
-
-    16 Rhythm Presets: From Rock and Breakbeat to House and Bossa Nova.
-    Auto-Embellish: Intelligent ghost notes and varying velocities
+    - 16 Rhythm Presets: From Rock and Breakbeat to House and Bossa Nova.
+    - Auto-Embellish: Intelligent ghost notes and varying velocities
       for an organic, human feel.
-    Manual Triggers: Finger-drum custom beats using on-screen pads.
-
-📈 5. Synthesizer Engine & Modulations
+    - Manual Triggers: Finger-drum custom beats using on-screen pads.
+---
+## 📈 Synthesizer Engine & Modulations
 
 A dual-oscillator engine with 19 calibrated presets (Piano, Lo-Fi Keys, 80s Brass, etc.).
 
-    Visual ADSR: Sculpt Attack, Decay, Sustain, and Release times.
-    Filter Control: Adjust Brightness, Resonance, and Filter Env for automated sweeps.
-    Sub & Noise: Thicken the low-end with a sub-oscillator or add breath with white noise.
-    Multi-LFO: Independent control over Vibrato, Tremolo, and Sweep (Auto-Wah).
-    FX Rack: Distortion, Chorus, Echo, and Reverb.
+    - Visual ADSR: Sculpt Attack, Decay, Sustain, and Release times.
+    - Filter Control: Adjust Brightness, Resonance, and Filter Env for automated sweeps.
+    - Sub & Noise: Thicken the low-end with a sub-oscillator or add breath with white noise.
+    - Multi-LFO: Independent control over Vibrato, Tremolo, and Sweep (Auto-Wah).
+    - FX Rack: Distortion, Chorus, Echo, and Reverb.
+---
+## ⚙️ Advanced Music Theory & Setup
 
-⚙️ 6. Advanced Music Theory & Setup
+    - Circle of Fifths: Interactive minimap that highlights current chord structures.
+    - Snap to Scale: Lock the grid to specific scales (Dorian, Lydian Dominant, etc.).
+    - Node Labels: Absolute notes, Scale Degrees, Roman Numerals, or Solfege.
+    - Alternative Tuning: Switch to Just Intonation or Pythagorean Tuning.
+    - State Saving: Export/Import your settings as a JSON file.
 
-    Circle of Fifths: Interactive minimap that highlights current chord structures.
-    Snap to Scale: Lock the grid to specific scales (Dorian, Lydian Dominant, etc.).
-    Node Labels: Absolute notes, Scale Degrees, Roman Numerals, or Solfege.
-    Alternative Tuning: Switch to Just Intonation or Pythagorean Tuning.
-    State Saving: Export/Import your entire setup as a JSON file.
+---
+## 🔌 MIDI Connectivity
 
-🔌 7. MIDI Connectivity
-
-    MIDI IN: Use any USB MIDI keyboard to play the internal synthesizer.
-    MIDI OUT: Use Tonnetz Pro as a geometric controller to drive
+    - MIDI IN: Use any USB MIDI keyboard to play the internal synthesizer.
+    - MIDI OUT: Use Tonnetz Pro as a geometric controller to drive
       external hardware or DAWs.
-
-📄 License
+---
+## 📄 License
 
 Copyright (c) 2026 Christian Suer (GitHub: cyberchriz). All rights reserved.
 Permission is granted for personal, non-commercial use and execution only.
