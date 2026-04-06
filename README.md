@@ -64,7 +64,7 @@ A built-in workstation for capturing your performance in real-time.
 ---
 ## 📈 Synthesizer Engine & Modulations
 
-A dual-oscillator engine with 19 calibrated presets (Piano, Lo-Fi Keys, 80s Brass, etc.).
+A dual-oscillator engine with 33 calibrated presets (Piano, Lo-Fi Keys, 80s Brass, etc.).
 
     - Visual ADSR: Sculpt Attack, Decay, Sustain, and Release times.
     - Filter Control: Adjust Brightness, Resonance, and Filter Env for automated sweeps.
