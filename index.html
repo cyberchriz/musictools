@@ -142,13 +142,22 @@
         .looper-btn.armed { background: #ff9800 !important; color: white !important; border-color: #ff9800; animation: pulse-fast 0.5s infinite alternate; }
         @keyframes pulse-fast { from { opacity: 1; } to { opacity: 0.5; } }
 
-		.controls-section { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(0,0,0,0.02); }
+		.controls-section { display: flex; flex-direction: column; gap: 6px; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; background: rgba(0,0,0,0.02); }
         .dark-theme .controls-section { background: rgba(255,255,255,0.02); }
-        .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05rem; color: var(--text-muted); font-weight: bold; margin-bottom: 0px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; display:flex; justify-content:space-between; align-items:center; }
+        
+        /* Colored Section Headers */
+        .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05rem; color: #ffffff; font-weight: bold; margin-bottom: 2px; padding: 6px 8px; background: var(--main-node); border-radius: 4px; display:flex; justify-content:space-between; align-items:center; }
+        
+        /* Row Dividers */
+        .control-row { display: grid; align-items: flex-end; width: 100%; border-bottom: 1px solid var(--grid-line); padding-bottom: 6px; }
+        .control-row:last-of-type { border-bottom: none; padding-bottom: 0; }
+        
+        /* Inset Well for Advanced Settings */
+        .control-well { background: rgba(0,0,0,0.04); border: 1px solid var(--border-color) !important; border-radius: 6px; padding: 6px; margin-top: 2px; }
+        .dark-theme .control-well { background: rgba(255,255,255,0.04); }
 
-        .control-row { display: grid; align-items: flex-end; width: 100%; }
         .control-group { display: flex; flex-direction: column; gap: 0px; font-weight: bold; justify-content: flex-end; height: 100%; min-width: 0; }
-        .control-group label { font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; margin: 0 0 2px 0; padding: 0;}
+        .control-group label { font-size: 0.65rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; margin: 0 0 3px 0; padding: 0;}
 
         input[type=range] { width: 100%; accent-color: var(--main-node); cursor: pointer; height: 22px; margin: 0; box-sizing: border-box; }
         select, button { padding: 0 5px; border-radius: 4px; border: 1px solid var(--grid-line); background: var(--bg-color); color: var(--text-main); font-family: inherit; font-size: 0.75rem; cursor: pointer; height: 22px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
@@ -302,11 +311,11 @@
         </div>
     </div>
 
-    <!-- OVERLAY 1.1: General Settings -->
+	<!-- OVERLAY 1.1: General Settings -->
     <div id="settings-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
-                Settings <button id="btnCloseSettings" class="close-btn-sm" title="Close">✕</button>
+                General Settings <button id="btnCloseSettings" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
             </div>
             <div class="control-row">
                 <div class="control-group"><label>Key Center</label>
@@ -314,64 +323,66 @@
                 </div>
                 <div class="control-group"><label>Scale Overlay</label>
                     <select id="scaleOverlay">
-						<option value="all">All Notes (Chromatic)</option>
-		                <option value="major">Major (Ionian)</option>
-						<option value="minor">Nat. Minor (Aeolian)</option>
-		                <option value="dorian">Dorian</option>
-						<option value="phrygian">Phrygian</option>
-		                <option value="lydian">Lydian</option>
-						<option value="mixolydian">Mixolydian</option>
-						<option value="locrian">Locrian</option>
-		                <option value="harmonic">Harmonic Minor</option>
-						<option value="melodic">Melodic Minor</option>
-		                <option value="pent_maj">Major Pentatonic</option>
-						<option value="pent_min">Minor Pentatonic</option>
-		                <option value="blues">Blues Scale</option>
-						<option value="wholetone">Whole Tone</option>
-		                <option value="diminished">Diminished (Octatonic)</option>
-						<option value="acoustic">Acoustic (Lydian Dom)</option>
-		                <option value="hungarian">Hungarian Minor</option>
-					</select>
+                        <option value="all">All Notes (Chromatic)</option>
+                        <option value="major">Major (Ionian)</option>
+                        <option value="minor">Nat. Minor (Aeolian)</option>
+                        <option value="dorian">Dorian</option>
+                        <option value="phrygian">Phrygian</option>
+                        <option value="lydian">Lydian</option>
+                        <option value="mixolydian">Mixolydian</option>
+                        <option value="locrian">Locrian</option>
+                        <option value="harmonic">Harmonic Minor</option>
+                        <option value="melodic">Melodic Minor</option>
+                        <option value="pent_maj">Major Pentatonic</option>
+                        <option value="pent_min">Minor Pentatonic</option>
+                        <option value="blues">Blues Scale</option>
+                        <option value="wholetone">Whole Tone</option>
+                        <option value="diminished">Diminished (Octatonic)</option>
+                        <option value="acoustic">Acoustic (Lydian Dom)</option>
+                        <option value="hungarian">Hungarian Minor</option>
+                    </select>
                 </div>
                 <div class="control-group"><label>Node Labels</label><select id="labelType">
-					<option value="absolute">Absolute (C, D, E)</option>
-					<option value="degrees">Degrees (1, 2, 3)</option>
-					<option value="roman">Roman (I, II, III)</option>
-					<option value="solfege">Solfege (Do, Re, Mi)</option></select>
-				</div>
+                    <option value="absolute">Absolute (C, D, E)</option>
+                    <option value="degrees">Degrees (1, 2, 3)</option>
+                    <option value="roman">Roman (I, II, III)</option>
+                    <option value="solfege">Solfege (Do, Re, Mi)</option></select>
+                </div>
                 <div class="control-group"><label>Transposition</label><select id="transpose"><option value="0">C (Concert)</option><option value="-2">Bb (Tenor Sax)</option><option value="3">Eb (Alto Sax)</option><option value="5">F (French Horn)</option></select></div>
             </div>
             
             <div class="control-row">
                 <div class="control-group"><label>Tuning System</label><select id="tuningMode"><option value="equal">Equal Temperament</option><option value="just">Just Intonation</option><option value="pythagorean">Pythagorean Tuning</option></select></div>
                 <div class="control-group"><label>Presets</label><div style="display:flex; gap:4px; height: 100%;"><button id="btnSavePreset" class="btn-sm">Save</button><button id="btnLoadPreset" class="btn-sm">Load</button></div></div>
-                <div class="control-group"><label>&nbsp;</label><button id="btnSnapToScale" class="btn-sm" title="Snap out-of-scale notes to valid notes">Snap to Scale: OFF</button></div>
-                <div class="control-group"><label>&nbsp;</label><button id="btnTheme" class="btn-sm">Dark Mode: OFF</button></div>
+                <div class="control-group"><label>Constraint</label><button id="btnSnapToScale" class="btn-sm" title="Snap out-of-scale notes to valid notes">Snap to Scale: OFF</button></div>
+                <div class="control-group"><label>UI Theme</label><button id="btnTheme" class="btn-sm">Dark Mode: OFF</button></div>
             </div>
 
             <div class="control-row">
                 <div class="control-group"><label id="lblArpBpm">Arp/Metron: 120 BPM</label><input type="range" id="arpBpm" min="40" max="240" step="1" value="120"></div>
-                <div class="control-group"><label>Arp Rhythm Mode</label><select id="arpRhythm"><option value="fast">Fast (16ths)</option><option value="slow" selected>Slow (8ths)</option></select></div>
+                <div class="control-group"><label>Arp Rhythm</label><select id="arpRhythm"><option value="fast">Fast (16ths)</option><option value="slow" selected>Slow (8ths)</option></select></div>
                 <div class="control-group"><label id="lblArpSwing">Swing Effect: 0%</label><input type="range" id="arpSwing" min="0" max="1" step="0.01" value="0"></div>
                 <div class="control-group"><label>Arp Loop</label><select id="arpLoop"><option value="false">Play Once</option><option value="true" selected>Continuous</option></select></div>
             </div>
 
             <div class="control-row">
-                <div class="control-group"><label>Metronome / Drums</label>
+                <div class="control-group"><label>Metronome</label>
                     <select id="metronomeMode"><option value="none">None</option><option value="click">Click</option><option value="basic">Basic Beat</option><option value="rock">Rock Beat</option><option value="swing">Swing Beat</option><option value="house">House</option><option value="techno">Techno</option><option value="breakbeat">Breakbeat</option><option value="dnb">Drum & Bass</option><option value="reggae">Reggae</option><option value="reggaeton">Reggaeton</option><option value="trap">Trap</option><option value="bossa">Bossa Nova</option><option value="funk">Funk</option><option value="hiphop">Hip Hop</option><option value="rnb">R&B</option><option value="latin">Latin Groove</option></select>
                 </div>
-                <div class="control-group"><label>Drum Vol (Mix)</label><input type="range" id="metronomeVol" min="0" max="1" step="0.01" value="0.3"></div>
-                <div class="control-group"><label>&nbsp;</label><button id="btnExtensions" class="btn-sm active-btn">7th/9th Ext. Highlights: ON</button></div>
-				<div class="control-group"><label>&nbsp;</label><button id="btnChordDegrees" class="btn-sm">Show Chord Degrees: OFF</button></div>
+                <div class="control-group"><label>Drum Vol</label><input type="range" id="metronomeVol" min="0" max="1" step="0.01" value="0.3"></div>
+                <div class="control-group"><label>Extensions</label><button id="btnExtensions" class="btn-sm active-btn">7th/9th Highlights: ON</button></div>
+                <div class="control-group"><label>Analysis</label><button id="btnChordDegrees" class="btn-sm">Show Degrees: OFF</button></div>
             </div>
             
-			<div class="control-row">
+            <div class="control-row">
                 <div class="control-group"><label id="lblMasterTune">Master Tune: 440 Hz</label><input type="range" id="masterTune" min="415" max="465" step="1" value="440"></div>
                 <div class="control-group"><label id="lblHideDelay">Auto-Hide: 1000ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="1000"></div>
-                <div class="control-group"><label>&nbsp;</label><button id="btnMidi">Connect MIDI</button></div>
-                <div class="control-group"><label>&nbsp;</label><button id="btnMidiOutput">MIDI OUT: MIDI + BROWSER</button></div>
+                <div class="control-group"><label>Hardware</label><button id="btnMidi">Connect MIDI</button></div>
+                <div class="control-group"><label>Routing</label><button id="btnMidiOutput">MIDI OUT: BROWSER</button></div>
             </div>
-            <div class="control-row">
+            
+            <!-- MIDI Well Box -->
+            <div class="control-row control-well">
                 <div class="control-group"><label id="lblMidiVelocity">Velocity: 100</label><input type="range" id="midiVelocity" min="1" max="127" step="1" value="100"></div>
                 <div class="control-group"><label id="lblMidiModWheel">Mod Wheel: 0</label><input type="range" id="midiModWheel" min="0" max="127" step="1" value="0"></div>
                 <div class="control-group" style="grid-column: span 2;"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0"></div>
@@ -379,78 +390,79 @@
         </div>
     </div>
 
-	<!-- OVERLAY 1.2: Synthesizer Engine (Stackable) -->
-	<div id="synth-overlay" class="overlay primary">
-	    <div class="controls-section">
-	        <div class="section-title">Synthesizer Engine <button id="btnCloseSynth" class="close-btn-sm" title="Close">✕</button></div>
-	        <div class="control-row">
-	            <div class="control-group"><label>Instrument</label>
-					<select id="instrumentPreset">
-	                    <option value="piano">Acoustic Piano</option>
-						<option value="epiano">Electric Piano</option>
-	                    <option value="lofi_keys">Lo-Fi Keys</option>
-						<option value="organ">Hammond Organ</option>
+    <!-- OVERLAY 1.2: Synthesizer Engine (Stackable) -->
+    <div id="synth-overlay" class="overlay primary">
+        <div class="controls-section">
+            <div class="section-title">Synthesizer Engine <button id="btnCloseSynth" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button></div>
+            <div class="control-row">
+                <div class="control-group"><label>Instrument</label>
+                    <select id="instrumentPreset">
+                        <option value="piano">Acoustic Piano</option>
+                        <option value="epiano">Electric Piano</option>
+                        <option value="lofi_keys">Lo-Fi Keys</option>
+                        <option value="organ">Hammond Organ</option>
                         <option value="harpsichord">Harpsichord</option>
                         <option value="accordion">Accordion</option>
                         <option value="musicbox">Music Box / Celesta</option>
-	                    <option value="pad">Synth Pad</option>
+                        <option value="pad">Synth Pad</option>
                         <option value="glasspad">Glass Pad</option>
-						<option value="pluck">Plucked Harp</option>
+                        <option value="pluck">Plucked Harp</option>
                         <option value="harp">Concert Harp</option>
-	                    <option value="guitar">Acoustic Guitar</option>
+                        <option value="guitar">Acoustic Guitar</option>
                         <option value="banjo">Banjo</option>
                         <option value="sitar">Sitar</option>
-						<option value="bass">Synth Bass</option>
+                        <option value="bass">Synth Bass</option>
                         <option value="slapbass">Slap Bass</option>
                         <option value="acid303">Acid Synth (303)</option>
-	                    <option value="synthlead">Synth Lead</option>
+                        <option value="synthlead">Synth Lead</option>
                         <option value="chiptune">8-Bit Chiptune</option>
-						<option value="synthbrass">80s Synth Brass</option>
-	                    <option value="sax">Saxophone</option>
-						<option value="trumpet">Trumpet</option>
+                        <option value="synthbrass">80s Synth Brass</option>
+                        <option value="sax">Saxophone</option>
+                        <option value="trumpet">Trumpet</option>
                         <option value="frenchhorn">French Horn</option>
                         <option value="tuba">Tuba</option>
                         <option value="clarinet">Clarinet</option>
                         <option value="oboe">Oboe</option>
-	                    <option value="violin">Violin / Strings</option>
-						<option value="cello">Solo Cello</option>
+                        <option value="violin">Violin / Strings</option>
+                        <option value="cello">Solo Cello</option>
                         <option value="pizzicato">Pizzicato Strings</option>
-	                    <option value="choir">Choir / Voices</option>
-						<option value="marimba">Marimba</option>
-	                    <option value="vibraphone">Vibraphone</option>
-						<option value="flute">Flute</option>
-	                    <option value="theremin">Theremin</option>
-	                </select>
-	            </div>
-	            <div class="control-group"><label id="lblVolume">Master Vol: 0.60</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.6"></div>
-	            <div class="control-group"><label id="lblAttack">Attack: 0.03s</label><input type="range" id="attack" min="0.01" max="1" step="0.01" value="0.03"></div>
-	            <div class="control-group"><label id="lblDecay">Decay: 0.20s</label><input type="range" id="decay" min="0.01" max="2" step="0.01" value="0.2"></div>
-	        </div>
-	        <div class="control-row">
-	            <div class="control-group"><label id="lblSustain">Sustain: 0.80</label><input type="range" id="sustain" min="0" max="1" step="0.01" value="0.8"></div>
-	            <div class="control-group"><label id="lblRelease">Release: 0.40s</label><input type="range" id="release" min="0.05" max="3" step="0.05" value="0.4"></div>
-	            <div class="control-group"><label id="lblBrightness">Brightness: 3.0</label><input type="range" id="brightness" min="1" max="8" step="0.1" value="3"></div>
-	            <div class="control-group"><label id="lblResonance">Resonance: 1.0</label><input type="range" id="resonance" min="0" max="20" step="0.1" value="1"></div>
-	        </div>
-	        <div class="control-row">
-	            <div class="control-group"><label id="lblChorus">Chorus: 7</label><input type="range" id="chorus" min="0" max="30" step="1" value="7"></div>
-	            <div class="control-group"><label id="lblDistortion">Distortion: 0</label><input type="range" id="distortion" min="0" max="100" step="1" value="0"></div>
-	            <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
-	            <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
-	        </div>
-	        <div class="control-row">
-	            <div class="control-group"><label id="lblLfoSpeed">LFO Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
-	            <div class="control-group"><label id="lblVibrato">Vibrato: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
-	            <div class="control-group"><label id="lblTremolo">Tremolo: 0.00</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
-	            <div class="control-group"><label id="lblSweep">Sweep: 0</label><input type="range" id="sweep" min="0" max="2400" step="10" value="0"></div>
-	        </div>
-				<div class="control-row">
+                        <option value="choir">Choir / Voices</option>
+                        <option value="marimba">Marimba</option>
+                        <option value="vibraphone">Vibraphone</option>
+                        <option value="flute">Flute</option>
+                        <option value="theremin">Theremin</option>
+                    </select>
+                </div>
+                <div class="control-group"><label id="lblVolume">Master Vol: 0.60</label><input type="range" id="volume" min="0" max="1" step="0.01" value="0.6"></div>
+                <div class="control-group"><label id="lblAttack">Attack: 0.03s</label><input type="range" id="attack" min="0.01" max="1" step="0.01" value="0.03"></div>
+                <div class="control-group"><label id="lblDecay">Decay: 0.20s</label><input type="range" id="decay" min="0.01" max="2" step="0.01" value="0.2"></div>
+            </div>
+            <div class="control-row">
+                <div class="control-group"><label id="lblSustain">Sustain: 0.80</label><input type="range" id="sustain" min="0" max="1" step="0.01" value="0.8"></div>
+                <div class="control-group"><label id="lblRelease">Release: 0.40s</label><input type="range" id="release" min="0.05" max="3" step="0.05" value="0.4"></div>
+                <div class="control-group"><label id="lblBrightness">Brightness: 3.0</label><input type="range" id="brightness" min="1" max="8" step="0.1" value="3"></div>
+                <div class="control-group"><label id="lblResonance">Resonance: 1.0</label><input type="range" id="resonance" min="0" max="20" step="0.1" value="1"></div>
+            </div>
+            <div class="control-row">
+                <div class="control-group"><label id="lblChorus">Chorus: 7</label><input type="range" id="chorus" min="0" max="30" step="1" value="7"></div>
+                <div class="control-group"><label id="lblDistortion">Distortion: 0</label><input type="range" id="distortion" min="0" max="100" step="1" value="0"></div>
+                <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
+                <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
+            </div>
+            <div class="control-row">
+                <div class="control-group"><label id="lblLfoSpeed">LFO Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
+                <div class="control-group"><label id="lblVibrato">Vibrato: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
+                <div class="control-group"><label id="lblTremolo">Tremolo: 0.00</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
+                <div class="control-group"><label id="lblSweep">Sweep: 0</label><input type="range" id="sweep" min="0" max="2400" step="10" value="0"></div>
+            </div>
+            
+            <!-- Deep Synthesis Well Box -->
+            <div class="control-row control-well">
                 <div class="control-group"><label id="lblDetune">Detune: 2</label><input type="range" id="detune" min="0" max="30" step="1" value="2"></div>
                 <div class="control-group"><label id="lblSubOsc">Sub Osc: 0.05</label><input type="range" id="subOsc" min="0" max="1" step="0.01" value="0.05"></div>
                 <div class="control-group"><label id="lblNoise">Noise: 0.03</label><input type="range" id="noise" min="0" max="1" step="0.01" value="0.03"></div>
                 <div class="control-group"><label id="lblFilterEnv">Filter Env: 3.0</label><input type="range" id="filterEnv" min="0" max="10" step="0.1" value="3"></div>
-            </div>
-			<div class="control-row">
+                
                 <div class="control-group"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
                 <div class="control-group"><label id="lblGlide">Glide (Porta): 0.0s</label><input type="range" id="glide" min="0" max="1" step="0.01" value="0"></div>
                 <div class="control-group" style="grid-column: span 2;"><label>Filter Type</label>
@@ -460,7 +472,7 @@
                         <option value="bandpass">Bandpass</option>
                     </select>
                 </div>
-                <div class="control-group"></div> </div>
+            </div>
             <canvas id="envCanvas" style="width: 100%; height: 60px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 8px;"></canvas>
         </div>
     </div>
@@ -576,103 +588,111 @@
         <div id="cof-container"></div>
     </div>
 
-    <!-- OVERLAY 4: Secondary 8-Track Looper/Sequencer -->
-    <div id="looper-overlay">
+	<!-- OVERLAY 4: 8-Track Looper/Sequencer -->
+    <div id="looper-overlay" class="overlay primary">
         <div class="controls-section">
-            <div class="section-title" style="margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="section-title">
                 Live 8-Track Looper 
-                <span style="flex-grow:1; text-align:right; margin-right: 10px;"><span id="looper-status-text" style="font-size:0.65rem; color:var(--text-muted);">STOPPED</span></span>
-                <button id="btnCloseLooper" class="close-btn-sm" title="Close">✕</button>
+                <span style="flex-grow:1; text-align:right; margin-right: 10px;"><span id="looper-status-text" style="font-size:0.65rem; color:var(--text-muted); font-weight:bold;">STOPPED</span></span>
+                <button id="btnCloseLooper" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
             </div>
             
-            <div class="looper-grid">
-                <div class="looper-row">
-                    <div class="looper-row-label">Synth / Voice Tracks</div>
-					<div class="looper-tracks-row">
-                        <div class="track-col"><div class="inst-label" id="inst-label-0"></div><button class="track-btn active" data-track="0" data-type="voice">V1</button><button class="mute-btn" data-track="0">Mute</button></div>
-                        <div class="track-col"><div class="inst-label" id="inst-label-1"></div><button class="track-btn" data-track="1" data-type="voice">V2</button><button class="mute-btn" data-track="1">Mute</button></div>
-                        <div class="track-col"><div class="inst-label" id="inst-label-2"></div><button class="track-btn" data-track="2" data-type="voice">V3</button><button class="mute-btn" data-track="2">Mute</button></div>
-                        <div class="track-col"><div class="inst-label" id="inst-label-3"></div><button class="track-btn" data-track="3" data-type="voice">V4</button><button class="mute-btn" data-track="3">Mute</button></div>
+            <!-- Main 8-Track Sequencer Well -->
+            <div class="control-well">
+                <div class="looper-grid">
+                    <div class="looper-row">
+                        <div class="looper-row-label">Synth / Voice Tracks</div>
+                        <div class="looper-tracks-row">
+                            <div class="track-col"><div class="inst-label" id="inst-label-0"></div><button class="track-btn active" data-track="0" data-type="voice">V1</button><button class="mute-btn" data-track="0">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-1"></div><button class="track-btn" data-track="1" data-type="voice">V2</button><button class="mute-btn" data-track="1">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-2"></div><button class="track-btn" data-track="2" data-type="voice">V3</button><button class="mute-btn" data-track="2">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-3"></div><button class="track-btn" data-track="3" data-type="voice">V4</button><button class="mute-btn" data-track="3">Mute</button></div>
+                        </div>
+                    </div>
+                    <div class="looper-row">
+                        <div class="looper-row-label">Drum / Beat Tracks</div>
+                        <div class="looper-tracks-row">
+                            <div class="track-col"><button class="track-btn active" data-track="4" data-type="drum">D1</button><button class="mute-btn" data-track="4">Mute</button></div>
+                            <div class="track-col"><button class="track-btn" data-track="5" data-type="drum">D2</button><button class="mute-btn" data-track="5">Mute</button></div>
+                            <div class="track-col"><button class="track-btn" data-track="6" data-type="drum">D3</button><button class="mute-btn" data-track="6">Mute</button></div>
+                            <div class="track-col"><button class="track-btn" data-track="7" data-type="drum">D4</button><button class="mute-btn" data-track="7">Mute</button></div>
+                        </div>
                     </div>
                 </div>
-                <div class="looper-row">
-                    <div class="looper-row-label">Drum / Beat Tracks (Presets & Manual)</div>
-                    <div class="looper-tracks-row">
-                        <div class="track-col"><button class="track-btn active" data-track="4" data-type="drum">D1</button><button class="mute-btn" data-track="4">Mute</button></div>
-                        <div class="track-col"><button class="track-btn" data-track="5" data-type="drum">D2</button><button class="mute-btn" data-track="5">Mute</button></div>
-                        <div class="track-col"><button class="track-btn" data-track="6" data-type="drum">D3</button><button class="mute-btn" data-track="6">Mute</button></div>
-                        <div class="track-col"><button class="track-btn" data-track="7" data-type="drum">D4</button><button class="mute-btn" data-track="7">Mute</button></div>
+
+                <div class="looper-progress-bar" style="margin-top: 8px;"><div id="looper-progress-fill"></div></div>
+                <div class="control-row" style="margin-top: 8px; border: none; padding: 0;">
+                    <div class="control-group"><button id="btnLooperRec" class="looper-btn">⏺ Record</button></div>
+                    <div class="control-group"><button id="btnLooperPlay" class="looper-btn">▶ Play</button></div>
+                    <div class="control-group"><button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button></div>
+                    <div class="control-group">
+                        <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold;">
+                            <option value="1">1 Bar</option><option value="2">2 Bars</option><option value="4" selected>4 Bars</option><option value="8">8 Bars</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <div class="looper-progress-bar"><div id="looper-progress-fill"></div></div>
-			<div class="looper-controls">
-                <div class="looper-actions">
-                    <button id="btnLooperRec" class="looper-btn">⏺ Record</button>
-                    <button id="btnLooperPlay" class="looper-btn">▶ Play</button>
-                    <button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button>
-                    <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold; padding-left: 10px;">
-                        <option value="1">1 Bar</option>
-						<option value="2">2 Bars</option>
-						<option value="4" selected>4 Bars</option>
-						<option value="8">8 Bars</option>
-                    </select>
+            <!-- Import Audio Well -->
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Import Audio Track</div>
+                <div class="control-row" style="grid-template-columns: 1fr;">
+                    <div class="control-group"><input type="file" id="import-audio-file" accept="audio/*" style="font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px; box-sizing: border-box; background: var(--bg-color); color: var(--text-main);"></div>
                 </div>
-            </div>
-
-            <!-- Master Recording Module -->
-            <div class="looper-row" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                <div class="looper-row-label" style="margin-bottom: 5px;">Master Output Recording</div>
-                <div class="looper-actions">
-                    <select id="export-format" class="looper-btn" style="flex: 1; font-size: 0.7rem; padding: 0 2px;">
-						<option value="audio/webm;codecs=opus">WebM</option>
-						<option value="audio/mp4">MP4</option>
-						<option value="audio/mpeg">MP3</option>
-						<option value="audio/wav">WAV</option></select>
-                    <select id="export-bitrate" class="looper-btn" style="flex: 1; font-size: 0.7rem; padding: 0 2px;">
-						<option value="32000">32 kbps</option>
-						<option value="64000">64 kbps</option>
-						<option value="128000">128 kbps</option>
-						<option value="256000" selected>256 kbps</option>
-						<option value="320000">320 kbps</option>
-					</select>
-                    <button id="btn-master-rec" class="looper-btn" style="flex: 1.5; font-size: 0.75rem;">🔴 Start</button>
-                    <button id="btn-master-stop" class="looper-btn" style="flex: 1.5; font-size: 0.75rem;" disabled>⏹ Stop</button>
-                </div>
-                <div class="looper-actions" id="download-container" style="display:none; margin-top: 5px;">
-                    <a id="download-link" class="looper-btn" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; background:#4caf50; color:white;">⬇️ Download Mixdown</a>
-                </div>
-            </div>
-
-            <!-- Audio Importer Module -->
-            <div class="looper-row" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                <div class="looper-row-label" style="margin-bottom: 4px;">Import Audio Track</div>
-                <input type="file" id="import-audio-file" accept="audio/*" style="font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-main);">
-                
-			<div style="display:flex; gap: 8px; margin-top: 8px; align-items: center;">
-                    <button id="btn-import-rw" class="looper-btn" style="flex: 1; max-width: 45px; height: 40px; font-size: clamp(1rem, 4vw, 1.4rem); padding: 0;" title="Rewind 5s">⏪</button>
-                    <button id="btn-import-play" class="looper-btn" style="flex: 1; max-width: 45px; height: 40px; font-size: clamp(1rem, 4vw, 1.4rem); padding: 0;" title="Play/Pause">▶</button>
-                    <button id="btn-import-ff" class="looper-btn" style="flex: 1; max-width: 45px; height: 40px; font-size: clamp(1rem, 4vw, 1.4rem); padding: 0;" title="Fast Forward 5s">⏩</button>
-                    <input type="range" id="import-seeker" min="0" max="100" value="0" style="flex: 1; min-width: 0; height: 20px; cursor: pointer; margin: 0;">
-                </div>
-                <div style="display:flex; gap: 12px; margin-top: 8px; align-items: center; justify-content: space-between;">
-                    <div style="display:flex; align-items: center; gap: 5px; flex: 1;">
-                        <label style="font-size: 0.75rem; font-weight:bold; color: var(--text-muted);">Vol:</label>
-                        <input type="range" id="import-vol" min="0" max="1" step="0.01" value="0.5" style="flex: 1; height: 16px; cursor: pointer; margin: 0;">
+                <div class="control-row" style="grid-template-columns: 1.5fr 1fr; border: none; padding: 0; margin-top: 4px;">
+                    <div style="display:flex; gap: 4px; align-items: center;">
+                        <button id="btn-import-rw" class="looper-btn" style="width: 32px; padding:0;" title="Rewind 5s">⏪</button>
+                        <button id="btn-import-play" class="looper-btn" style="width: 32px; padding:0;" title="Play/Pause">▶</button>
+                        <button id="btn-import-ff" class="looper-btn" style="width: 32px; padding:0;" title="Fast Forward 5s">⏩</button>
+                        <input type="range" id="import-seeker" min="0" max="100" value="0" style="flex: 1; height: 22px; margin: 0;">
                     </div>
-                    <label style="font-size: 0.75rem; display:flex; align-items:center; gap:4px; font-weight:bold; cursor:pointer; color: var(--text-muted); white-space: nowrap;">
-                        <input type="checkbox" id="import-mix-master" checked style="margin: 0; width: 16px; height: 16px;"> Mix to Master
-                    </label>
+                    <div style="display:flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                        <label style="font-size: 0.65rem; font-weight:bold; color: var(--text-muted); display:flex; align-items:center; gap: 2px; margin:0;">Vol: <input type="range" id="import-vol" min="0" max="1" step="0.01" value="0.5" style="width: 45px; height: 16px; margin:0;"></label>
+                        <label style="font-size: 0.65rem; font-weight:bold; color: var(--text-muted); display:flex; align-items:center; gap: 2px; cursor:pointer; margin:0;"><input type="checkbox" id="import-mix-master" checked style="margin: 0; width: 14px; height: 14px;"> Master Mix</label>
+                    </div>
                 </div>
                 <audio id="imported-audio-element" style="display:none;"></audio>
             </div>
 
-            <!-- Oscilloscope Integrated into Looper Overlay at bottom -->
-            <div class="looper-row" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                <div class="looper-row-label">Master Oscilloscope</div>
-                <canvas id="oscilloscope" style="width: 100%; height: 80px; background: #111; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 5px;"></canvas>
+            <!-- Master Recording Well -->
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Output Recording</div>
+                <div class="control-row" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="control-group"><label>Format</label>
+                        <select id="export-format" class="ui-select">
+                            <option value="audio/webm;codecs=opus">WebM</option><option value="audio/mp4">MP4</option><option value="audio/mpeg">MP3</option><option value="audio/wav">WAV</option>
+                        </select>
+                    </div>
+                    <div class="control-group"><label>Bitrate</label>
+                        <select id="export-bitrate" class="ui-select">
+                            <option value="32000">32k</option><option value="64000">64k</option><option value="128000">128k</option><option value="256000" selected>256k</option><option value="320000">320k</option>
+                        </select>
+                    </div>
+                    <div class="control-group"><label>Capture</label><button id="btn-master-rec" style="background:#c2185b; color:white; border:none;">🔴 START REC</button></div>
+                    <div class="control-group"><label>Export</label><button id="btn-master-save" disabled>💾 SAVE AS...</button></div>
+                </div>
+                
+                <div class="control-row" style="grid-template-columns: repeat(2, 1fr); border: none; padding: 0;">
+                    <div class="control-group"><label>Review Playback</label>
+                        <div style="display:flex; gap:4px;">
+                            <button id="btn-rec-rw" disabled title="Rewind 5s">⏪</button>
+                            <button id="btn-rec-play" disabled title="Play/Pause" style="flex:1.5;">▶ / ⏸</button>
+                            <button id="btn-rec-ff" disabled title="Fast Forward 5s">⏩</button>
+                        </div>
+                    </div>
+                    <div class="control-group"><label>Position</label>
+                        <button id="lbl-rec-time" disabled style="background:transparent; border:1px solid var(--grid-line); color:var(--text-main); cursor:default;">00:00 / 00:00</button>
+                    </div>
+                </div>
+                <audio id="masterAudioPlayer" style="display: none;"></audio>
             </div>
+
+            <!-- Master Oscilloscope Well -->
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Oscilloscope</div>
+                <canvas id="oscilloscope" style="width: 100%; height: 50px; background: #111; border-radius: 4px; border: 1px solid var(--border-color);"></canvas>
+            </div>
+
         </div>
     </div>
 
@@ -2793,126 +2813,195 @@
             lastLoopPhase = phase;
         }
 
-        // Master Recording Logic
+		// --- MASTER OUTPUT RECORDING ---
         let mediaRecorder;
         let recordedChunks = [];
         let isCustomWavRecording = false;
         let wavRecordingBuffers = [];
         let wavScriptProcessor = null;
+        
+        let masterBlob = null;
+        let masterAudioUrl = null;
+        
+        const btnMasterRec = document.getElementById('btn-master-rec');
+        const btnMasterSave = document.getElementById('btn-master-save');
+        const exportFormatSel = document.getElementById('export-format');
+        const exportBitrateSel = document.getElementById('export-bitrate');
+        
+        const masterPlayer = document.getElementById('masterAudioPlayer');
+        const btnRecPlay = document.getElementById('btn-rec-play');
+        const btnRecRw = document.getElementById('btn-rec-rw');
+        const btnRecFf = document.getElementById('btn-rec-ff');
+        const lblRecTime = document.getElementById('lbl-rec-time');
 
-        document.getElementById('btn-master-rec')?.addEventListener('click', () => {
+		let recTimerInterval;
+        let recStartTime;
+
+        // Helper: Loads the generated Blob into the UI for playback & saving
+        function setupPlaybackAndUnlock(blob) {
+            masterBlob = blob;
+            if (masterAudioUrl) URL.revokeObjectURL(masterAudioUrl);
+            masterAudioUrl = URL.createObjectURL(blob);
+            masterPlayer.src = masterAudioUrl;
+            
+            // Wait for audio to load to avoid "NaN" duration
+            masterPlayer.onloadedmetadata = () => {
+                const m = Math.floor(masterPlayer.duration / 60).toString().padStart(2, '0');
+                const s = Math.floor(masterPlayer.duration % 60).toString().padStart(2, '0');
+                if (lblRecTime) lblRecTime.textContent = `00:00 / ${m}:${s}`;
+            };
+            
+            [btnMasterSave, btnRecPlay, btnRecRw, btnRecFf, lblRecTime].forEach(el => el.disabled = false);
+            btnRecPlay.textContent = '▶ PLAY';
+            showToast("Master recording finished! You can now review and save.");
+        }
+
+        btnMasterRec?.addEventListener('click', async () => {
             initAudio(); 
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            recordedChunks = [];
-            document.getElementById('download-container').style.display = 'none';
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
 
-            const format = document.getElementById('export-format').value;
-            const bitrate = parseInt(document.getElementById('export-bitrate').value);
+            // === STOP RECORDING LOGIC ===
+            if (btnMasterRec.classList.contains('recording')) {
+                clearInterval(recTimerInterval); // Stop the live stopwatch
+                
+                const format = exportFormatSel.value;
+                if (isCustomWavRecording && wavScriptProcessor) {
+                    wavScriptProcessor.disconnect();
+                    compressor.disconnect(wavScriptProcessor);
+                    if(typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
+                        try{ importedAudioMasterGainNode.disconnect(wavScriptProcessor); } catch(e){}
+                    }
+                    isCustomWavRecording = false;
+                    setupPlaybackAndUnlock(exportWAV(wavRecordingBuffers, audioCtx.sampleRate));
+                } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    await new Promise(resolve => {
+                        mediaRecorder.onstop = () => {
+                            setupPlaybackAndUnlock(new Blob(recordedChunks, { type: mediaRecorder.mimeType || format }));
+                            resolve();
+                        };
+                        mediaRecorder.stop();
+                    });
+                }
+                
+                btnMasterRec.disabled = false;
+                btnMasterRec.textContent = '🔴 START REC';
+                btnMasterRec.style.background = '#c2185b';
+                btnMasterRec.classList.remove('recording');
+                return;
+            }
+
+            // === START RECORDING LOGIC ===
+            recordedChunks = [];
+            const format = exportFormatSel.value;
+            const bitrate = parseInt(exportBitrateSel.value);
 
             if (format === 'audio/wav') {
                 isCustomWavRecording = true;
-                wavRecordingBuffers = [[], []]; // Left and right channels
+                wavRecordingBuffers = [[], []]; // L & R channels
                 wavScriptProcessor = audioCtx.createScriptProcessor(4096, 2, 2);
                 compressor.connect(wavScriptProcessor);
-                if(importedAudioMasterGainNode) {
+                if(typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
                     try { importedAudioMasterGainNode.connect(wavScriptProcessor); } catch(e){}
                 }
                 wavScriptProcessor.connect(audioCtx.destination);
                 wavScriptProcessor.onaudioprocess = (e) => {
-                    const left = e.inputBuffer.getChannelData(0);
-                    const right = e.inputBuffer.getChannelData(1);
-                    wavRecordingBuffers[0].push(new Float32Array(left));
-                    wavRecordingBuffers[1].push(new Float32Array(right));
+                    wavRecordingBuffers[0].push(new Float32Array(e.inputBuffer.getChannelData(0)));
+                    wavRecordingBuffers[1].push(new Float32Array(e.inputBuffer.getChannelData(1)));
                 };
             } else {
                 isCustomWavRecording = false;
-                const options = { mimeType: format, audioBitsPerSecond: bitrate };
                 try {
-                    mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream, options);
+                    mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream, { mimeType: format, audioBitsPerSecond: bitrate });
                 } catch(e) {
                     console.warn(`Requested codec ${format} unsupported, falling back to browser default.`);
                     mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream);
                 }
-
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) recordedChunks.push(e.data);
-                };
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
                 mediaRecorder.start();
             }
 
-            const btnRec = document.getElementById('btn-master-rec');
-            btnRec.disabled = true;
-            btnRec.innerHTML = "🔴 Recording...";
-            btnRec.classList.add('recording');
-            document.getElementById('btn-master-stop').disabled = false;
+            btnMasterRec.textContent = '⏹ STOP REC';
+            btnMasterRec.style.background = '#4CAF50';
+            btnMasterRec.classList.add('recording');
+            
+            // Start the Live Stopwatch!
+            recStartTime = Date.now();
+            if (lblRecTime) {
+                lblRecTime.textContent = "REC 00:00";
+                recTimerInterval = setInterval(() => {
+                    const secs = Math.floor((Date.now() - recStartTime) / 1000);
+                    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+                    const s = (secs % 60).toString().padStart(2, '0');
+                    lblRecTime.textContent = `REC ${m}:${s}`;
+                }, 1000);
+            }
+            
+            // Lock UI while recording
+            [btnMasterSave, btnRecPlay, btnRecRw, btnRecFf].forEach(el => el.disabled = true);
+            if (!masterPlayer.paused) masterPlayer.pause();
         });
 
-        document.getElementById('btn-master-stop')?.addEventListener('click', async () => {
-            const btnRec = document.getElementById('btn-master-rec');
-            const format = document.getElementById('export-format').value;
+        // --- Playback Review Controls ---
+        btnRecPlay?.addEventListener('click', () => {
+            if (!masterAudioUrl) return;
+            if (masterPlayer.paused) { masterPlayer.play(); btnRecPlay.textContent = '⏸ PAUSE'; } 
+            else { masterPlayer.pause(); btnRecPlay.textContent = '▶ PLAY'; }
+        });
+
+        btnRecRw?.addEventListener('click', () => { if (masterAudioUrl) masterPlayer.currentTime = Math.max(0, masterPlayer.currentTime - 5); });
+        btnRecFf?.addEventListener('click', () => { if (masterAudioUrl) masterPlayer.currentTime = Math.min(masterPlayer.duration, masterPlayer.currentTime + 5); });
+
+        masterPlayer?.addEventListener('timeupdate', () => {
+            if (!lblRecTime) return;
+            const fmt = (t) => {
+                if (isNaN(t) || !isFinite(t)) return "00:00";
+                return `${Math.floor(t / 60).toString().padStart(2, '0')}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
+            };
+            lblRecTime.textContent = `${fmt(masterPlayer.currentTime)} / ${fmt(masterPlayer.duration)}`;
+        });
+        masterPlayer?.addEventListener('ended', () => { btnRecPlay.textContent = '▶ PLAY'; });
+
+        // --- Advanced Save As Logic ---
+        btnMasterSave?.addEventListener('click', async () => {
+            if (!masterBlob) return;
+            const format = exportFormatSel.value;
             let ext = ".webm";
             if(format.includes("mp4")) ext = ".mp4";
             if(format.includes("mpeg")) ext = ".mp3";
             if(format.includes("wav")) ext = ".wav";
+            
+            let defaultName = `TonnetzPro_Master${ext}`;
 
-            let blob = null;
-
-            if (isCustomWavRecording && wavScriptProcessor) {
-                wavScriptProcessor.disconnect();
-                compressor.disconnect(wavScriptProcessor);
-                if(importedAudioMasterGainNode) {
-                    try{ importedAudioMasterGainNode.disconnect(wavScriptProcessor); } catch(e){}
-                }
-                isCustomWavRecording = false;
-                blob = exportWAV(wavRecordingBuffers, audioCtx.sampleRate);
-            } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                await new Promise(resolve => {
-                    mediaRecorder.onstop = () => {
-                        blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || format });
-                        resolve();
-                    };
-                    mediaRecorder.stop();
-                });
-            }
-
-            if (blob) {
-                if (window.showSaveFilePicker) {
-                    try {
-                        const handle = await window.showSaveFilePicker({
-                            suggestedName: `TonnetzPro_Master${ext}`,
-                            types: [{
-                                description: 'Audio File',
-                                accept: { [blob.type || 'audio/*']: [ext] }
-                            }]
-                        });
-                        const writable = await handle.createWritable();
-                        await writable.write(blob);
-                        await writable.close();
-                        showToast("File saved successfully!");
-                    } catch (err) {
-                        fallbackDownload(blob, ext);
-                    }
-                } else {
-                    fallbackDownload(blob, ext);
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({ 
+                        suggestedName: defaultName,
+                        types: [{ description: 'Audio File', accept: { [masterBlob.type || 'audio/*']: [ext] } }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(masterBlob);
+                    await writable.close();
+                    showToast("Mixdown saved successfully!");
+                    return;
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error(err);
+                    return;
                 }
             }
 
-            btnRec.disabled = false;
-            btnRec.innerHTML = "🔴 Start Rec";
-            btnRec.classList.remove('recording');
-            document.getElementById('btn-master-stop').disabled = true;
+            // Fallback for browsers/mobile without Native File Picker
+            let fileName = prompt("Enter a filename for your mixdown:", defaultName);
+            if (!fileName) return; 
+            if (!fileName.endsWith(ext)) fileName += ext;
+
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = masterAudioUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => document.body.removeChild(a), 100);
         });
-
-        function fallbackDownload(blob, ext) {
-            const url = URL.createObjectURL(blob);
-            const dlLink = document.getElementById('download-link');
-            if(dlLink) {
-                dlLink.href = url;
-                dlLink.download = `TonnetzPro_Master${ext}`;
-                document.getElementById('download-container').style.display = 'flex';
-                showToast("Mixdown ready to download!");
-            }
-        }
 
         // --- Custom WAV Exporter to guarantee lossless native WAV export ---
         function exportWAV(buffers, sampleRate) {
@@ -2921,6 +3010,8 @@
             const length = bufferLength * numChannels * 2 + 44;
             const buffer = new ArrayBuffer(length);
             const view = new DataView(buffer);
+            
+            const writeString = (view, offset, string) => { for (let i=0; i<string.length; i++) { view.setUint8(offset + i, string.charCodeAt(i)); } };
             
             writeString(view, 0, 'RIFF');
             view.setUint32(4, 36 + bufferLength * numChannels * 2, true);
@@ -2949,12 +3040,12 @@
             }
             return new Blob([view], { type: 'audio/wav' });
         }
+		
         function writeString(view, offset, string) {
             for (let i = 0; i < string.length; i++) {
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
         }
-
 
         // --- Piano Keyboard Generation ---
         function initPiano() {
