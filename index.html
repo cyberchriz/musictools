@@ -365,16 +365,16 @@
 				<div class="control-group"><label>&nbsp;</label><button id="btnChordDegrees" class="btn-sm">Show Chord Degrees: OFF</button></div>
             </div>
             
-			<div class="control-row" style="grid-template-columns: repeat(4, 1fr);">
+			<div class="control-row">
                 <div class="control-group"><label id="lblMasterTune">Master Tune: 440 Hz</label><input type="range" id="masterTune" min="415" max="465" step="1" value="440"></div>
                 <div class="control-group"><label id="lblHideDelay">Auto-Hide: 1000ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="1000"></div>
                 <div class="control-group"><label>&nbsp;</label><button id="btnMidi">Connect MIDI</button></div>
                 <div class="control-group"><label>&nbsp;</label><button id="btnMidiOutput">MIDI OUT: MIDI + BROWSER</button></div>
             </div>
-            <div class="control-row" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="control-row">
                 <div class="control-group"><label id="lblMidiVelocity">Velocity: 100</label><input type="range" id="midiVelocity" min="1" max="127" step="1" value="100"></div>
                 <div class="control-group"><label id="lblMidiModWheel">Mod Wheel: 0</label><input type="range" id="midiModWheel" min="0" max="127" step="1" value="0"></div>
-                <div class="control-group"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0"></div>
+                <div class="control-group" style="grid-column: span 2;"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0"></div>
             </div>
         </div>
     </div>
@@ -450,10 +450,10 @@
                 <div class="control-group"><label id="lblNoise">Noise: 0.03</label><input type="range" id="noise" min="0" max="1" step="0.01" value="0.03"></div>
                 <div class="control-group"><label id="lblFilterEnv">Filter Env: 3.0</label><input type="range" id="filterEnv" min="0" max="10" step="0.1" value="3"></div>
             </div>
-            <div class="control-row">
+			<div class="control-row">
                 <div class="control-group"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
                 <div class="control-group"><label id="lblGlide">Glide (Porta): 0.0s</label><input type="range" id="glide" min="0" max="1" step="0.01" value="0"></div>
-                <div class="control-group"><label>Filter Type</label>
+                <div class="control-group" style="grid-column: span 2;"><label>Filter Type</label>
                     <select id="filterType" class="ui-select">
                         <option value="lowpass" selected>Lowpass</option>
                         <option value="highpass">Highpass</option>
@@ -723,7 +723,7 @@
             </ul>
 
             <h3>📈 5. Synthesizer Engine & Modulations</h3>
-            <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from 19 perfectly calibrated acoustic and retro analog presets (Piano, Lo-Fi Keys, 80s Brass, Theremin, Solo Cello, etc.).</p>
+            <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from 33 perfectly calibrated acoustic and retro analog presets (Piano, Lo-Fi Keys, 80s Brass, Theremin, Solo Cello, etc.).</p>
             <ul>
                 <li><strong>ADSR Envelope:</strong> Visually sculpt your Attack, Decay, Sustain, and Release times to create anything from sharp rhythmic plucks to slowly swelling cinematic pads.</li>
                 <li><strong>Brightness & Resonance:</strong> Controls the built-in low-pass filter to make sounds darker or sharper. Add <strong>Filter Env</strong> to let the ADSR envelope sweep the filter cutoff automatically.</li>
