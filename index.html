@@ -445,30 +445,30 @@
                         <button id="btnClosePads" class="close-btn-sm" title="Close">✕</button>
                     </div>
                 </div>
-				<div class="thumb-row">
+				<div class="thumb-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                     <div class="big-tap-btn btn-cat-sus" id="tapSustain"><span class="icon">〰️</span>SUSTAIN<span class="kb-shortcut">[Space]</span></div>
                     <div class="big-tap-btn btn-cat-sus" id="tapDampen"><span class="icon">🔇</span>DAMPEN<span class="kb-shortcut">[L-Alt]</span></div>
                 </div>
                 <div class="pad-grid">
-                    <div class="big-tap-btn btn-cat-add" id="tap69">6/9<span class="kb-shortcut">[1]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tapMaj7">Maj7<span class="kb-shortcut">[2]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tapFlat5">♭5<span class="kb-shortcut">[3]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tapSharp5">♯5<span class="kb-shortcut">[4]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tapSus4">sus4<span class="kb-shortcut">[5]</span></div>
+                    <div class="big-tap-btn btn-cat-oct" id="tapOctDown"><span class="icon">🔽</span>OCT -1<span class="kb-shortcut">[1]</span></div>
+                    <div class="big-tap-btn btn-cat-oct" id="tapOctUp"><span class="icon">🔼</span>OCT +1<span class="kb-shortcut">[2]</span></div>
+                    <div class="big-tap-btn btn-cat-arp" id="tapArpUp"><span class="icon">↗️</span>ARP UP<span class="kb-shortcut">[3]</span></div>
+                    <div class="big-tap-btn btn-cat-arp" id="tapArpDown"><span class="icon">↘️</span>ARP DN<span class="kb-shortcut">[4]</span></div>
+                    <div class="big-tap-btn btn-cat-arp" id="tapArpRandom"><span class="icon">🔀</span>ARP RND<span class="kb-shortcut">[5]</span></div>
                     
-                    <div class="big-tap-btn btn-cat-oct" id="tapOctDown"><span class="icon">🔽</span>OCT -1<span class="kb-shortcut">[Q]</span></div>
-                    <div class="big-tap-btn btn-cat-oct" id="tapOctUp"><span class="icon">🔼</span>OCT +1<span class="kb-shortcut">[W]</span></div>
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpUp"><span class="icon">↗️</span>ARP UP<span class="kb-shortcut">[E]</span></div>
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpDown"><span class="icon">↘️</span>ARP DN<span class="kb-shortcut">[R]</span></div>
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpRandom"><span class="icon">🔀</span>ARP RND<span class="kb-shortcut">[T]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tap69">6/9<span class="kb-shortcut">[Q]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapMaj7">Maj7<span class="kb-shortcut">[W]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapFlat5">♭5<span class="kb-shortcut">[E]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSharp5">♯5<span class="kb-shortcut">[R]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSus4">sus4<span class="kb-shortcut">[T]</span></div>
                     
                     <div class="big-tap-btn btn-cat-add" id="tap6th">ADD 6<span class="kb-shortcut">[A]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tap7th">ADD 7<span class="kb-shortcut">[S]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tap9th">ADD 9<span class="kb-shortcut">[D]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tap11th">ADD 11<span class="kb-shortcut">[F]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tapSus2">sus2<span class="kb-shortcut">[G]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tap13th">ADD 13<span class="kb-shortcut">[G]</span></div>
                     
-                    <div class="big-tap-btn btn-cat-add" id="tap13th">ADD 13<span class="kb-shortcut">[Z/Y]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSus2">sus2<span class="kb-shortcut">[Z/Y]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tapFlat9">♭9<span class="kb-shortcut">[X]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tapSharp9">♯9<span class="kb-shortcut">[C]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tapSharp11">♯11<span class="kb-shortcut">[V]</span></div>
@@ -781,11 +781,10 @@
         
         let currentKeyCenter = 0, currentScale = 'all', currentLabelType = 'absolute';
         
-        function getExtendedStArray(stArray) {
+		function getExtendedStArray(stArray) {
             let res = [...stArray];
             if (res.length >= 3) {
                 const root = res[0]; const third = res[1]; const fifth = res[2];
-                const isMajor = res.includes(root + 4);
                 
                 // Alterations (Replacing base notes)
                 if (isFlat5On()) { res = res.filter(st => st !== fifth); res.push(root + 6); }
@@ -797,7 +796,7 @@
                 if (is69On()) { res.push(root + 9); res.push(root + 14); }
                 if (isMaj7On()) { res.push(root + 11); }
                 if (is6thOn()) res.push(root + 9);
-                if (is7thOn()) res.push(root + (isMajor ? 11 : 10));
+                if (is7thOn()) res.push(root + 10); // ALWAYS Dominant 7th (+10)
                 if (is9thOn()) res.push(root + 14);
                 if (is11thOn()) res.push(root + 17);
                 if (is13thOn()) res.push(root + 21);
@@ -809,7 +808,7 @@
             // Ensure unique notes, sorted from lowest to highest pitch for perfect Arpeggiation
             return Array.from(new Set(res)).sort((a,b) => a - b); 
         }
-
+		
         function applyArpMode(freqs) {
             let res = [...freqs];
             if (arpMode === 'down') { res.reverse(); } 
@@ -1605,30 +1604,30 @@
             }
         }, { capture: true });
         
-        document.addEventListener('keydown', (e) => {
+		document.addEventListener('keydown', (e) => {
             if(e.repeat || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
             let trigger = false; wakeNav();
             switch(e.code) {
-                // Row 1
-                case 'Digit1': add69Held = true; trigger = true; break;
-                case 'Digit2': addMaj7Held = true; trigger = true; break;
-                case 'Digit3': addFlat5Held = true; trigger = true; break;
-                case 'Digit4': addSharp5Held = true; trigger = true; break;
-                case 'Digit5': addSus4Held = true; trigger = true; break;
-                // Row 2
-                case 'KeyQ': octDownHeld = true; octMode = 'down'; trigger = true; break;
-                case 'KeyW': octUpHeld = true; octMode = 'up'; trigger = true; break;
-                case 'KeyE': case 'ShiftLeft': case 'ShiftRight': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
-                case 'KeyR': case 'ControlLeft': case 'ControlRight': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
-                case 'KeyT': arpRandomHeld = true; arpMode = 'random'; trigger = true; break;
-                // Row 3
+                // Row 1 (Numbers)
+                case 'Digit1': octDownHeld = true; octMode = 'down'; trigger = true; break;
+                case 'Digit2': octUpHeld = true; octMode = 'up'; trigger = true; break;
+                case 'Digit3': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
+                case 'Digit4': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
+                case 'Digit5': arpRandomHeld = true; arpMode = 'random'; trigger = true; break;
+                // Row 2 (QWERTY)
+                case 'KeyQ': add69Held = true; trigger = true; break;
+                case 'KeyW': addMaj7Held = true; trigger = true; break;
+                case 'KeyE': addFlat5Held = true; trigger = true; break;
+                case 'KeyR': addSharp5Held = true; trigger = true; break;
+                case 'KeyT': addSus4Held = true; trigger = true; break;
+                // Row 3 (ASDFG)
                 case 'KeyA': add6Held = true; trigger = true; break;
                 case 'KeyS': add7Held = true; trigger = true; break;
                 case 'KeyD': add9Held = true; trigger = true; break;
                 case 'KeyF': add11Held = true; trigger = true; break;
-                case 'KeyG': addSus2Held = true; trigger = true; break;
-                // Row 4
-                case 'KeyZ': case 'KeyY': add13Held = true; trigger = true; break;
+                case 'KeyG': add13Held = true; trigger = true; break;
+                // Row 4 (ZXCVB)
+                case 'KeyZ': case 'KeyY': addSus2Held = true; trigger = true; break;
                 case 'KeyX': addFlat9Held = true; trigger = true; break;
                 case 'KeyC': addSharp9Held = true; trigger = true; break;
                 case 'KeyV': addSharp11Held = true; trigger = true; break;
@@ -1645,25 +1644,25 @@
             if(e.target.tagName === 'INPUT') return;
             let trigger = false;
             switch(e.code) {
-                case 'Digit1': add69Held = false; trigger = true; break;
-                case 'Digit2': addMaj7Held = false; trigger = true; break;
-                case 'Digit3': addFlat5Held = false; trigger = true; break;
-                case 'Digit4': addSharp5Held = false; trigger = true; break;
-                case 'Digit5': addSus4Held = false; trigger = true; break;
+                case 'Digit1': octDownHeld = false; trigger = true; break;
+                case 'Digit2': octUpHeld = false; trigger = true; break;
+                case 'Digit3': arpUpHeld = false; trigger = true; break;
+                case 'Digit4': arpDownHeld = false; trigger = true; break;
+                case 'Digit5': arpRandomHeld = false; trigger = true; break;
                 
-                case 'KeyQ': octDownHeld = false; trigger = true; break;
-                case 'KeyW': octUpHeld = false; trigger = true; break;
-                case 'KeyE': case 'ShiftLeft': case 'ShiftRight': arpUpHeld = false; trigger = true; break;
-                case 'KeyR': case 'ControlLeft': case 'ControlRight': arpDownHeld = false; trigger = true; break;
-                case 'KeyT': arpRandomHeld = false; trigger = true; break;
+                case 'KeyQ': add69Held = false; trigger = true; break;
+                case 'KeyW': addMaj7Held = false; trigger = true; break;
+                case 'KeyE': addFlat5Held = false; trigger = true; break;
+                case 'KeyR': addSharp5Held = false; trigger = true; break;
+                case 'KeyT': addSus4Held = false; trigger = true; break;
                 
                 case 'KeyA': add6Held = false; trigger = true; break;
                 case 'KeyS': add7Held = false; trigger = true; break;
                 case 'KeyD': add9Held = false; trigger = true; break;
                 case 'KeyF': add11Held = false; trigger = true; break;
-                case 'KeyG': addSus2Held = false; trigger = true; break;
+                case 'KeyG': add13Held = false; trigger = true; break;
                 
-                case 'KeyZ': case 'KeyY': add13Held = false; trigger = true; break;
+                case 'KeyZ': case 'KeyY': addSus2Held = false; trigger = true; break;
                 case 'KeyX': addFlat9Held = false; trigger = true; break;
                 case 'KeyC': addSharp9Held = false; trigger = true; break;
                 case 'KeyV': addSharp11Held = false; trigger = true; break;
@@ -2269,17 +2268,28 @@
                 return;
             }
 
-            const chordDict = {
-                '0,4,7': '', '0,3,7': 'm', '0,3,6': 'dim', '0,4,8': 'aug', '0,5,7': 'sus4', '0,2,7': 'sus2', '0,4,6': 'b5',
-                '0,4,7,9': '6', '0,3,7,9': 'm6', '0,2,4,7,9': '6/9', '0,2,3,7,9': 'm6/9',
-                '0,4,7,11': 'Maj7', '0,3,7,10': 'm7', '0,4,7,10': '7', '0,3,6,10': 'm7b5', '0,3,6,9': 'dim7',
-                '0,3,7,11': 'mM7', '0,4,8,10': 'aug7', '0,4,8,11': 'Maj7#5', '0,4,6,10': '7b5', '0,5,7,10': '7sus4',
-                '0,2,4,7,11': 'Maj9', '0,2,3,7,10': 'm9', '0,2,4,7,10': '9', '0,1,4,7,10': '7b9', '0,3,4,7,10': '7#9',
-                '0,2,3,6,10': 'm9b5', '0,1,3,6,10': 'm7b5b9', '0,2,4,8,10': '9#5', '0,1,4,8,10': '7b9#5', '0,2,4,6,10': '9b5',
-                '0,2,4,5,7,11': 'Maj11', '0,2,3,5,7,10': 'm11', '0,2,4,5,7,10': '11', '0,4,6,7,10': '7#11', '0,2,4,6,7,10': '9#11', '0,2,4,6,7,11': 'Maj9#11',
-                '0,2,4,7,9,11': 'Maj13', '0,2,3,5,7,9,10': 'm13', '0,2,4,7,9,10': '13', '0,4,7,8,10': '7b13', '0,2,4,7,8,10': '9b13',
-                '0,2,4,7': 'add9', '0,2,3,7': 'madd9', '0,4,5,7': 'add11', '0,3,5,7': 'madd11',
-                '0,4,10': '7(no5)', '0,3,10': 'm7(no5)', '0,4,11': 'Maj7(no5)', '0,2,4,10': '9(no5)', '0,2,3,10': 'm9(no5)', '0,2,4,11': 'Maj9(no5)',
+			const chordDict = {
+                // Triads
+                '0,4,7': '', '0,3,7': '-', '0,3,6': 'dim', '0,4,8': 'aug', '0,5,7': 'sus4', '0,2,7': 'sus2', '0,4,6': 'b5',
+                // 6ths
+                '0,4,7,9': '6', '0,3,7,9': '-6', '0,2,4,7,9': '6/9', '0,2,3,7,9': '-6/9',
+                // 7ths
+                '0,4,7,11': 'Maj7', '0,3,7,10': '-7', '0,4,7,10': '7', '0,3,6,10': '-7b5', '0,3,6,9': 'dim7',
+                '0,3,7,11': '-(maj7)', '0,4,8,10': 'aug7', '0,4,8,11': 'Maj7#5', '0,4,6,10': '7b5', '0,5,7,10': '7sus4',
+                // 9ths
+                '0,2,4,7,11': 'Maj9', '0,2,3,7,10': '-9', '0,2,4,7,10': '9', '0,1,4,7,10': '7b9', '0,3,4,7,10': '7#9',
+                '0,2,3,6,10': '-9b5', '0,1,3,6,10': '-7b5b9', '0,2,4,8,10': '9#5', '0,1,4,8,10': '7b9#5', '0,2,4,6,10': '9b5',
+                // 11ths
+                '0,2,4,5,7,11': 'Maj11', '0,2,3,5,7,10': '-11', '0,2,4,5,7,10': '11', '0,4,6,7,10': '7#11', '0,2,4,6,7,10': '9#11', '0,2,4,6,7,11': 'Maj9#11',
+                // 13ths
+                '0,2,4,7,9,11': 'Maj13', '0,2,3,5,7,9,10': '-13', '0,2,4,7,9,10': '13', '0,4,7,8,10': '7b13', '0,2,4,7,8,10': '9b13',
+                // Altered Dominant Combinations
+                '0,1,4,7,8,10': '7b9b13', '0,3,4,7,8,10': '7#9b13', '0,1,4,6,7,10': '7b9#11', '0,3,4,6,7,10': '7#9#11',
+                // Added tones
+                '0,2,4,7': 'add9', '0,2,3,7': '-add9', '0,4,5,7': 'add11', '0,3,5,7': '-add11',
+                // Omitted 5ths (Generated via Tonnetz spacing)
+                '0,4,10': '7(no5)', '0,3,10': '-7(no5)', '0,4,11': 'Maj7(no5)', '0,2,4,10': '9(no5)', '0,2,3,10': '-9(no5)', '0,2,4,11': 'Maj9(no5)',
+                // Power chord
                 '0,7': '5'
             };
 
