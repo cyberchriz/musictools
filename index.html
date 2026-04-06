@@ -374,18 +374,24 @@
                 <div class="control-group"><label>Analysis</label><button id="btnChordDegrees" class="btn-sm">Show Degrees: OFF</button></div>
             </div>
             
-            <div class="control-row">
+			<div class="control-row" style="border: none; padding: 0;">
                 <div class="control-group"><label id="lblMasterTune">Master Tune: 440 Hz</label><input type="range" id="masterTune" min="415" max="465" step="1" value="440"></div>
                 <div class="control-group"><label id="lblHideDelay">Auto-Hide: 1000ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="1000"></div>
-                <div class="control-group"><label>Hardware</label><button id="btnMidi">Connect MIDI</button></div>
-                <div class="control-group"><label>Routing</label><button id="btnMidiOutput">MIDI OUT: BROWSER</button></div>
+                <div class="control-group" style="display:none;"></div><div class="control-group" style="display:none;"></div>
             </div>
             
-            <!-- MIDI Well Box -->
-            <div class="control-row control-well">
-                <div class="control-group"><label id="lblMidiVelocity">Velocity: 100</label><input type="range" id="midiVelocity" min="1" max="127" step="1" value="100"></div>
-                <div class="control-group"><label id="lblMidiModWheel">Mod Wheel: 0</label><input type="range" id="midiModWheel" min="0" max="127" step="1" value="0"></div>
-                <div class="control-group" style="grid-column: span 2;"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0"></div>
+            <!-- MIDI & Hardware Well Box -->
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">MIDI & Hardware Settings</div>
+                <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+                    <div class="control-group"><label>Hardware</label><button id="btnMidi">Connect MIDI</button></div>
+                    <div class="control-group"><label>Routing</label><button id="btnMidiOutput">MIDI OUT: BROWSER</button></div>
+                    <div class="control-group"><label id="lblMidiVelocity">Velocity: 100</label><input type="range" id="midiVelocity" min="1" max="127" step="1" value="100"></div>
+                    <div class="control-group"><label id="lblMidiModWheel">Mod Wheel: 0</label><input type="range" id="midiModWheel" min="0" max="127" step="1" value="0"></div>
+                </div>
+                <div class="control-row" style="grid-template-columns: 1fr; border: none; padding: 0;">
+                    <div class="control-group"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0" style="margin-top: 4px;"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -449,7 +455,7 @@
                 <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
                 <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
             </div>
-            <div class="control-row">
+			<div class="control-row" style="border: none; padding: 0;">
                 <div class="control-group"><label id="lblLfoSpeed">LFO Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
                 <div class="control-group"><label id="lblVibrato">Vibrato: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
                 <div class="control-group"><label id="lblTremolo">Tremolo: 0.00</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
@@ -457,23 +463,28 @@
             </div>
             
             <!-- Deep Synthesis Well Box -->
-            <div class="control-row control-well">
-                <div class="control-group"><label id="lblDetune">Detune: 2</label><input type="range" id="detune" min="0" max="30" step="1" value="2"></div>
-                <div class="control-group"><label id="lblSubOsc">Sub Osc: 0.05</label><input type="range" id="subOsc" min="0" max="1" step="0.01" value="0.05"></div>
-                <div class="control-group"><label id="lblNoise">Noise: 0.03</label><input type="range" id="noise" min="0" max="1" step="0.01" value="0.03"></div>
-                <div class="control-group"><label id="lblFilterEnv">Filter Env: 3.0</label><input type="range" id="filterEnv" min="0" max="10" step="0.1" value="3"></div>
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Deep Synthesis</div>
+                <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+                    <div class="control-group"><label id="lblDetune">Detune: 2</label><input type="range" id="detune" min="0" max="30" step="1" value="2"></div>
+                    <div class="control-group"><label id="lblSubOsc">Sub Osc: 0.05</label><input type="range" id="subOsc" min="0" max="1" step="0.01" value="0.05"></div>
+                    <div class="control-group"><label id="lblNoise">Noise: 0.03</label><input type="range" id="noise" min="0" max="1" step="0.01" value="0.03"></div>
+                    <div class="control-group"><label id="lblFilterEnv">Filter Env: 3.0</label><input type="range" id="filterEnv" min="0" max="10" step="0.1" value="3"></div>
+                </div>
                 
-                <div class="control-group"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
-                <div class="control-group"><label id="lblGlide">Glide (Porta): 0.0s</label><input type="range" id="glide" min="0" max="1" step="0.01" value="0"></div>
-                <div class="control-group" style="grid-column: span 2;"><label>Filter Type</label>
-                    <select id="filterType" class="ui-select">
-                        <option value="lowpass" selected>Lowpass</option>
-                        <option value="highpass">Highpass</option>
-                        <option value="bandpass">Bandpass</option>
-                    </select>
+                <div class="control-row" style="border: none; padding: 0;">
+                    <div class="control-group"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
+                    <div class="control-group"><label id="lblGlide">Glide (Porta): 0.0s</label><input type="range" id="glide" min="0" max="1" step="0.01" value="0"></div>
+                    <div class="control-group" style="grid-column: span 2;"><label>Filter Type</label>
+                        <select id="filterType" class="ui-select">
+                            <option value="lowpass" selected>Lowpass</option>
+                            <option value="highpass">Highpass</option>
+                            <option value="bandpass">Bandpass</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <canvas id="envCanvas" style="width: 100%; height: 60px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 8px;"></canvas>
+            <canvas id="envCanvas" style="width: 100%; height: 60px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 4px;"></canvas>
         </div>
     </div>
 	
@@ -620,14 +631,17 @@
                     </div>
                 </div>
 
-                <div class="looper-progress-bar" style="margin-top: 8px;"><div id="looper-progress-fill"></div></div>
-                <div class="control-row" style="margin-top: 8px; border: none; padding: 0;">
-                    <div class="control-group"><button id="btnLooperRec" class="looper-btn">⏺ Record</button></div>
-                    <div class="control-group"><button id="btnLooperPlay" class="looper-btn">▶ Play</button></div>
-                    <div class="control-group"><button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button></div>
-                    <div class="control-group">
-                        <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold;">
-                            <option value="1">1 Bar</option><option value="2">2 Bars</option><option value="4" selected>4 Bars</option><option value="8">8 Bars</option>
+			<div class="looper-progress-bar" style="margin-top: 8px;"><div id="looper-progress-fill"></div></div>
+                <div class="looper-controls" style="margin-top: 8px;">
+                    <div class="looper-actions">
+                        <button id="btnLooperRec" class="looper-btn">⏺ Record</button>
+                        <button id="btnLooperPlay" class="looper-btn">▶ Play</button>
+                        <button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button>
+                        <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold; padding-left: 10px;">
+                            <option value="1">1 Bar</option>
+                            <option value="2">2 Bars</option>
+                            <option value="4" selected>4 Bars</option>
+                            <option value="8">8 Bars</option>
                         </select>
                     </div>
                 </div>
