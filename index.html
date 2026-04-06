@@ -238,12 +238,12 @@
         .dimmed-scale.interactive-triad { fill: transparent !important; opacity: 1 !important; }
         .dimmed-text { fill: var(--grid-line) !important; stroke: none !important; opacity: 0.8; }
         
-        /* Highlight overlays (SVG) */
+		/* Highlight overlays (SVG) */
         .highlight-overlay { transition: opacity 0.1s ease-out; pointer-events: none; will-change: opacity; }
-		.node-active { fill: #ffeb3b !important; stroke: #ff9800 !important; stroke-width: 3px !important; filter: drop-shadow(0 0 8px rgba(255, 235, 59, 0.8)) !important; }
+        .extension-highlight { stroke: var(--ext-highlight-stroke) !important; stroke-width: 4px !important; fill: var(--ext-highlight-fill) !important; filter: drop-shadow(0 0 8px var(--ext-highlight-stroke)) !important; }
+        .node-active { fill: #ffeb3b !important; stroke: #ff9800 !important; stroke-width: 3px !important; filter: drop-shadow(0 0 8px rgba(255, 235, 59, 0.8)) !important; }
         .triad-active { fill: #fff59d !important; stroke: #ff9800 !important; stroke-width: 2px !important; filter: drop-shadow(0 0 10px rgba(255, 235, 59, 0.6)) !important; opacity: 1 !important; }
         .dark-theme .triad-active { fill: rgba(130, 119, 23, 0.8) !important; stroke: #ff9800 !important; filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.5)) !important; }
-        .extension-highlight { stroke: var(--ext-highlight-stroke) !important; stroke-width: 4px !important; fill: var(--ext-highlight-fill) !important; filter: drop-shadow(0 0 8px var(--ext-highlight-stroke)) !important; }
 
         .text-natural { fill: var(--text-light); font-weight: bold; text-anchor: middle; dominant-baseline: central; pointer-events: none; transition: opacity 0.3s; }
         .text-accidental { fill: var(--text-accidental); font-weight: bold; text-anchor: middle; dominant-baseline: central; pointer-events: none; transition: opacity 0.3s; }
@@ -361,7 +361,7 @@
                     <select id="metronomeMode"><option value="none">None</option><option value="click">Click</option><option value="basic">Basic Beat</option><option value="rock">Rock Beat</option><option value="swing">Swing Beat</option><option value="house">House</option><option value="techno">Techno</option><option value="breakbeat">Breakbeat</option><option value="dnb">Drum & Bass</option><option value="reggae">Reggae</option><option value="reggaeton">Reggaeton</option><option value="trap">Trap</option><option value="bossa">Bossa Nova</option><option value="funk">Funk</option><option value="hiphop">Hip Hop</option><option value="rnb">R&B</option><option value="latin">Latin Groove</option></select>
                 </div>
                 <div class="control-group"><label>Drum Vol (Mix)</label><input type="range" id="metronomeVol" min="0" max="1" step="0.01" value="0.3"></div>
-                <div class="control-group"><label>&nbsp;</label><button id="btnExtensions" class="btn-sm active-btn">Show Ext. Highlights: ON</button></div>
+                <div class="control-group"><label>&nbsp;</label><button id="btnExtensions" class="btn-sm active-btn">7th/9th Ext. Highlights: ON</button></div>
 				<div class="control-group"><label>&nbsp;</label><button id="btnChordDegrees" class="btn-sm">Show Chord Degrees: OFF</button></div>
             </div>
             
@@ -668,7 +668,7 @@
             <h3>🎛️ 2. Performance Pads & Arpeggiator</h3>
             <p>You don't need to stretch your mouse across the grid to play complex jazz chords. Use the Performance Pads (or keyboard shortcuts) to instantly modify any note or triad you click:</p>
             <ul>
-                <li><strong>Extensions:</strong> Hold <code>A</code>, <code>S</code>, <code>D</code>, or <code>F</code> to instantly add a 6th, 7th, 9th, or 13th to your chord. When <i>Show Ext. Highlights</i> is ON, extended notes light up with a green border on the grid and piano. Use the 'Lock' buttons to keep extensions permanently active.</li>
+                <li><strong>Extensions:</strong> Hold <code>A</code>, <code>S</code>, <code>D</code>, or <code>F</code> to instantly add a 6th, 7th, 9th, or 13th to your chord. When <i>7th/9th Ext. Highlights</i> is ON, extended notes light up with a green border on the grid and piano. Use the 'Lock' buttons to keep extensions permanently active.</li>
                 <li><strong>Octave Jumps:</strong> Hold <code>Q</code> or <code>W</code> to drop or raise your playing by a full octave instantly.</li>
                 <li><strong>Arpeggiator:</strong> Hold <code>Shift</code> (Up), <code>Ctrl</code> (Down), or lock the Arp via the menu to automatically step through the notes of the shapes you press. Control the speed and rhythm via the <strong>Arp/Metron BPM</strong> slider. You can also apply a <strong>Swing Effect</strong> or toggle continuous looping.</li>
                 <li><strong>Dampen:</strong> Hold the <code>Left Alt</code> key or press the Dampen pad to smoothly muffle and quiet actively sustaining voices (simulating an 'una corda' pedal).</li>
@@ -1117,7 +1117,7 @@
 			['keyCenter','scaleOverlay','labelType','transpose','tuningMode','arpBpm','arpRhythm','arpSwing','arpLoop','metronomeMode','metronomeVol','masterTune','uiHideDelay','instrumentPreset','volume','attack','decay','sustain','release','brightness','resonance','chorus','distortion','echo','reverbMix','lfoSpeed','vibrato','tremolo','sweep','detune','subOsc','noise','filterEnv'].forEach(k => av(k, s[k]));
 		                				     av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
 				    if (s.drumEmbellish !== undefined) document.getElementById('drum-embellish').checked = s.drumEmbellish;
-				       if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `Show Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; 	document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
+				       if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `7th/9th Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; 	document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
 		                if (s.showChordDegrees !== undefined && showChordDegrees !== s.showChordDegrees) { showChordDegrees = s.showChordDegrees; document.getElementById('btnChordDegrees').textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; document.getElementById('btnChordDegrees').classList.toggle('active-btn', showChordDegrees); updatePianoVisuals(); }
 		                if (s.isDarkMode !== undefined && isDarkMode !== s.isDarkMode) { isDarkMode = s.isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode); document.getElementById('btnTheme').textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; document.getElementById('btnTheme').classList.toggle('active-btn', isDarkMode); }
 		                showToast("Settings loaded successfully.");
@@ -1215,7 +1215,7 @@
         });
 
         document.getElementById('btnExtensions')?.addEventListener('click', (e) => {
-            showExtensions = !showExtensions; e.target.textContent = `Show Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; e.target.classList.toggle('active-btn', showExtensions);
+            showExtensions = !showExtensions; e.target.textContent = `7th/9th Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; e.target.classList.toggle('active-btn', showExtensions);
             if(!showExtensions) { document.querySelectorAll('.extension-highlight').forEach(el => el.classList.remove('extension-highlight')); }
             updateHighlights();
         });
