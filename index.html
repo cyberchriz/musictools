@@ -47,7 +47,8 @@
             .manual-drum-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
             .overlay.primary { top: 0; left: 0; width: clamp(320px, 90vw, 450px); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-bottom-right-radius: 12px; transform: translateX(-105%); }
             .overlay.primary .control-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .overlay.primary .pad-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+			.overlay.primary .pad-grid { grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); }
+            .thumb-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
             .overlay.primary .lock-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vmin; }
         }
         @media (orientation: portrait) {
@@ -55,7 +56,8 @@
             .manual-drum-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
             .overlay.primary { top: 0; left: 0; width: 100vw; border-bottom: 1px solid var(--border-color); border-right: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; transform: translateY(-105%); }
             .overlay.primary .control-row { grid-template-columns: repeat(4, 1fr); gap: 6px; }
-            .overlay.primary .pad-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+			.overlay.primary .pad-grid { grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); }
+            .thumb-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
             .overlay.primary .lock-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1vmin; }
             .overlay.primary .control-group label { font-size: 0.65rem; }
             input[type=range] { height: 20px; }
@@ -443,23 +445,35 @@
                         <button id="btnClosePads" class="close-btn-sm" title="Close">✕</button>
                     </div>
                 </div>
-                <div class="pad-grid">
+				<div class="thumb-row">
                     <div class="big-tap-btn btn-cat-sus" id="tapSustain"><span class="icon">〰️</span>SUSTAIN<span class="kb-shortcut">[Space]</span></div>
                     <div class="big-tap-btn btn-cat-sus" id="tapDampen"><span class="icon">🔇</span>DAMPEN<span class="kb-shortcut">[L-Alt]</span></div>
+                </div>
+                <div class="pad-grid">
+                    <div class="big-tap-btn btn-cat-add" id="tap69">6/9<span class="kb-shortcut">[1]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapMaj7">Maj7<span class="kb-shortcut">[2]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapFlat5">♭5<span class="kb-shortcut">[3]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSharp5">♯5<span class="kb-shortcut">[4]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSus4">sus4<span class="kb-shortcut">[5]</span></div>
+                    
                     <div class="big-tap-btn btn-cat-oct" id="tapOctDown"><span class="icon">🔽</span>OCT -1<span class="kb-shortcut">[Q]</span></div>
                     <div class="big-tap-btn btn-cat-oct" id="tapOctUp"><span class="icon">🔼</span>OCT +1<span class="kb-shortcut">[W]</span></div>
+                    <div class="big-tap-btn btn-cat-arp" id="tapArpUp"><span class="icon">↗️</span>ARP UP<span class="kb-shortcut">[E]</span></div>
+                    <div class="big-tap-btn btn-cat-arp" id="tapArpDown"><span class="icon">↘️</span>ARP DN<span class="kb-shortcut">[R]</span></div>
+                    <div class="big-tap-btn btn-cat-arp" id="tapArpRandom"><span class="icon">🔀</span>ARP RND<span class="kb-shortcut">[T]</span></div>
                     
-                    <div class="big-tap-btn btn-cat-add" id="tap6th"><span class="icon">🪄</span>ADD 6<span class="kb-shortcut">[A]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tap7th"><span class="icon">🪄</span>ADD 7<span class="kb-shortcut">[S]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tap9th"><span class="icon">🪄</span>ADD 9<span class="kb-shortcut">[D]</span></div>
-                    <div class="big-tap-btn btn-cat-add" id="tap13th"><span class="icon">🪄</span>ADD 13<span class="kb-shortcut">[F]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tap6th">ADD 6<span class="kb-shortcut">[A]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tap7th">ADD 7<span class="kb-shortcut">[S]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tap9th">ADD 9<span class="kb-shortcut">[D]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tap11th">ADD 11<span class="kb-shortcut">[F]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSus2">sus2<span class="kb-shortcut">[G]</span></div>
                     
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpUp"><span class="icon">↗️</span>ARP UP<span class="kb-shortcut">[Shift]</span></div>
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpDown"><span class="icon">↘️</span>ARP DOWN<span class="kb-shortcut">[Ctrl]</span></div>
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpUpDown"><span class="icon">↕️</span>ARP U/D</div>
-                    <div class="big-tap-btn btn-cat-arp" id="tapArpRandom"><span class="icon">🔀</span>ARP RAND</div>
+                    <div class="big-tap-btn btn-cat-add" id="tap13th">ADD 13<span class="kb-shortcut">[Z/Y]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapFlat9">♭9<span class="kb-shortcut">[X]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSharp9">♯9<span class="kb-shortcut">[C]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapSharp11">♯11<span class="kb-shortcut">[V]</span></div>
+                    <div class="big-tap-btn btn-cat-add" id="tapFlat13">♭13<span class="kb-shortcut">[B]</span></div>
                 </div>
-                
                 <div class="lock-row">
                     <button class="lock-btn btn-cat-loc" id="lockSustain">Lock Sustain</button>
                     <button class="lock-btn btn-cat-loc" id="lock7th">Lock +7ths</button>
@@ -732,7 +746,9 @@
         let sustainHeld = false, sustainLocked = false, dampenHeld = false;
         let octDownHeld = false, octUpHeld = false, octLocked = false, octMode = 'up'; 
         let arpUpHeld = false, arpDownHeld = false, arpUpDownHeld = false, arpRandomHeld = false, arpLocked = false, arpMode = 'up'; 
-        let add6Held = false, add7Held = false, add7Locked = false, add9Held = false, add13Held = false;
+        let add6Held = false, add7Held = false, add7Locked = false, add9Held = false, add11Held = false;
+        let add13Held = false, addFlat9Held = false, addSharp9Held = false, addSharp11Held = false, addFlat13Held = false;
+        let add69Held = false, addMaj7Held = false, addFlat5Held = false, addSharp5Held = false, addSus4Held = false, addSus2Held = false;
 
         let snapToScale = false, currentTuning = 'equal';
         let isEnvActive = false, isPianoActive = true, isCofActive = false, isLooperActive = false;
@@ -746,23 +762,52 @@
         function is6thOn() { return add6Held; }
         function is7thOn() { return add7Locked || add7Held; }
         function is9thOn() { return add9Held; }
+        function is11thOn() { return add11Held; }
         function is13thOn() { return add13Held; }
+        function isFlat9On() { return addFlat9Held; }
+        function isSharp9On() { return addSharp9Held; }
+        function isSharp11On() { return addSharp11Held; }
+        function isFlat13On() { return addFlat13Held; }
+        function is69On() { return add69Held; }
+        function isMaj7On() { return addMaj7Held; }
+        function isFlat5On() { return addFlat5Held; }
+        function isSharp5On() { return addSharp5Held; }
+        function isSus4On() { return addSus4Held; }
+        function isSus2On() { return addSus2Held; }
+        
         function isArpOn() { return arpLocked || arpUpHeld || arpDownHeld || arpUpDownHeld || arpRandomHeld; }
         function isOctUpOn() { return octUpHeld || (octLocked && octMode === 'up'); }
         function isOctDownOn() { return octDownHeld || (octLocked && octMode === 'down'); }
         
         let currentKeyCenter = 0, currentScale = 'all', currentLabelType = 'absolute';
-		
-		function getExtendedStArray(stArray) {
+        
+        function getExtendedStArray(stArray) {
             let res = [...stArray];
             if (res.length >= 3) {
-                const root = res[0]; const isMajor = res.includes(root + 4);
+                const root = res[0]; const third = res[1]; const fifth = res[2];
+                const isMajor = res.includes(root + 4);
+                
+                // Alterations (Replacing base notes)
+                if (isFlat5On()) { res = res.filter(st => st !== fifth); res.push(root + 6); }
+                if (isSharp5On()) { res = res.filter(st => st !== fifth); res.push(root + 8); }
+                if (isSus4On()) { res = res.filter(st => st !== third); res.push(root + 5); }
+                if (isSus2On()) { res = res.filter(st => st !== third); res.push(root + 2); }
+
+                // Extensions (Adding notes)
+                if (is69On()) { res.push(root + 9); res.push(root + 14); }
+                if (isMaj7On()) { res.push(root + 11); }
                 if (is6thOn()) res.push(root + 9);
                 if (is7thOn()) res.push(root + (isMajor ? 11 : 10));
                 if (is9thOn()) res.push(root + 14);
+                if (is11thOn()) res.push(root + 17);
                 if (is13thOn()) res.push(root + 21);
+                if (isFlat9On()) res.push(root + 13);
+                if (isSharp9On()) res.push(root + 15);
+                if (isSharp11On()) res.push(root + 18);
+                if (isFlat13On()) res.push(root + 20);
             }
-            return res;
+            // Ensure unique notes, sorted from lowest to highest pitch for perfect Arpeggiation
+            return Array.from(new Set(res)).sort((a,b) => a - b); 
         }
 
         function applyArpMode(freqs) {
@@ -1214,21 +1259,22 @@
 
         function checkSustainRelease() { if (!isSustainOn()) releaseSustainedNotes(); }
         
-        function updatePadVisuals() {
+		function updatePadVisuals() {
             const tSus = document.getElementById('tapSustain'); if (tSus) tSus.classList.toggle('held', sustainHeld || sustainLocked);
             const tDampen = document.getElementById('tapDampen'); if (tDampen) tDampen.classList.toggle('held', dampenHeld);
             const tOctD = document.getElementById('tapOctDown'); if (tOctD) tOctD.classList.toggle('held', octDownHeld || (octLocked && octMode === 'down'));
             const tOctU = document.getElementById('tapOctUp'); if (tOctU) tOctU.classList.toggle('held', octUpHeld || (octLocked && octMode === 'up'));
             
-            const t6 = document.getElementById('tap6th'); if (t6) t6.classList.toggle('held', add6Held);
-            const t7 = document.getElementById('tap7th'); if (t7) t7.classList.toggle('held', add7Held || add7Locked);
-            const t9 = document.getElementById('tap9th'); if (t9) t9.classList.toggle('held', add9Held);
-            const t13 = document.getElementById('tap13th'); if (t13) t13.classList.toggle('held', add13Held);
-
             const tArpU = document.getElementById('tapArpUp'); if (tArpU) tArpU.classList.toggle('held', arpUpHeld || (arpLocked && arpMode === 'up'));
             const tArpD = document.getElementById('tapArpDown'); if (tArpD) tArpD.classList.toggle('held', arpDownHeld || (arpLocked && arpMode === 'down'));
-            const tArpUD = document.getElementById('tapArpUpDown'); if (tArpUD) tArpUD.classList.toggle('held', arpUpDownHeld || (arpLocked && arpMode === 'updown'));
             const tArpR = document.getElementById('tapArpRandom'); if (tArpR) tArpR.classList.toggle('held', arpRandomHeld || (arpLocked && arpMode === 'random'));
+
+            const ids = [
+                ['tap69', add69Held], ['tapMaj7', addMaj7Held], ['tapFlat5', addFlat5Held], ['tapSharp5', addSharp5Held], ['tapSus4', addSus4Held],
+                ['tap6th', add6Held], ['tap7th', add7Held || add7Locked], ['tap9th', add9Held], ['tap11th', add11Held], ['tapSus2', addSus2Held],
+                ['tap13th', add13Held], ['tapFlat9', addFlat9Held], ['tapSharp9', addSharp9Held], ['tapSharp11', addSharp11Held], ['tapFlat13', addFlat13Held]
+            ];
+            ids.forEach(([id, state]) => { const el = document.getElementById(id); if (el) el.classList.toggle('held', state); });
         }
 
         // ==========================================
@@ -1522,67 +1568,109 @@
         setupTapPad('tapOctDown', () => { octDownHeld = true; octMode = 'down'; }, () => { octDownHeld = false; });
         setupTapPad('tapOctUp', () => { octUpHeld = true; octMode = 'up'; }, () => { octUpHeld = false; });
         
+        setupTapPad('tapArpUp', () => { arpUpHeld = true; arpMode = 'up'; }, () => { arpUpHeld = false; });
+        setupTapPad('tapArpDown', () => { arpDownHeld = true; arpMode = 'down'; }, () => { arpDownHeld = false; });
+        setupTapPad('tapArpRandom', () => { arpRandomHeld = true; arpMode = 'random'; }, () => { arpRandomHeld = false; });
+
+        setupTapPad('tap69', () => { add69Held = true; }, () => { add69Held = false; });
+        setupTapPad('tapMaj7', () => { addMaj7Held = true; }, () => { addMaj7Held = false; });
+        setupTapPad('tapFlat5', () => { addFlat5Held = true; }, () => { addFlat5Held = false; });
+        setupTapPad('tapSharp5', () => { addSharp5Held = true; }, () => { addSharp5Held = false; });
+        setupTapPad('tapSus4', () => { addSus4Held = true; }, () => { addSus4Held = false; });
+        
         setupTapPad('tap6th', () => { add6Held = true; }, () => { add6Held = false; });
         setupTapPad('tap7th', () => { add7Held = true; }, () => { add7Held = false; });
         setupTapPad('tap9th', () => { add9Held = true; }, () => { add9Held = false; });
+        setupTapPad('tap11th', () => { add11Held = true; }, () => { add11Held = false; });
+        setupTapPad('tapSus2', () => { addSus2Held = true; }, () => { addSus2Held = false; });
+
         setupTapPad('tap13th', () => { add13Held = true; }, () => { add13Held = false; });
-        
-        setupTapPad('tapArpUp', () => { arpUpHeld = true; arpMode = 'up'; }, () => { arpUpHeld = false; });
-        setupTapPad('tapArpDown', () => { arpDownHeld = true; arpMode = 'down'; }, () => { arpDownHeld = false; });
-        setupTapPad('tapArpUpDown', () => { arpUpDownHeld = true; arpMode = 'updown'; }, () => { arpUpDownHeld = false; });
-        setupTapPad('tapArpRandom', () => { arpRandomHeld = true; arpMode = 'random'; }, () => { arpRandomHeld = false; });
-		
+        setupTapPad('tapFlat9', () => { addFlat9Held = true; }, () => { addFlat9Held = false; });
+        setupTapPad('tapSharp9', () => { addSharp9Held = true; }, () => { addSharp9Held = false; });
+        setupTapPad('tapSharp11', () => { addSharp11Held = true; }, () => { addSharp11Held = false; });
+        setupTapPad('tapFlat13', () => { addFlat13Held = true; }, () => { addFlat13Held = false; });
+
         document.getElementById('lockSustain')?.addEventListener('click', function() { sustainLocked = !sustainLocked; this.classList.toggle('active-btn', sustainLocked); checkSustainRelease(); updatePadVisuals(); });
         document.getElementById('lock7th')?.addEventListener('click', function() { add7Locked = !add7Locked; this.classList.toggle('active-btn', add7Locked); updatePadVisuals(); retriggerHeldNodes(); });
         document.getElementById('lockOct')?.addEventListener('click', function() { octLocked = !octLocked; this.classList.toggle('active-btn', octLocked); if(octLocked && !octUpHeld && !octDownHeld) octMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
-        document.getElementById('lockArp')?.addEventListener('click', function() { arpLocked = !arpLocked; this.classList.toggle('active-btn', arpLocked); if(arpLocked && !arpUpHeld && !arpDownHeld && !arpUpDownHeld && !arpRandomHeld) arpMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
+        document.getElementById('lockArp')?.addEventListener('click', function() { arpLocked = !arpLocked; this.classList.toggle('active-btn', arpLocked); if(arpLocked && !arpUpHeld && !arpDownHeld && !arpRandomHeld) arpMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
 
-		// Catch Ctrl+S, Ctrl+D, etc. in the "Capture Phase" before the browser handles them
         window.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
-                // Check both physical key code and logical key value just to be safe across all layouts
                 const key = e.key ? e.key.toLowerCase() : '';
-                if (['s', 'd', 'f', 'a', 'w', 'r', 'e', 'q'].includes(key) || 
-                    ['KeyS', 'KeyD', 'KeyF', 'KeyA', 'KeyW', 'KeyR', 'KeyE', 'KeyQ'].includes(e.code)) {
+                if (['1','2','3','4','5','q','w','e','r','t','a','s','d','f','g','z','y','x','c','v','b'].includes(key) || 
+                    ['Digit1','Digit2','Digit3','Digit4','Digit5','KeyQ','KeyW','KeyE','KeyR','KeyT','KeyA','KeyS','KeyD','KeyF','KeyG','KeyZ','KeyY','KeyX','KeyC','KeyV','KeyB'].includes(e.code)) {
                     e.preventDefault();
                 }
             }
         }, { capture: true });
-		
-		document.addEventListener('keydown', (e) => {
+        
+        document.addEventListener('keydown', (e) => {
             if(e.repeat || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
             let trigger = false; wakeNav();
             switch(e.code) {
+                // Row 1
+                case 'Digit1': add69Held = true; trigger = true; break;
+                case 'Digit2': addMaj7Held = true; trigger = true; break;
+                case 'Digit3': addFlat5Held = true; trigger = true; break;
+                case 'Digit4': addSharp5Held = true; trigger = true; break;
+                case 'Digit5': addSus4Held = true; trigger = true; break;
+                // Row 2
+                case 'KeyQ': octDownHeld = true; octMode = 'down'; trigger = true; break;
+                case 'KeyW': octUpHeld = true; octMode = 'up'; trigger = true; break;
+                case 'KeyE': case 'ShiftLeft': case 'ShiftRight': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
+                case 'KeyR': case 'ControlLeft': case 'ControlRight': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
+                case 'KeyT': arpRandomHeld = true; arpMode = 'random'; trigger = true; break;
+                // Row 3
                 case 'KeyA': add6Held = true; trigger = true; break;
                 case 'KeyS': add7Held = true; trigger = true; break;
                 case 'KeyD': add9Held = true; trigger = true; break;
-                case 'KeyF': add13Held = true; trigger = true; break;
+                case 'KeyF': add11Held = true; trigger = true; break;
+                case 'KeyG': addSus2Held = true; trigger = true; break;
+                // Row 4
+                case 'KeyZ': case 'KeyY': add13Held = true; trigger = true; break;
+                case 'KeyX': addFlat9Held = true; trigger = true; break;
+                case 'KeyC': addSharp9Held = true; trigger = true; break;
+                case 'KeyV': addSharp11Held = true; trigger = true; break;
+                case 'KeyB': addFlat13Held = true; trigger = true; break;
+                
+                // Thumbs
                 case 'AltLeft': dampenHeld = true; applyDampening(true); trigger = true; break;
                 case 'Space': sustainHeld = true; trigger = true; break;
-                case 'ShiftLeft': case 'ShiftRight': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
-                case 'ControlLeft': case 'ControlRight': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
-                case 'KeyQ': octDownHeld = true; octMode = 'down'; trigger = true; break;
-                case 'KeyW': octUpHeld = true; octMode = 'up'; trigger = true; break;
-                case 'KeyE': if (document.getElementById('lockOct')) document.getElementById('lockOct').click(); break;
-                case 'KeyR': if (document.getElementById('lockArp')) document.getElementById('lockArp').click(); break;
             }
             if(trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
         });
-		
+        
         document.addEventListener('keyup', (e) => { 
             if(e.target.tagName === 'INPUT') return;
             let trigger = false;
             switch(e.code) {
+                case 'Digit1': add69Held = false; trigger = true; break;
+                case 'Digit2': addMaj7Held = false; trigger = true; break;
+                case 'Digit3': addFlat5Held = false; trigger = true; break;
+                case 'Digit4': addSharp5Held = false; trigger = true; break;
+                case 'Digit5': addSus4Held = false; trigger = true; break;
+                
+                case 'KeyQ': octDownHeld = false; trigger = true; break;
+                case 'KeyW': octUpHeld = false; trigger = true; break;
+                case 'KeyE': case 'ShiftLeft': case 'ShiftRight': arpUpHeld = false; trigger = true; break;
+                case 'KeyR': case 'ControlLeft': case 'ControlRight': arpDownHeld = false; trigger = true; break;
+                case 'KeyT': arpRandomHeld = false; trigger = true; break;
+                
                 case 'KeyA': add6Held = false; trigger = true; break;
                 case 'KeyS': add7Held = false; trigger = true; break;
                 case 'KeyD': add9Held = false; trigger = true; break;
-                case 'KeyF': add13Held = false; trigger = true; break;
+                case 'KeyF': add11Held = false; trigger = true; break;
+                case 'KeyG': addSus2Held = false; trigger = true; break;
+                
+                case 'KeyZ': case 'KeyY': add13Held = false; trigger = true; break;
+                case 'KeyX': addFlat9Held = false; trigger = true; break;
+                case 'KeyC': addSharp9Held = false; trigger = true; break;
+                case 'KeyV': addSharp11Held = false; trigger = true; break;
+                case 'KeyB': addFlat13Held = false; trigger = true; break;
+
                 case 'AltLeft': dampenHeld = false; applyDampening(false); trigger = true; break;
                 case 'Space': sustainHeld = false; trigger = true; checkSustainRelease(); break;
-                case 'ShiftLeft': case 'ShiftRight': arpUpHeld = false; trigger = true; break;
-                case 'ControlLeft': case 'ControlRight': arpDownHeld = false; trigger = true; break;
-                case 'KeyQ': octDownHeld = false; trigger = true; break;
-                case 'KeyW': octUpHeld = false; trigger = true; break;
             }
             if(trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
         });
