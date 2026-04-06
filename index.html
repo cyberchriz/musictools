@@ -152,8 +152,8 @@
         .control-row { display: grid; align-items: flex-end; width: 100%; border-bottom: 1px solid var(--grid-line); padding-bottom: 6px; }
         .control-row:last-of-type { border-bottom: none; padding-bottom: 0; }
         
-        /* Inset Well for Advanced Settings */
-        .control-well { background: rgba(0,0,0,0.04); border: 1px solid var(--border-color) !important; border-radius: 6px; padding: 6px; margin-top: 2px; }
+		/* Inset Well for Advanced Settings */
+        .control-well { background: rgba(0,0,0,0.04); border: 1px solid var(--border-color) !important; border-radius: 6px; padding: 8px; margin-top: 4px; margin-bottom: 4px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; }
         .dark-theme .control-well { background: rgba(255,255,255,0.04); }
 
         .control-group { display: flex; flex-direction: column; gap: 0px; font-weight: bold; justify-content: flex-end; height: 100%; min-width: 0; }
@@ -654,7 +654,7 @@
                 <audio id="imported-audio-element" style="display:none;"></audio>
             </div>
 
-            <!-- Master Recording Well -->
+			<!-- Master Recording Well -->
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Output Recording</div>
                 <div class="control-row" style="grid-template-columns: repeat(4, 1fr);">
@@ -672,16 +672,15 @@
                     <div class="control-group"><label>Export</label><button id="btn-master-save" disabled>💾 SAVE AS...</button></div>
                 </div>
                 
-                <div class="control-row" style="grid-template-columns: repeat(2, 1fr); border: none; padding: 0;">
-                    <div class="control-group"><label>Review Playback</label>
-                        <div style="display:flex; gap:4px;">
-                            <button id="btn-rec-rw" disabled title="Rewind 5s">⏪</button>
-                            <button id="btn-rec-play" disabled title="Play/Pause" style="flex:1.5;">▶ / ⏸</button>
-                            <button id="btn-rec-ff" disabled title="Fast Forward 5s">⏩</button>
-                        </div>
+                <div class="control-row" style="grid-template-columns: 1.5fr 1fr; border: none; padding: 0; margin-top: 4px;">
+                    <div style="display:flex; gap: 4px; align-items: center;">
+                        <button id="btn-rec-rw" class="looper-btn" style="width: 32px; padding:0;" disabled title="Rewind 5s">⏪</button>
+                        <button id="btn-rec-play" class="looper-btn" style="width: 32px; padding:0;" disabled title="Play/Pause">▶</button>
+                        <button id="btn-rec-ff" class="looper-btn" style="width: 32px; padding:0;" disabled title="Fast Forward 5s">⏩</button>
+                        <input type="range" id="master-seeker" min="0" max="100" value="0" disabled style="flex: 1; height: 22px; margin: 0;">
                     </div>
-                    <div class="control-group"><label>Position</label>
-                        <button id="lbl-rec-time" disabled style="background:transparent; border:1px solid var(--grid-line); color:var(--text-main); cursor:default;">00:00 / 00:00</button>
+                    <div style="display:flex; align-items: center; justify-content: flex-end;">
+                        <button id="lbl-rec-time" disabled style="background:transparent; border:none; color:var(--text-main); font-size: 0.75rem; font-weight: bold; cursor:default; padding: 0; margin: 0;">00:00 / 00:00</button>
                     </div>
                 </div>
                 <audio id="masterAudioPlayer" style="display: none;"></audio>
@@ -2853,6 +2852,7 @@
             
             [btnMasterSave, btnRecPlay, btnRecRw, btnRecFf, lblRecTime].forEach(el => el.disabled = false);
             btnRecPlay.textContent = '▶ PLAY';
+			if (masterSeeker) masterSeeker.disabled = false;
             showToast("Master recording finished! You can now review and save.");
         }
 
@@ -2960,7 +2960,22 @@
             lblRecTime.textContent = `${fmt(masterPlayer.currentTime)} / ${fmt(masterPlayer.duration)}`;
         });
         masterPlayer?.addEventListener('ended', () => { btnRecPlay.textContent = '▶ PLAY'; });
+		
+        // Update the slider as the song plays
+		const masterSeeker = document.getElementById('master-seeker');
+        masterPlayer?.addEventListener('timeupdate', () => {
+            if (masterSeeker && !isNaN(masterPlayer.duration) && masterPlayer.duration > 0) {
+                masterSeeker.value = (masterPlayer.currentTime / masterPlayer.duration) * 100;
+            }
+        });
 
+        // Let the user drag the slider to change the time
+        masterSeeker?.addEventListener('input', (e) => {
+            if (masterPlayer && !isNaN(masterPlayer.duration)) {
+                masterPlayer.currentTime = (e.target.value / 100) * masterPlayer.duration;
+            }
+        });
+		
         // --- Advanced Save As Logic ---
         btnMasterSave?.addEventListener('click', async () => {
             if (!masterBlob) return;
