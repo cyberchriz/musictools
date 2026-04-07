@@ -17,6 +17,7 @@
             --c-add-bg: #f3e5f5; --c-add-txt: #7b1fa2; --c-arp-bg: #fff3e0; --c-arp-txt: #f57c00;
             --c-loc-bg: #eceff1; --c-loc-txt: #546e7a;
 			--settings-height: 0px; --synth-gap: 0px;
+            --mixer-fader-height: 100px;
         }
 
         body.dark-theme {
@@ -259,10 +260,10 @@
 
         .val-readout { font-size: 0.55rem; font-family: monospace; margin-top: 6px; background: #111; color: #00ff41; padding: 3px 0px; border-radius: 3px; border: 1px solid #333; width: 90%; text-align: center; box-sizing: border-box; line-height: 1; }
 
-        input[type=range].v-slider { -webkit-appearance: slider-vertical; appearance: slider-vertical; width: 24px; height: 150px; cursor: pointer; margin: 0; background: transparent; }
+        input[type=range].v-slider { -webkit-appearance: slider-vertical; appearance: slider-vertical; width: 24px; height: var(--mixer-fader-height); cursor: pointer; margin: 0; background: transparent; }
 
         @media (orientation: portrait) {
-            input[type=range].v-slider { height: 130px; width: 20px; }
+            input[type=range].v-slider { height: var(--mixer-fader-height); width: 20px; }
             .mixer-grid-8 { gap: 2px; }
             .mixer-channel { padding: 4px 1px; }
             .mixer-channel label { font-size: 0.5rem; margin-bottom: 4px; }
@@ -330,7 +331,7 @@
             <button id="btnToggleCOF" class="nav-btn" title="Circle of Fifths (F4)">⭕</button>
             <button id="btnTogglePiano" class="nav-btn toggled" title="Piano Keyboard">🎹</button>
             <button id="btnInfo" class="nav-btn" title="Info & Theory (F1)">ℹ️</button>
-            <button id="btnToggleMixer" class="nav-btn" title="Mixer & EQ Desk" style="grid-column: span 4; font-size: 0.75rem; font-weight: bold; background: var(--main-node); color: white; border-radius: 4px;">MIX/EQ</button>
+            <button id="btnToggleMixer" class="nav-btn" title="Mixer & EQ Desk" style="grid-column: span 4; font-size: 0.75rem; font-weight: bold; border-radius: 4px;">MIX/EQ</button>
         </div>
     </div>
 
@@ -763,7 +764,13 @@
     <!-- Mixer & EQ Overlay -->
     <div id="mixer-overlay" class="overlay primary">
         <div class="controls-section">
-            <div class="section-title">Mixer & Equalizer <button id="btnCloseMixer" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button></div>
+            <div class="section-title">
+                <span>Mixer & Equalizer</span>
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <input type="range" id="mixerHeightSlider" min="50" max="250" value="100" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
+                    <button id="btnCloseMixer" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                </div>
+            </div>
 
             <!-- Section A: 4-Bus Sub-Mixer -->
             <div class="control-well">
@@ -1353,6 +1360,7 @@
         });
 
         // MIXER DESK & EQ CONTROLS
+        document.getElementById('mixerHeightSlider')?.addEventListener('input', (e) => { document.documentElement.style.setProperty('--mixer-fader-height', `${e.target.value}px`); updateOverlayCSSVars(); });
         document.getElementById('synthVol')?.addEventListener('input', e => { if (synthGain) synthGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valSynthVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('drumVol')?.addEventListener('input', e => { if (drumGain) drumGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valDrumVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('looperMasterVol')?.addEventListener('input', e => { if (looperMasterGain) looperMasterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valLooperMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
