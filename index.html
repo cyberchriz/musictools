@@ -260,6 +260,25 @@
 
         .val-readout { font-size: 0.55rem; font-family: monospace; margin-top: 6px; background: #111; color: #00ff41; padding: 3px 0px; border-radius: 3px; border: 1px solid #333; width: 90%; text-align: center; box-sizing: border-box; line-height: 1; }
 
+        /* --- AUX SEND SLIDERS --- */
+        input[type=range].aux-send {
+            width: 85%;
+            height: 12px !important; /* Enough height to fit the native thumb */
+            margin: 2px 0 4px 0;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        /* Forcefully override the global purple accent-color */
+        input[type=range].echo-send {
+            accent-color: #00bcd4 !important;
+        }
+
+        input[type=range].reverb-send {
+            accent-color: #e91e63 !important;
+        }
+
         input[type=range].v-slider { -webkit-appearance: slider-vertical; appearance: slider-vertical; width: 24px; height: var(--mixer-fader-height); cursor: pointer; margin: 0; background: transparent; }
 
         @media (orientation: portrait) {
@@ -778,13 +797,13 @@
                 <div class="mixer-grid-4">
                     <div class="mixer-channel">
                         <label>Synth</label>
-                        <input type="range" orient="vertical" class="v-slider" id="synthVol" min="0" max="1.5" step="0.01" value="0.6">
-                        <div class="val-readout" id="valSynthVol">0.60</div>
+                        <input type="range" orient="vertical" class="v-slider" id="synthVol" min="0" max="1.5" step="0.01" value="1.0">
+                        <div class="val-readout" id="valSynthVol">1.00</div>
                     </div>
                     <div class="mixer-channel">
                         <label>Drums</label>
-                        <input type="range" orient="vertical" class="v-slider" id="drumVol" min="0" max="1.5" step="0.01" value="0.8">
-                        <div class="val-readout" id="valDrumVol">0.80</div>
+                        <input type="range" orient="vertical" class="v-slider" id="drumVol" min="0" max="1.5" step="0.01" value="1.0">
+                        <div class="val-readout" id="valDrumVol">1.00</div>
                     </div>
                     <div class="mixer-channel">
                         <label>Looper</label>
@@ -793,32 +812,36 @@
                     </div>
                     <div class="mixer-channel">
                         <label>Import</label>
-                        <input type="range" orient="vertical" class="v-slider" id="mixerImportVol" min="0" max="1.5" step="0.01" value="0.5">
-                        <div class="val-readout" id="valMixerImportVol">0.50</div>
+                        <input type="range" orient="vertical" class="v-slider" id="mixerImportVol" min="0" max="1.5" step="0.01" value="0.7">
+                        <div class="val-readout" id="valMixerImportVol">0.70</div>
                     </div>
                 </div>
             </div>
 
             <!-- Section B: 8-Track Looper Detailed Mixer -->
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Looper Track Levels</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">
+                    <span>Looper Levels & Aux Sends</span>
+                    <span style="font-size: 0.5rem; color: #ddd; font-weight: normal;">(Cyan=Echo, Pink=Reverb)</span>
+                </div>
                 <div class="mixer-grid-8">
                     <!-- V1 to V4 -->
-                    <div class="mixer-channel"><label>V1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><label>V2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><label>V3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><label>V4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0"><label>V1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0"><label>V2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0"><label>V3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0"><label>V4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
                     <!-- D1 to D4 -->
-                    <div class="mixer-channel"><label>D1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><label>D2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><label>D3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><label>D4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0"><label>D1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0"><label>D2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0"><label>D3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0"><label>D4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
                 </div>
             </div>
 
+
             <!-- Section C: Master Bus & EQ -->
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Bus & Equalizer</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Bus, EQ & Dynamics</div>
                 <div class="mixer-grid-4">
                     <div class="mixer-channel">
                         <label>Low</label>
@@ -840,6 +863,11 @@
                         <input type="range" orient="vertical" class="v-slider" id="masterVol" min="0" max="2" step="0.01" value="1.0">
                         <div class="val-readout" id="valMasterVol" style="color: #ff9800; border-color: #ff9800;">1.00</div>
                     </div>
+                </div>
+
+                <div class="control-row" style="grid-template-columns: 1fr 1fr; border: none; padding-top: 8px; padding-bottom: 0;">
+                    <div class="control-group"><label id="lblBusComp">Bus Comp: 40%</label><input type="range" id="busComp" min="0" max="100" step="1" value="40"></div>
+                    <div class="control-group"><label>Safety Limiter</label><button id="btnLimiter" class="btn-sm active-btn">Limiter: ON</button></div>
                 </div>
             </div>
 
@@ -1049,7 +1077,7 @@
                     let toRemoveVoices = nodeData.voices.filter(v => !targetFreqs.some(tf => Math.abs(tf - v.freq) < 0.1));
 
                     toAdd.forEach(freq => {
-                        const voice = spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true, nodeData.synthState);
+                        const voice = spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true, nodeData.synthState, nodeData.destination);
                         nodeData.voices.push(voice); nodeData.freqs.push(freq);
                     });
 
@@ -1073,7 +1101,7 @@
                         nodeData.nextNoteTime = audioCtx.currentTime; nodeData.noteIndex = 0;
                     } else {
                         nodeData.type = 'chord'; nodeData.freqs = targetFreqs;
-                        nodeData.voices = targetFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true, nodeData.synthState));
+                        nodeData.voices = targetFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, targetFreqs.length, true, nodeData.synthState, nodeData.destination));
                     }
                 }
             };
@@ -1315,13 +1343,19 @@
                 echo: document.getElementById('echo').value, reverbMix: document.getElementById('reverbMix').value, lfoSpeed: document.getElementById('lfoSpeed').value, vibrato: document.getElementById('vibrato').value,
                 tremolo: document.getElementById('tremolo').value, sweep: document.getElementById('sweep').value, detune: document.getElementById('detune').value, subOsc: document.getElementById('subOsc').value,
                 noise: document.getElementById('noise').value, filterEnv: document.getElementById('filterEnv').value, padHeight: document.getElementById('padHeightSlider').value, drumHeight: document.getElementById('drumHeightSlider').value,
-                masterVol: document.getElementById('masterVol').value, synthVol: document.getElementById('synthVol').value, drumVol: document.getElementById('drumVol').value, looperMasterVol: document.getElementById('looperMasterVol').value, mixerImportVol: document.getElementById('mixerImportVol').value, eqLow: document.getElementById('eqLow').value, eqMid: document.getElementById('eqMid').value, eqHigh: document.getElementById('eqHigh').value,
-                drumEmbellish: document.getElementById('drum-embellish').checked, showExtensions: showExtensions, showChordDegrees: showChordDegrees, isDarkMode: isDarkMode,
 
-                // NEWLY ADDED SETTINGS
+                masterVol: document.getElementById('masterVol').value, synthVol: document.getElementById('synthVol').value, drumVol: document.getElementById('drumVol').value, looperMasterVol: document.getElementById('looperMasterVol').value, mixerImportVol: document.getElementById('mixerImportVol').value, eqLow: document.getElementById('eqLow').value, eqMid: document.getElementById('eqMid').value, eqHigh: document.getElementById('eqHigh').value,
                 oscMix: document.getElementById('oscMix').value, glide: document.getElementById('glide').value, filterType: document.getElementById('filterType').value,
                 midiVelocity: document.getElementById('midiVelocity').value, looperLength: document.getElementById('looperLength').value,
-                looperTrackVols: Array.from(document.querySelectorAll('.track-vol')).map(el => el.value)
+                drumEmbellish: document.getElementById('drum-embellish').checked, showExtensions: showExtensions, showChordDegrees: showChordDegrees, isDarkMode: isDarkMode,
+
+                // NEW: Aux Sends, Track Vols, and Dynamics!
+                looperTrackVols: Array.from(document.querySelectorAll('.track-vol')).map(el => el.value),
+                looperEchoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => el.value),
+                looperReverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => el.value),
+                busComp: document.getElementById('busComp').value,
+                mixerHeightSlider: document.getElementById('mixerHeightSlider').value,
+                isLimiterOn: document.getElementById('btnLimiter').classList.contains('active-btn')
             };
             const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'TonnetzPro_Settings.json'; a.click(); URL.revokeObjectURL(url); showToast("Settings saved to file.");
@@ -1336,20 +1370,43 @@
                     try {
                         const s = JSON.parse(ev.target.result);
                         const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
-                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength'].forEach(k => av(k, s[k]));
+
+                        // NEW: Added busComp and mixerHeightSlider to the auto-restore array
+                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider'].forEach(k => av(k, s[k]));
+
                         av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
+
                         if (s.drumEmbellish !== undefined) document.getElementById('drum-embellish').checked = s.drumEmbellish;
                         if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `7th/9th Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
                         if (s.showChordDegrees !== undefined && showChordDegrees !== s.showChordDegrees) { showChordDegrees = s.showChordDegrees; document.getElementById('btnChordDegrees').textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; document.getElementById('btnChordDegrees').classList.toggle('active-btn', showChordDegrees); updatePianoVisuals(); }
                         if (s.isDarkMode !== undefined && isDarkMode !== s.isDarkMode) { isDarkMode = s.isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode); document.getElementById('btnTheme').textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; document.getElementById('btnTheme').classList.toggle('active-btn', isDarkMode); }
 
-                        // RESTORE 8-TRACK VOLUMES
+                        // NEW: Restore Safety Limiter state
+                        if (s.isLimiterOn !== undefined) {
+                            const btnLimiter = document.getElementById('btnLimiter');
+                            if (btnLimiter) {
+                                btnLimiter.classList.toggle('active-btn', s.isLimiterOn);
+                                btnLimiter.textContent = `Limiter: ${s.isLimiterOn ? 'ON' : 'OFF'}`;
+                                if (typeof safetyClipper !== 'undefined' && safetyClipper) {
+                                    safetyClipper.curve = s.isLimiterOn ? makeSafetyCurve() : null;
+                                }
+                            }
+                        }
+
+                        // RESTORE 8-TRACK VOLUMES, ECHO & REVERB SENDS
                         if (s.looperTrackVols) {
                             document.querySelectorAll('.track-vol').forEach((el, idx) => {
-                                if (s.looperTrackVols[idx] !== undefined) {
-                                    el.value = s.looperTrackVols[idx];
-                                    el.dispatchEvent(new Event('input'));
-                                }
+                                if (s.looperTrackVols[idx] !== undefined) { el.value = s.looperTrackVols[idx]; el.dispatchEvent(new Event('input')); }
+                            });
+                        }
+                        if (s.looperEchoSends) {
+                            document.querySelectorAll('.echo-send').forEach((el, idx) => {
+                                if (s.looperEchoSends[idx] !== undefined) { el.value = s.looperEchoSends[idx]; el.dispatchEvent(new Event('input')); }
+                            });
+                        }
+                        if (s.looperReverbSends) {
+                            document.querySelectorAll('.reverb-send').forEach((el, idx) => {
+                                if (s.looperReverbSends[idx] !== undefined) { el.value = s.looperReverbSends[idx]; el.dispatchEvent(new Event('input')); }
                             });
                         }
 
@@ -1361,6 +1418,8 @@
 
         // MIXER DESK & EQ CONTROLS
         document.getElementById('mixerHeightSlider')?.addEventListener('input', (e) => { document.documentElement.style.setProperty('--mixer-fader-height', `${e.target.value}px`); updateOverlayCSSVars(); });
+        document.getElementById('btnLimiter')?.addEventListener('click', e => { const isON = !e.target.classList.contains('active-btn'); e.target.classList.toggle('active-btn', isON); e.target.textContent = `Limiter: ${isON ? 'ON' : 'OFF'}`; if (safetyClipper) safetyClipper.curve = isON ? makeSafetyCurve() : null; });
+        document.getElementById('busComp')?.addEventListener('input', e => { const val = parseFloat(e.target.value); updateLabel('busComp', val, 'Bus Comp', '%'); if (compressor) { compressor.threshold.value = isMobileDevice ? -15.0 : -4.0 - (val / 100 * 16); compressor.ratio.value = 1 + (val / 100 * 11); } });
         document.getElementById('synthVol')?.addEventListener('input', e => { if (synthGain) synthGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valSynthVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('drumVol')?.addEventListener('input', e => { if (drumGain) drumGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valDrumVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('looperMasterVol')?.addEventListener('input', e => { if (looperMasterGain) looperMasterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valLooperMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
@@ -1391,6 +1450,20 @@
             slider.addEventListener('input', e => {
                 const trackIdx = parseInt(e.target.getAttribute('data-track'));
                 if (looperGainNodes[trackIdx] && !looper.muted[trackIdx]) looperGainNodes[trackIdx].gain.value = parseFloat(e.target.value);
+            });
+        });
+
+        document.querySelectorAll('.echo-send').forEach(slider => {
+            slider.addEventListener('input', e => {
+                const trackIdx = parseInt(e.target.getAttribute('data-track'));
+                if (looperEchoSends[trackIdx]) looperEchoSends[trackIdx].gain.value = parseFloat(e.target.value);
+            });
+        });
+
+        document.querySelectorAll('.reverb-send').forEach(slider => {
+            slider.addEventListener('input', e => {
+                const trackIdx = parseInt(e.target.getAttribute('data-track'));
+                if (looperReverbSends[trackIdx]) looperReverbSends[trackIdx].gain.value = parseFloat(e.target.value);
             });
         });
 
@@ -1965,6 +2038,8 @@
         let analyzer;
         let synthGain, drumGain, looperMasterGain, eqLow, eqMid, eqHigh, masterEqIn, importedAudioMasterGainNode;
         let looperGainNodes = [];
+        let looperEchoSends = [];
+        let looperReverbSends = [];
 
         // --- HARDWARE DETECTION ---
         // 1. Check User Agent (catches standard mobile browsers)
@@ -2476,33 +2551,36 @@
             if (audioCtx) return;
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-            // === 1. FINAL MASTER BUS & SAFETY LIMITER ===
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
             masterGain = audioCtx.createGain();
             masterGain.gain.value = parseFloat(document.getElementById('masterVol')?.value || 1.0);
 
-            // SMART COMPRESSOR: Aggressive on mobile, gentle on desktop
+            // Set up the VU Meter Analyser PRE-LIMITER to show true mix volume
+            window.analyser = audioCtx.createAnalyser();
+            window.analyser.fftSize = 2048;
+            masterGain.connect(window.analyser);
+
+            // SMART COMPRESSOR
             compressor = audioCtx.createDynamicsCompressor();
-            compressor.threshold.value = isMobileDevice ? -15.0 : -6.0;
-            compressor.knee.value = 12.0;
-            compressor.ratio.value = 12.0;
-            compressor.attack.value = 0.002;
+            let initComp = parseFloat(document.getElementById('busComp')?.value || 40);
+            compressor.threshold.value = isMobileDevice ? -15.0 : -4.0 - (initComp / 100 * 16);
+            compressor.ratio.value = 1 + (initComp / 100 * 11);
+            compressor.knee.value = 10.0;
+            compressor.attack.value = 0.005;
             compressor.release.value = 0.05;
 
-            // ABSOLUTE CEILING: Soft-Clipper to prevent Android DAC crackling
+            // ABSOLUTE CEILING: Soft-Clipper to prevent DAC crackling
             safetyClipper = audioCtx.createWaveShaper();
             safetyClipper.curve = makeSafetyCurve();
             safetyClipper.oversample = 'none';
 
-            window.analyser = audioCtx.createAnalyser();
-            window.analyser.fftSize = 2048;
-
-            // Route: Master Fader -> Compressor -> Safety Clipper -> Analyser -> Speakers
+            // Route: Master Fader -> Compressor -> Safety Clipper -> Speakers
             masterGain.connect(compressor);
             compressor.connect(safetyClipper);
-            safetyClipper.connect(window.analyser);
-            window.analyser.connect(audioCtx.destination);
+            safetyClipper.connect(audioCtx.destination);
 
-            // Master Recording Tap
+            // Master Recording Tap (Records the limited, safe audio)
             window.mediaStreamDest = audioCtx.createMediaStreamDestination();
             safetyClipper.connect(window.mediaStreamDest);
 
@@ -2521,10 +2599,10 @@
 
             // === 3. MIXER SUB-BUSES ===
             synthGain = audioCtx.createGain();
-            synthGain.gain.value = parseFloat(document.getElementById('synthVol')?.value || 0.6);
+            synthGain.gain.value = parseFloat(document.getElementById('synthVol')?.value || 1.0);
 
             drumGain = audioCtx.createGain();
-            drumGain.gain.value = parseFloat(document.getElementById('drumVol')?.value || 0.8);
+            drumGain.gain.value = parseFloat(document.getElementById('drumVol')?.value || 1.0);
             drumGain.connect(masterEqIn);
 
             looperMasterGain = audioCtx.createGain();
@@ -2532,16 +2610,27 @@
             looperMasterGain.connect(masterEqIn);
 
             importedAudioMasterGainNode = audioCtx.createGain();
-            importedAudioMasterGainNode.gain.value = parseFloat(document.getElementById('mixerImportVol')?.value || 0.5);
+            importedAudioMasterGainNode.gain.value = parseFloat(document.getElementById('mixerImportVol')?.value || 0.7);
+
             if (document.getElementById('import-mix-master')?.checked !== false) importedAudioMasterGainNode.connect(masterEqIn);
             if (typeof importedAudioEl !== 'undefined' && importedAudioEl.src) setupImportedAudioRouting();
 
-            // Looper Per-Track Faders
+            // Looper Per-Track Faders & Aux Sends
             for (let i = 0; i < 8; i++) {
                 let g = audioCtx.createGain();
                 g.gain.value = parseFloat(document.querySelector(`.track-vol[data-track="${i}"]`)?.value || 1.0);
                 g.connect(looperMasterGain);
                 looperGainNodes.push(g);
+
+                let eSend = audioCtx.createGain();
+                eSend.gain.value = parseFloat(document.querySelector(`.echo-send[data-track="${i}"]`)?.value || 0);
+                g.connect(eSend);
+                looperEchoSends.push(eSend);
+
+                let rSend = audioCtx.createGain();
+                rSend.gain.value = parseFloat(document.querySelector(`.reverb-send[data-track="${i}"]`)?.value || 0);
+                g.connect(rSend);
+                looperReverbSends.push(rSend);
             }
 
             // === 4. SYNTH FX CHAIN ===
@@ -2595,6 +2684,12 @@
             delayNode.connect(delayMix);
             delayMix.connect(masterEqIn); // Delay feeds into EQ
             synthGain.connect(delayNode);
+
+            // Connect Aux Sends to Master FX
+            for (let i = 0; i < 8; i++) {
+                if (looperEchoSends[i]) looperEchoSends[i].connect(delayNode);
+                if (looperReverbSends[i]) looperReverbSends[i].connect(convolver);
+            }
 
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
@@ -2780,7 +2875,7 @@
             display.style.opacity = '1';
         }
 
-        function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null) {
+        function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null, destination = null) {
             const midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
 
             let isAccent = false;
@@ -2856,7 +2951,12 @@
             if (subOsc) { subOsc.connect(subGain); subGain.connect(filter); }
             if (noiseSrc) { noiseSrc.connect(noiseGain); noiseGain.connect(filter); }
 
-            filter.connect(gainNode); gainNode.connect(ampLfoGain); ampLfoGain.connect(preDistortionGain);
+            filter.connect(gainNode); gainNode.connect(ampLfoGain);
+            if (destination) {
+                ampLfoGain.connect(destination); // Looper playback goes to track channel
+            } else {
+                ampLfoGain.connect(preDistortionGain); // Live playback goes to Master Synth
+            }
 
             const velMult = currentVelocity / 127; // Velocity Scaling!
 
@@ -2914,7 +3014,7 @@
             });
         }
 
-        function playFrequencies(element, freqs, originalStArray = null, synthState = null) {
+        function playFrequencies(element, freqs, originalStArray = null, synthState = null, destination = null) {
             initAudio(); if (activeNodes.has(element)) return;
 
             if (!element.isLooper) { activeUserNotes++; if (uiHideDelay > 0) hideNav(); }
@@ -2937,10 +3037,10 @@
                 let arpFreqs = applyArpMode(finalFreqs);
                 let stepDuration = 0; const beatDuration = 60 / currentArpBPM;
                 if (finalFreqs.length === 3) stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3); else stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
-                activeNodes.set(element, { type: 'arp', freqs: arpFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState }); scheduleArps();
+                activeNodes.set(element, { type: 'arp', freqs: arpFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState, destination: destination }); scheduleArps();
             } else {
-                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, synthState));
-                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState });
+                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, synthState, destination));
+                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState, destination: destination });
             }
 
             updateHighlights();
@@ -3087,7 +3187,7 @@
                 if (isDuplicate) return null;
             }
 
-            // 🎵 NEW: Snapshot the current synth state for this specific event
+            // Snapshot the current synth state for this specific event
             let synthState = null;
             if (type === 'play') {
                 synthState = {
@@ -3095,7 +3195,7 @@
                     subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
                     brightness: currentBrightness, filterEnv: currentFilterEnv,
                     attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
-                    oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType // NEW PARAMS
+                    oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType
                 };
 
                 // Write the instrument name to the track's label
@@ -3103,6 +3203,21 @@
                 const instName = instSelect ? instSelect.options[instSelect.selectedIndex].text : '';
                 const labelEl = document.getElementById(`inst-label-${targetTrack}`);
                 if (labelEl) labelEl.textContent = instName;
+
+                // Auto-Inherit Aux Sends! (Only on the very first note of the track)
+                if (looper.tracks[targetTrack].length === 0) {
+                    const eSlider = document.querySelector(`.echo-send[data-track="${targetTrack}"]`);
+                    const rSlider = document.querySelector(`.reverb-send[data-track="${targetTrack}"]`);
+
+                    if (eSlider && typeof looperEchoSends !== 'undefined' && looperEchoSends[targetTrack]) {
+                        eSlider.value = currentEcho;
+                        looperEchoSends[targetTrack].gain.value = currentEcho;
+                    }
+                    if (rSlider && typeof looperReverbSends !== 'undefined' && looperReverbSends[targetTrack]) {
+                        rSlider.value = currentReverb;
+                        looperReverbSends[targetTrack].gain.value = currentReverb;
+                    }
+                }
             }
 
             const evt = { id: Math.random(), freqs: freqs, timeOffset: offset, type: type, stArray: originalStArray, drumType: drumType, velocity: velocity, duration: 0.5, synthState: synthState };
@@ -3133,8 +3248,8 @@
                     if (evt.timeOffset > lastLoopPhase && evt.timeOffset <= phase) {
                         if (evt.type === 'play') {
                             let dummy = { _st: evt.stArray || [], isLooper: true };
-                            // Pass the historical synthState into the playback engine
-                            playFrequencies(dummy, evt.freqs, evt.stArray, evt.synthState);
+                            // Pass the historical synthState AND the specific Looper Track destination
+                            playFrequencies(dummy, evt.freqs, evt.stArray, evt.synthState, typeof looperGainNodes !== 'undefined' ? looperGainNodes[idx] : null);
                             setTimeout(() => stopFrequencies(dummy), (evt.duration || 0.5) * 1000);
                         }
                         else if (evt.type === 'drum') {
@@ -3486,7 +3601,7 @@
                         }
 
                         const startTime = nodeData.nextNoteTime + swingDelay;
-                        const voice = spawnVoice(freq, startTime, index, nodeData.freqs.length, false, nodeData.synthState); // NEW: Arps now use their parent track's synth state!
+                        const voice = spawnVoice(freq, startTime, index, nodeData.freqs.length, false, nodeData.synthState, nodeData.destination); // NEW: Arps now use their parent track's synth state!
                         voice.midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
                         nodeData.voices.push(voice);
                         if (nodeData.voices.length > 30) nodeData.voices.shift();
