@@ -72,49 +72,86 @@
         .manual-drum-btn:active, .manual-drum-btn.active-btn { transform: scale(0.92); filter: brightness(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
         body { background: var(--bg-color); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: var(--text-main); transition: background 0.3s, color 0.3s; overflow: hidden; width: 100vw; height: 100vh; }
-        .svg-wrapper { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); cursor: grab; z-index: 1; }
-        .svg-wrapper:active { cursor: grabbing; }
-        svg { width: 100%; height: 100%; display: block; user-select: none; touch-action: none; }
 
-		.overlay.primary { 
+        .svg-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh; /* Permanently full screen! */
+            background: var(--bg-color);
+            cursor: grab;
+            z-index: 1;
+            overflow: hidden;
+            transition: background 0.3s;
+        }
+
+        .svg-wrapper:active {
+            cursor: grabbing;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* --- DOCKED PANEL ARCHITECTURE --- */
+        .overlay.primary, #looper-overlay { 
             position: absolute; background: var(--panel-bg); z-index: 20; overflow-y: auto; 
-            transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.4s ease, top 0.3s cubic-bezier(0.1, 0.8, 0.3, 1); 
+            transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.2s ease; 
             box-shadow: 0 0 2vw rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 12px; padding: 15px; box-sizing: border-box; 
-            /* NEW: Global max-height to protect piano dynamically */
-            max-height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px)) - 15px);
+            opacity: 0; pointer-events: none;
         }
-        .overlay.primary.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
-        @media (orientation: portrait) { .overlay.primary.active { transform: translateY(0); opacity: 1; } }
-
-        /* Dynamic Vertical Stacking for Settings & Synth */
-        #settings-overlay { top: 0; }
-        #synth-overlay { top: 0; } /* Reset top when hidden to prevent off-screen transform leaks */
-        #synth-overlay.active { 
-            top: calc(var(--settings-height, 0px) + var(--synth-gap, 0px)); 
-            /* Synth must fit in the remaining space below Settings */
-            max-height: calc(100vh - var(--settings-height, 0px) - var(--synth-gap, 0px) - var(--piano-h, clamp(80px, 16vh, 140px)) - 15px);
-        }
-		
-		#looper-overlay {
-            position: absolute; background: var(--panel-bg); z-index: 25; 
-            top: 0; right: 0; left: auto;
-            border-left: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); 
-            border-bottom-left-radius: 12px; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
-            width: clamp(320px, 90vw, 450px); overflow-y: auto; overflow-x: hidden;
-            max-height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px)) - 15px);
-            box-sizing: border-box; 
-            transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.2s; 
-            transform: translateX(105%); opacity: 0; pointer-events: none;
-        }
-        #looper-overlay.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
         
-        @media (orientation: portrait) { 
+        .overlay.primary.active, #looper-overlay.active { 
+            opacity: 1; pointer-events: auto; 
+        }
+
+        /* Desktop / Landscape: Left & Right Drawers */
+        @media (orientation: landscape) {
+            .overlay.primary { 
+                top: 0; left: 0; width: clamp(320px, 30vw, 450px); 
+                height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px))); /* Stretch down to piano */
+                border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-bottom-right-radius: 12px; 
+                transform: translateX(-105%); 
+            }
+            .overlay.primary.active { transform: translateX(0); }
+
             #looper-overlay { 
-                width: 100vw; max-width: 100vw; border-left: none; 
-                border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; 
-                transform: translateY(-105%); 
-            } 
-            #looper-overlay.active { transform: translateY(0); } 
+                top: 0; right: 0; left: auto; width: clamp(320px, 30vw, 450px); 
+                height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px))); 
+                border-left: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-bottom-left-radius: 12px; 
+                transform: translateX(105%); 
+            }
+            #looper-overlay.active { transform: translateX(0); }
+        }
+
+        /* Mobile / Portrait: Top Dropdowns */
+        @media (orientation: portrait) {
+            .overlay.primary, #looper-overlay {
+                top: 0;
+                left: 0;
+                width: 100vw;
+                max-width: 100vw;
+                /* Standard height for performance panels (Pads/Drums/Synth) */
+                max-height: 45vh;
+                border-left: none;
+                border-right: none;
+                border-bottom: 2px solid var(--main-node);
+                border-radius: 0 0 16px 16px;
+                transform: translateY(-105%);
+            }
+            /* Admin/Mixing Panels get the full screen minus the piano */
+            #settings-overlay, #mixer-overlay {
+                max-height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px)) - 15px) !important;
+            }
+
+            .overlay.primary.active, #looper-overlay.active {
+                transform: translateY(0);
+            }
         }
 
         .looper-controls { display: flex; flex-direction: column; gap: 10px; width: 100%; box-sizing: border-box; }
@@ -196,13 +233,85 @@
         #cof-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
         #cof-container svg { width: 100%; height: 100%; display: block; }
 
-        .canvas-controls { position: absolute; top: calc(max(15px, 2vh) + var(--active-overlay-height) + var(--looper-height)); right: 15px; left: auto; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; transition: opacity 0.4s ease, top 0.3s cubic-bezier(0.1, 0.8, 0.3, 1); }
+        .canvas-controls {
+            position: absolute;
+            bottom: calc(15px + var(--piano-h, clamp(80px, 16vh, 140px)));
+            right: calc(15px + var(--right-panel-w, 0px));
+            left: auto;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            transition: opacity 0.4s ease, bottom 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), right 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
         .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--panel-bg); padding: 8px; border-radius: 12px; border: 2px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: clamp(170px, 22vw, 220px); height: clamp(180px, 22vw, 240px); }
         .dark-theme .nav-grid { box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .nav-btn { width: 100%; height: 100%; border-radius: 6px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-main); font-size: clamp(0.9rem, 2vw, 1.3rem); font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; padding: 0; user-select: none; touch-action: manipulation; transition: background 0.1s, transform 0.1s; }
         .nav-btn:hover { background: var(--border-color); }
         .nav-btn:active { transform: scale(0.9); }
         .nav-btn.toggled { background: var(--main-node); color: white; border-color: var(--main-node); }
+        
+        /* --- FAB MENU & MOBILE NAV GRID --- */
+        @keyframes fab-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7), 0 4px 12px rgba(0,0,0,0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 152, 0, 0), 0 4px 12px rgba(0,0,0,0.4); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0), 0 4px 12px rgba(0,0,0,0.4); }
+        }
+
+        .fab-menu-btn { 
+            display: none; 
+            width: 56px; height: 56px; /* Slightly larger for a better touch target */
+            border-radius: 50%; 
+            background: linear-gradient(135deg, #ffca28, #ff5722); /* Vibrant Amber to Deep Orange */
+            color: white; 
+            border: 3px solid rgba(255, 255, 255, 0.9); /* Crisp outer ring */
+            cursor: pointer; 
+            z-index: 101; 
+            transition: all 0.2s cubic-bezier(0.1, 0.8, 0.3, 1); 
+            font-size: 1.5rem; align-items: center; justify-content: center; 
+            animation: fab-pulse 2s infinite cubic-bezier(0.66, 0, 0, 1); /* Sonar pulse effect */
+        }
+        .fab-menu-btn:active { transform: scale(0.9) !important; }
+
+        /* Dark mode adjustment for the outer ring */
+        .dark-theme .fab-menu-btn {
+            border-color: #2a2a2a;
+        }
+
+        @media (orientation: portrait) {
+            .fab-menu-btn { display: flex; }
+            .nav-grid { 
+                position: absolute; 
+                bottom: 70px; /* Adjusted slightly for the larger FAB */
+                top: auto;
+                right: 0;
+                transform-origin: bottom right; 
+                transform: scale(0.8); opacity: 0; pointer-events: none; 
+                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
+                background: rgba(248, 249, 250, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            }
+            .dark-theme .nav-grid { background: rgba(34, 34, 34, 0.85); }
+            
+            /* The Open State */
+            .canvas-controls.menu-open .nav-grid { transform: scale(1); opacity: 1; pointer-events: auto; }
+            .canvas-controls.menu-open .fab-menu-btn { 
+                background: #f44336; /* Reverts to flat red */
+                border-color: transparent;
+                transform: rotate(90deg); 
+                animation: none; /* Stops pulsing when the menu is open */
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            }
+        }
+
+        /* --- AUTO-HIDE ENGINE --- */
+        body.ui-hidden #canvas-controls,
+        body.ui-hidden #settings-overlay,
+        body.ui-hidden #synth-overlay,
+        body.ui-hidden #mixer-overlay {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
 
         .env-widget { background: var(--panel-bg); border-radius: 8px; border: 2px solid var(--border-color); padding: 8px; display: flex; flex-direction: column; gap: 5px; width: clamp(200px, 35vw, 320px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: all 0.2s; transform-origin: top; transform: scaleY(0); opacity: 0; height: 0; overflow: hidden; }
         .dark-theme .env-widget { box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
@@ -333,7 +442,8 @@
     <div id="toast-container">Message</div>
 
     <div class="canvas-controls" id="canvas-controls">
-        <div class="nav-grid">
+        <button id="btnNavToggle" class="fab-menu-btn" title="Open Menu">🛠️</button>
+        <div class="nav-grid" id="main-nav-grid">
             <button id="btnZoomIn" class="nav-btn" title="Zoom In">+</button>
             <button id="btnPanUp" class="nav-btn" title="Pan Up">▲</button>
             <button id="btnZoomOut" class="nav-btn" title="Zoom Out">−</button>
@@ -867,7 +977,14 @@
 
                 <div class="control-row" style="grid-template-columns: 1fr 1fr; border: none; padding-top: 8px; padding-bottom: 0;">
                     <div class="control-group"><label id="lblBusComp">Bus Comp: 40%</label><input type="range" id="busComp" min="0" max="100" step="1" value="40"></div>
-                    <div class="control-group"><label>Safety Limiter</label><button id="btnLimiter" class="btn-sm active-btn">Limiter: ON</button></div>
+                    <div class="control-group">
+                        <label>Master Limiter</label>
+                        <select id="limiterMode" class="ui-select">
+                            <option value="brickwall" selected>Brickwall</option>
+                            <option value="soft">Soft (Analog)</option>
+                            <option value="none">OFF (Caution!)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -1117,47 +1234,57 @@
         let isInfoActive = false;
         let isSettingsActive = false, isSynthActive = false, isPadsActive = false, isDrumsActive = false, isMixerActive = false;
 
+        let lastSafeOffsetX = 0, lastSafeOffsetY = 0;
+
         function updateOverlayCSSVars() {
-            const settingsEl = document.getElementById('settings-overlay');
-            const synthEl = document.getElementById('synth-overlay');
+            const isPortrait = window.innerHeight > window.innerWidth;
 
-            const sH = (isSettingsActive && settingsEl) ? settingsEl.offsetHeight : 0;
-            document.documentElement.style.setProperty('--settings-height', `${sH}px`);
+            let topH = 0, leftW = 0, rightW = 0;
+            let L = 0, T = 0, R = 0, B = 0;
 
-            document.documentElement.style.setProperty('--synth-gap', '0px');
+            // Grab the active panels
+            const activeLeft = document.querySelector('.overlay.primary.active:not(#looper-overlay)');
+            const looperEl = document.getElementById('looper-overlay');
+            const pianoEl = document.getElementById('piano-overlay');
+            const isUiAsleep = document.body.classList.contains('ui-hidden');
 
-            if (isSettingsActive && isSynthActive && settingsEl) {
-                settingsEl.style.borderBottomRightRadius = '0px';
-                settingsEl.style.borderBottomLeftRadius = '0px';
-                settingsEl.style.borderBottomColor = 'transparent';
-            } else if (settingsEl) {
-                settingsEl.style.borderBottomRightRadius = '';
-                settingsEl.style.borderBottomLeftRadius = '';
-                settingsEl.style.borderBottomColor = '';
+            // 1. LOGICAL DIMENSIONS for Panning (Ignores Auto-Hide so the grid never jumps!)
+            if (isPianoActive && pianoEl) B = pianoEl.offsetHeight;
+
+            if (activeLeft) {
+                if (isPortrait) T = activeLeft.offsetHeight;
+                else L = activeLeft.offsetWidth;
+            }
+            if (isLooperActive && looperEl) {
+                if (isPortrait) T = Math.max(T, looperEl.offsetHeight);
+                else R = looperEl.offsetWidth + 10;
             }
 
-            // Calculate exact target heights for portrait overlays
-            let activeH = 0;
-            if (window.innerHeight > window.innerWidth) { // Portrait
-                if (isSettingsActive || isSynthActive) {
-                    activeH = sH + (isSynthActive && synthEl ? synthEl.offsetHeight : 0);
-                } else if (isPadsActive) {
-                    const padsEl = document.getElementById('pads-overlay');
-                    if (padsEl) activeH = padsEl.offsetHeight;
-                } else if (isDrumsActive) {
-                    const drumsEl = document.getElementById('drums-overlay');
-                    if (drumsEl) activeH = drumsEl.offsetHeight;
-                } else if (isMixerActive) {
-                    const mixerEl = document.getElementById('mixer-overlay');
-                    if (mixerEl) activeH = mixerEl.offsetHeight;
+            // 2. VISUAL DIMENSIONS for Canvas Controls (Respects Auto-Hide)
+            if (activeLeft) {
+                const autoHides = ['settings-overlay', 'synth-overlay', 'mixer-overlay'].includes(activeLeft.id);
+                if (!(isUiAsleep && autoHides)) {
+                    if (isPortrait) topH = activeLeft.offsetHeight;
+                    else leftW = activeLeft.offsetWidth;
                 }
             }
-            document.documentElement.style.setProperty('--active-overlay-height', `${activeH}px`);
+            if (isLooperActive && looperEl) {
+                if (isPortrait) topH = Math.max(topH, looperEl.offsetHeight);
+                else rightW = looperEl.offsetWidth + 10;
+            }
 
-            const looperEl = document.getElementById('looper-overlay');
-            let looperH = 0;
-            if (isLooperActive && looperEl) { looperH = looperEl.offsetHeight + 10; }
-            document.documentElement.style.setProperty('--looper-height', `${looperH}px`);
+            document.documentElement.style.setProperty('--active-overlay-height', `${topH}px`);
+            document.documentElement.style.setProperty('--right-panel-w', `${rightW}px`);
+
+            // 3. HARDWARE ACCELERATED PANNING ENGINE
+            let newSafeOffsetX = (L - R) / 2;
+            let newSafeOffsetY = (T - B) / 2;
+
+            if (newSafeOffsetX !== lastSafeOffsetX || newSafeOffsetY !== lastSafeOffsetY) {
+                lastSafeOffsetX = newSafeOffsetX;
+                lastSafeOffsetY = newSafeOffsetY;
+                applyTransform(); // Force the grid to shift into the new Safe Area
+            }
         }
 
         function updatePianoRange() {
@@ -1205,33 +1332,81 @@
             }
         }
 
+        function constrainView() {
+            const wrapper = document.getElementById('tonnetz-wrapper');
+            if (!wrapper) return;
+            const w = wrapper.clientWidth;
+            const h = wrapper.clientHeight;
+
+            // 1. Constrain Zoom: Never allow the grid to be smaller than the screen
+            const minScaleX = w / GRID_W;
+            const minScaleY = h / GRID_H;
+            const minScale = Math.max(minScaleX, minScaleY, 0.3);
+            t_scale = Math.max(minScale, Math.min(t_scale, 8));
+
+            // 2. Constrain Panning: Stop exactly at the edges of the scaled grid
+            const scaledGridW = GRID_W * t_scale;
+            const scaledGridH = GRID_H * t_scale;
+
+            // Absolute maximum panning allowed before the void shows
+            const maxPanX = Math.max(0, (scaledGridW - w) / 2);
+            const maxPanY = Math.max(0, (scaledGridH - h) / 2);
+
+            // Shift the panning boundaries by the Safe Area offset!
+            // This prevents the camera from sliding into the void when a panel pushes it.
+            const minX = -maxPanX - lastSafeOffsetX;
+            const maxX = maxPanX - lastSafeOffsetX;
+            const minY = -maxPanY - lastSafeOffsetY;
+            const maxY = maxPanY - lastSafeOffsetY;
+
+            // Save the old values to detect if we hit a wall
+            const oldPanX = t_panX;
+            const oldPanY = t_panY;
+
+            // Force targets and current pan values to stay strictly inside the shifted box
+            targetPanX = Math.max(minX, Math.min(maxX, targetPanX));
+            targetPanY = Math.max(minY, Math.min(maxY, targetPanY));
+            t_panX = Math.max(minX, Math.min(maxX, t_panX));
+            t_panY = Math.max(minY, Math.min(maxY, t_panY));
+
+            // Prevent drag desync: If the user is dragging against the hard wall, 
+            // update the anchor coordinates so the grid instantly responds when they change direction!
+            if (t_isDragging) {
+                if (oldPanX !== t_panX) t_startX += (oldPanX - t_panX);
+                if (oldPanY !== t_panY) t_startY += (oldPanY - t_panY);
+            }
+        }
+
         let transformPending = false;
         function applyTransform() {
+            constrainView();
             if (transformPending) return;
             transformPending = true;
             requestAnimationFrame(() => {
                 const zoomGroup = document.getElementById('tonnetz-zoom-group');
-                if (zoomGroup) { zoomGroup.style.willChange = 'transform'; zoomGroup.setAttribute("transform", `translate(${t_panX}, ${t_panY}) scale(${t_scale})`); }
+                if (zoomGroup) {
+                    zoomGroup.style.willChange = 'transform';
+
+                    // Add the Safe Area offset directly to the camera matrix!
+                    const finalX = t_panX + lastSafeOffsetX;
+                    const finalY = t_panY + lastSafeOffsetY;
+
+                    zoomGroup.setAttribute("transform", `translate(${finalX}, ${finalY}) scale(${t_scale})`);
+                }
                 updatePianoRange(); transformPending = false;
             });
         }
 
         function centerOnRoot(animate = false) {
-            let targetX = 0, targetY = 0;
-
-            // Universally accommodate the Piano at the bottom (if active)
-            const pianoEl = document.getElementById('piano-overlay');
-            if (pianoEl && pianoEl.classList.contains('active')) {
-                targetY -= pianoEl.offsetHeight / 2;
-            }
-
-            targetPanX = targetX;
-            targetPanY = targetY;
+            // Because the offset is injected in applyTransform, 
+            // true center is ALWAYS mathematically (0,0)!
+            targetPanX = 0;
+            targetPanY = 0;
 
             if (animate) {
                 if (!isAnimatingPan) { isAnimatingPan = true; animatePan(); }
             } else {
-                t_panX = targetPanX; t_panY = targetPanY; applyTransform();
+                t_panX = 0; t_panY = 0; applyTransform();
             }
         }
 
@@ -1244,6 +1419,9 @@
 
         function toggleOverlay(type) {
             wakeNav();
+            closeFabMenu();
+
+            // Independent Overlays (Info & Piano)
             if (type === 'info') { isInfoActive = !isInfoActive; document.getElementById('info-overlay')?.classList.toggle('active', isInfoActive); document.getElementById('btnInfo')?.classList.toggle('toggled', isInfoActive); return; }
             if (type === 'piano') {
                 isPianoActive = !isPianoActive;
@@ -1251,38 +1429,59 @@
                 document.getElementById('btnTogglePiano')?.classList.toggle('toggled', isPianoActive);
                 document.getElementById('chord-display')?.classList.toggle('piano-active', isPianoActive);
                 document.documentElement.style.setProperty('--piano-h', isPianoActive ? 'clamp(80px, 16vh, 140px)' : '0px');
+                updateOverlayCSSVars();
                 return;
             }
-            if (type === 'looper') { isLooperActive = !isLooperActive; document.getElementById('looper-overlay')?.classList.toggle('active', isLooperActive); document.getElementById('btnToggleLooper')?.classList.toggle('toggled', isLooperActive); updateOverlayCSSVars(); return; }
 
-            if (type === 'settings') {
-                isSettingsActive = !isSettingsActive;
-                document.getElementById('settings-overlay')?.classList.toggle('active', isSettingsActive);
-                document.getElementById('btnToggleSettings')?.classList.toggle('toggled', isSettingsActive);
-            } else if (type === 'synth') {
-                isSynthActive = !isSynthActive;
-                document.getElementById('synth-overlay')?.classList.toggle('active', isSynthActive);
-                document.getElementById('btnToggleSynth')?.classList.toggle('toggled', isSynthActive);
-                if (isSynthActive) drawEnvelope();
-            } else if (type === 'pads') {
-                isPadsActive = !isPadsActive; isDrumsActive = false; isMixerActive = false;
-                document.getElementById('pads-overlay')?.classList.toggle('active', isPadsActive);
-                document.getElementById('btnTogglePads')?.classList.toggle('toggled', isPadsActive);
-                document.getElementById('drums-overlay')?.classList.remove('active'); document.getElementById('btnToggleDrums')?.classList.remove('toggled');
-                document.getElementById('mixer-overlay')?.classList.remove('active'); document.getElementById('btnToggleMixer')?.classList.remove('toggled');
-            } else if (type === 'drums') {
-                isDrumsActive = !isDrumsActive; isPadsActive = false; isMixerActive = false;
-                document.getElementById('drums-overlay')?.classList.toggle('active', isDrumsActive);
-                document.getElementById('btnToggleDrums')?.classList.toggle('toggled', isDrumsActive);
-                document.getElementById('pads-overlay')?.classList.remove('active'); document.getElementById('btnTogglePads')?.classList.remove('toggled');
-                document.getElementById('mixer-overlay')?.classList.remove('active'); document.getElementById('btnToggleMixer')?.classList.remove('toggled');
-            } else if (type === 'mixer') {
-                isMixerActive = !isMixerActive; isPadsActive = false; isDrumsActive = false;
-                document.getElementById('mixer-overlay')?.classList.toggle('active', isMixerActive);
-                document.getElementById('btnToggleMixer')?.classList.toggle('toggled', isMixerActive);
-                document.getElementById('pads-overlay')?.classList.remove('active'); document.getElementById('btnTogglePads')?.classList.remove('toggled');
-                document.getElementById('drums-overlay')?.classList.remove('active'); document.getElementById('btnToggleDrums')?.classList.remove('toggled');
+            const isPortrait = window.innerHeight > window.innerWidth;
+
+            // Define Panel Groups
+            const leftPanels = ['settings', 'synth', 'pads', 'drums', 'mixer'];
+            const rightPanels = ['looper'];
+            const allPanels = [...leftPanels, ...rightPanels];
+
+            // Helper to close a specific panel
+            const closePanel = (p) => {
+                if (p === 'settings') { isSettingsActive = false; document.getElementById('settings-overlay')?.classList.remove('active'); document.getElementById('btnToggleSettings')?.classList.remove('toggled'); }
+                if (p === 'synth') { isSynthActive = false; document.getElementById('synth-overlay')?.classList.remove('active'); document.getElementById('btnToggleSynth')?.classList.remove('toggled'); }
+                if (p === 'pads') { isPadsActive = false; document.getElementById('pads-overlay')?.classList.remove('active'); document.getElementById('btnTogglePads')?.classList.remove('toggled'); }
+                if (p === 'drums') { isDrumsActive = false; document.getElementById('drums-overlay')?.classList.remove('active'); document.getElementById('btnToggleDrums')?.classList.remove('toggled'); }
+                if (p === 'mixer') { isMixerActive = false; document.getElementById('mixer-overlay')?.classList.remove('active'); document.getElementById('btnToggleMixer')?.classList.remove('toggled'); }
+                if (p === 'looper') { isLooperActive = false; document.getElementById('looper-overlay')?.classList.remove('active'); document.getElementById('btnToggleLooper')?.classList.remove('toggled'); }
+            };
+
+            // Check if we are opening or closing the requested panel
+            let isOpening = false;
+            if (type === 'settings' && !isSettingsActive) isOpening = true;
+            if (type === 'synth' && !isSynthActive) isOpening = true;
+            if (type === 'pads' && !isPadsActive) isOpening = true;
+            if (type === 'drums' && !isDrumsActive) isOpening = true;
+            if (type === 'mixer' && !isMixerActive) isOpening = true;
+            if (type === 'looper' && !isLooperActive) isOpening = true;
+
+            // Apply Exclusivity Rules
+            if (isOpening) {
+                if (isPortrait) {
+                    // Mobile Strict Single-Panel: Close EVERYTHING else
+                    allPanels.forEach(p => { if (p !== type) closePanel(p); });
+                } else {
+                    // Landscape Dual-Panel: Close only panels sharing the same screen edge
+                    if (leftPanels.includes(type)) {
+                        leftPanels.forEach(p => { if (p !== type) closePanel(p); });
+                    } else if (rightPanels.includes(type)) {
+                        rightPanels.forEach(p => { if (p !== type) closePanel(p); });
+                    }
+                }
             }
+
+            // Toggle the requested panel
+            if (type === 'settings') { isSettingsActive = !isSettingsActive; document.getElementById('settings-overlay')?.classList.toggle('active', isSettingsActive); document.getElementById('btnToggleSettings')?.classList.toggle('toggled', isSettingsActive); }
+            if (type === 'synth') { isSynthActive = !isSynthActive; document.getElementById('synth-overlay')?.classList.toggle('active', isSynthActive); document.getElementById('btnToggleSynth')?.classList.toggle('toggled', isSynthActive); if (isSynthActive) drawEnvelope(); }
+            if (type === 'pads') { isPadsActive = !isPadsActive; document.getElementById('pads-overlay')?.classList.toggle('active', isPadsActive); document.getElementById('btnTogglePads')?.classList.toggle('toggled', isPadsActive); }
+            if (type === 'drums') { isDrumsActive = !isDrumsActive; document.getElementById('drums-overlay')?.classList.toggle('active', isDrumsActive); document.getElementById('btnToggleDrums')?.classList.toggle('toggled', isDrumsActive); }
+            if (type === 'mixer') { isMixerActive = !isMixerActive; document.getElementById('mixer-overlay')?.classList.toggle('active', isMixerActive); document.getElementById('btnToggleMixer')?.classList.toggle('toggled', isMixerActive); }
+            if (type === 'looper') { isLooperActive = !isLooperActive; document.getElementById('looper-overlay')?.classList.toggle('active', isLooperActive); document.getElementById('btnToggleLooper')?.classList.toggle('toggled', isLooperActive); }
+
             updateOverlayCSSVars();
         }
 
@@ -1296,21 +1495,46 @@
         function wakeNav() {
             if (activeUserNotes > 0 && !t_isDragging) return;
             clearTimeout(navFadeTimeout);
-            if (navEl) { navEl.style.opacity = '1'; navEl.style.pointerEvents = 'auto'; }
-            ['settings-overlay', 'synth-overlay'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el && (id === 'settings-overlay' ? isSettingsActive : isSynthActive)) { el.style.opacity = '1'; el.style.pointerEvents = 'auto'; }
-            });
+
+            const wasHidden = document.body.classList.contains('ui-hidden');
+            document.body.classList.remove('ui-hidden');
+
+            // If the UI was asleep, wake it up and recalculate the Tonnetz Safe Area!
+            if (wasHidden) updateOverlayCSSVars();
         }
 
         function hideNav() {
-            if (uiHideDelay === 0 || !navEl) return;
-            navEl.style.opacity = '0'; navEl.style.pointerEvents = 'none';
-            ['settings-overlay', 'synth-overlay'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el && (id === 'settings-overlay' ? isSettingsActive : isSynthActive)) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; }
-            });
+            if (uiHideDelay === 0) return; // Auto-hide is turned OFF
+
+            const wasHidden = document.body.classList.contains('ui-hidden');
+            document.body.classList.add('ui-hidden');
+
+            // Tell the Tonnetz Safe Area that the panels are gone!
+            if (!wasHidden) updateOverlayCSSVars();
         }
+
+        // --- FAB MENU LOGIC ---
+        function closeFabMenu() {
+            const cc = document.getElementById('canvas-controls');
+            const btn = document.getElementById('btnNavToggle');
+            if (cc && cc.classList.contains('menu-open')) {
+                cc.classList.remove('menu-open');
+                if (btn) { btn.textContent = '🛠️'; btn.style.transform = 'rotate(0deg)'; }
+            }
+        }
+
+        document.getElementById('btnNavToggle')?.addEventListener('click', (e) => {
+            const cc = document.getElementById('canvas-controls');
+            const btn = e.target;
+            cc.classList.toggle('menu-open');
+            if (cc.classList.contains('menu-open')) {
+                btn.textContent = '✕';
+                btn.style.transform = 'rotate(90deg)';
+            } else {
+                btn.textContent = '🛠️';
+                btn.style.transform = 'rotate(0deg)';
+            }
+        });
 
         document.getElementById('btnToggleSettings')?.addEventListener('click', () => toggleOverlay('settings'));
         document.getElementById('btnToggleSynth')?.addEventListener('click', () => toggleOverlay('synth'));
@@ -1355,7 +1579,7 @@
                 looperReverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => el.value),
                 busComp: document.getElementById('busComp').value,
                 mixerHeightSlider: document.getElementById('mixerHeightSlider').value,
-                isLimiterOn: document.getElementById('btnLimiter').classList.contains('active-btn')
+                limiterMode: document.getElementById('limiterMode').value
             };
             const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'TonnetzPro_Settings.json'; a.click(); URL.revokeObjectURL(url); showToast("Settings saved to file.");
@@ -1372,7 +1596,7 @@
                         const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
 
                         // NEW: Added busComp and mixerHeightSlider to the auto-restore array
-                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider'].forEach(k => av(k, s[k]));
+                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode'].forEach(k => av(k, s[k]));
 
                         av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
 
@@ -1380,18 +1604,6 @@
                         if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `7th/9th Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
                         if (s.showChordDegrees !== undefined && showChordDegrees !== s.showChordDegrees) { showChordDegrees = s.showChordDegrees; document.getElementById('btnChordDegrees').textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; document.getElementById('btnChordDegrees').classList.toggle('active-btn', showChordDegrees); updatePianoVisuals(); }
                         if (s.isDarkMode !== undefined && isDarkMode !== s.isDarkMode) { isDarkMode = s.isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode); document.getElementById('btnTheme').textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; document.getElementById('btnTheme').classList.toggle('active-btn', isDarkMode); }
-
-                        // NEW: Restore Safety Limiter state
-                        if (s.isLimiterOn !== undefined) {
-                            const btnLimiter = document.getElementById('btnLimiter');
-                            if (btnLimiter) {
-                                btnLimiter.classList.toggle('active-btn', s.isLimiterOn);
-                                btnLimiter.textContent = `Limiter: ${s.isLimiterOn ? 'ON' : 'OFF'}`;
-                                if (typeof safetyClipper !== 'undefined' && safetyClipper) {
-                                    safetyClipper.curve = s.isLimiterOn ? makeSafetyCurve() : null;
-                                }
-                            }
-                        }
 
                         // RESTORE 8-TRACK VOLUMES, ECHO & REVERB SENDS
                         if (s.looperTrackVols) {
@@ -1418,7 +1630,7 @@
 
         // MIXER DESK & EQ CONTROLS
         document.getElementById('mixerHeightSlider')?.addEventListener('input', (e) => { document.documentElement.style.setProperty('--mixer-fader-height', `${e.target.value}px`); updateOverlayCSSVars(); });
-        document.getElementById('btnLimiter')?.addEventListener('click', e => { const isON = !e.target.classList.contains('active-btn'); e.target.classList.toggle('active-btn', isON); e.target.textContent = `Limiter: ${isON ? 'ON' : 'OFF'}`; if (safetyClipper) safetyClipper.curve = isON ? makeSafetyCurve() : null; });
+        document.getElementById('limiterMode')?.addEventListener('change', e => { updateSafetyCurve(e.target.value); });
         document.getElementById('busComp')?.addEventListener('input', e => { const val = parseFloat(e.target.value); updateLabel('busComp', val, 'Bus Comp', '%'); if (compressor) { compressor.threshold.value = isMobileDevice ? -15.0 : -4.0 - (val / 100 * 16); compressor.ratio.value = 1 + (val / 100 * 11); } });
         document.getElementById('synthVol')?.addEventListener('input', e => { if (synthGain) synthGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valSynthVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('drumVol')?.addEventListener('input', e => { if (drumGain) drumGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valDrumVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
@@ -1772,24 +1984,20 @@
 
                 const w = window.innerWidth;
                 const h = window.innerHeight;
-
                 const mx = e.clientX - w / 2;
                 const my = e.clientY - h / 2;
 
                 const svgX = (mx - t_panX) / t_scale;
                 const svgY = (my - t_panY) / t_scale;
 
+                // Request new scale
                 const zoomAmount = e.deltaY > 0 ? 0.9 : 1.1;
+                t_scale *= zoomAmount;
 
-                const minScaleX = w / 11000;
-                const minScaleY = h / 11000;
-                const absoluteMinScale = Math.max(0.15, minScaleX, minScaleY);
-
-                const newScale = Math.max(absoluteMinScale, Math.min(t_scale * zoomAmount, 8));
-
-                t_panX = mx - svgX * newScale;
-                t_panY = my - svgY * newScale;
-                t_scale = newScale;
+                // Let the constraint engine (inside applyTransform) enforce the min/max limits
+                // but we proactively adjust pan towards the mouse cursor first
+                t_panX = mx - svgX * t_scale;
+                t_panY = my - svgY * t_scale;
 
                 targetPanX = t_panX; targetPanY = t_panY; isAnimatingPan = false;
                 applyTransform();
@@ -2051,15 +2259,31 @@
             isMobileDevice = true;
         }
 
-        // Creates a warm, analog-style soft-clipper to absolutely prevent DAC crackling
-        function makeSafetyCurve() {
-            const curve = new Float32Array(44100);
-            for (let i = 0; i < 44100; i++) {
-                const x = (i * 2) / 44100 - 1;
-                // Gently compress loud signals, absolutely cap at -0.5dBFS (0.95)
-                curve[i] = Math.tanh(x) * 0.95;
+        // Pre-allocate memory once to prevent Garbage Collection stutter
+        const SAFETY_CURVE_SIZE = 44100;
+        const safetyCurveBuffer = new Float32Array(SAFETY_CURVE_SIZE);
+
+        function updateSafetyCurve(type) {
+            if (!safetyClipper) return;
+
+            if (type === 'none') {
+                safetyClipper.curve = null;
+                return;
             }
-            return curve;
+
+            for (let i = 0; i < SAFETY_CURVE_SIZE; i++) {
+                const x = (i * 2) / SAFETY_CURVE_SIZE - 1;
+                if (type === 'brickwall') {
+                    // Transparent 1:1 until the absolute ceiling
+                    safetyCurveBuffer[i] = Math.max(-0.98, Math.min(0.98, x));
+                } else if (type === 'soft') {
+                    // Warm, analog-style saturation
+                    safetyCurveBuffer[i] = Math.tanh(x) * 0.95;
+                }
+            }
+
+            // Re-assigning the buffer forces the Web Audio API to apply the changes
+            safetyClipper.curve = safetyCurveBuffer;
         }
 
         let currentTranspose = 0;
@@ -2116,9 +2340,22 @@
         };
 
         function makeDistortionCurve(amount) {
-            if (amount === 0) return new Float32Array([-1, 0, 1]);
-            const k = amount * 1.5; const n_samples = 44100; const curve = new Float32Array(n_samples); const deg = Math.PI / 180;
-            for (let i = 0; i < n_samples; ++i) { const x = i * 2 / n_samples - 1; curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x)); }
+            const n_samples = 44100;
+            const curve = new Float32Array(n_samples);
+
+            if (amount === 0) {
+                for (let i = 0; i < n_samples; ++i) {
+                    curve[i] = (i * 2) / n_samples - 1;
+                }
+                return curve;
+            }
+
+            const k = amount * 1.5;
+            const deg = Math.PI / 180;
+            for (let i = 0; i < n_samples; ++i) {
+                const x = (i * 2) / n_samples - 1;
+                curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            }
             return curve;
         }
 
@@ -2570,10 +2807,10 @@
             compressor.attack.value = 0.005;
             compressor.release.value = 0.05;
 
-            // ABSOLUTE CEILING: Soft-Clipper to prevent DAC crackling
+            // ABSOLUTE CEILING: Master Limiter
             safetyClipper = audioCtx.createWaveShaper();
-            safetyClipper.curve = makeSafetyCurve();
             safetyClipper.oversample = 'none';
+            updateSafetyCurve(document.getElementById('limiterMode')?.value || 'brickwall');
 
             // Route: Master Fader -> Compressor -> Safety Clipper -> Speakers
             masterGain.connect(compressor);
@@ -4061,12 +4298,27 @@
         const tonnetzSvg = document.createElementNS(svgNS, "svg");
 
         function resizeTonnetzSvg() {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
+            const wrapper = document.getElementById('tonnetz-wrapper');
+            if (!wrapper) return;
+            // Get exact current dimensions of the safe area wrapper
+            const w = wrapper.clientWidth || window.innerWidth;
+            const h = wrapper.clientHeight || window.innerHeight;
+
             tonnetzSvg.setAttribute("viewBox", `${-w / 2} ${-h / 2} ${w} ${h}`);
             updatePianoRange();
         }
-        window.addEventListener('resize', resizeTonnetzSvg);
+
+        // PHASE 3: Use a ResizeObserver for perfectly smooth framing during CSS animations!
+        const tonnetzObserver = new ResizeObserver(() => {
+            requestAnimationFrame(resizeTonnetzSvg);
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const wrapper = document.getElementById('tonnetz-wrapper');
+            if (wrapper) tonnetzObserver.observe(wrapper);
+            resizeTonnetzSvg();
+        });
+
         resizeTonnetzSvg();
 
         tonnetzSvg.appendChild(tonnetzZoomGroup);
@@ -4099,8 +4351,8 @@
         }
 
         const gridBuffer = 2;
-        const GRID_W = 1200;
-        const GRID_H = 1000;
+        const GRID_W = 1600;
+        const GRID_H = 1200;
         const jMin = Math.floor((-GRID_H / 2) / DY) - gridBuffer;
         const jMax = Math.ceil((GRID_H / 2) / DY) + gridBuffer;
 
