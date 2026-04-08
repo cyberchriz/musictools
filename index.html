@@ -589,7 +589,7 @@
 
             <div class="control-row" style="border: none; padding: 0;">
                 <div class="control-group"><label id="lblMasterTune">Master Tune: 440 Hz</label><input type="range" id="masterTune" min="415" max="465" step="1" value="440"></div>
-                <div class="control-group"><label id="lblHideDelay">Auto-Hide: 1000ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="0"></div>
+                <div class="control-group"><label id="lblHideDelay">Auto-Hide: 700ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="700"></div>
                 <div class="control-group" style="display:none;"></div><div class="control-group" style="display:none;"></div>
             </div>
 
@@ -1447,7 +1447,7 @@
         const overlayObserver = new ResizeObserver(() => updateOverlayCSSVars());
         ['settings-overlay', 'synth-overlay', 'pads-overlay', 'drums-overlay', 'looper-overlay'].forEach(id => { const el = document.getElementById(id); if (el) overlayObserver.observe(el); });
 
-        let activeUserNotes = 0, navFadeTimeout = null, uiHideDelay = 0;
+        let activeUserNotes = 0, navFadeTimeout = null, uiHideDelay = 700;
         const navEl = document.getElementById('canvas-controls');
 
 
