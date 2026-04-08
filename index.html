@@ -2985,7 +2985,7 @@
             }
 
             // Export the specific releaseTime so the cleanup engine knows how long the tail is!
-            return { osc1, osc2, subOsc, noiseSrc, gainNode, filter, freq, midiNote, isChord, startTime, accentMult, releaseTime: s.release };
+            return { osc1, osc2, subOsc, noiseSrc, gainNode, filter, ampLfoGain, freq, midiNote, isChord, startTime, accentMult, releaseTime: s.release };
         }
 
         const tunings = {
@@ -3046,29 +3046,39 @@
             updateHighlights();
         }
 
+        // release audio graph nodes with automatic garbage collection
         function beginRelease(voices, skipFade = false, isFastSwipe = false) {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
 
-            voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, midiNote, isChord, releaseTime }) => {
+            voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, filter, ampLfoGain, midiNote, isChord, releaseTime }) => {
                 try {
                     gainNode.gain.cancelScheduledValues(now);
 
-                    // NEW: Retrieve specific release time for this track, or fall back to global
                     const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
                     const relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
 
+                    // 🧹 THE FIX: Physically destroy the nodes to free Mobile CPU!
+                    const cleanup = () => {
+                        try {
+                            osc1.stop(); osc2.stop(); if (subOsc) subOsc.stop(); if (noiseSrc) noiseSrc.stop();
+
+                            osc1.disconnect(); osc2.disconnect();
+                            if (subOsc) subOsc.disconnect();
+                            if (noiseSrc) noiseSrc.disconnect();
+                            filter.disconnect();
+                            gainNode.disconnect();
+                            if (ampLfoGain) ampLfoGain.disconnect();
+                        } catch (e) { }
+                    };
+
                     if (skipFade || isFastSwipe) {
                         gainNode.gain.setTargetAtTime(0.001, now, 0.015);
-                        setTimeout(() => {
-                            try { osc1.stop(); osc2.stop(); if (subOsc) subOsc.stop(); if (noiseSrc) noiseSrc.stop(); } catch (e) { }
-                        }, 30);
+                        setTimeout(cleanup, 30);
                     } else {
                         gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now);
                         gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime);
-                        setTimeout(() => {
-                            try { osc1.stop(); osc2.stop(); if (subOsc) subOsc.stop(); if (noiseSrc) noiseSrc.stop(); } catch (e) { }
-                        }, (relTime * 1000) + 100);
+                        setTimeout(cleanup, (relTime * 1000) + 100);
                     }
                     if (midiOut && isChord) midiOut.send([0x80, midiNote, 0]);
                 } catch (e) { }
@@ -3632,10 +3642,13 @@
         function playDrum(type, time, velocity = 1, destination = null) {
             if (midiOutMode === 'midi') return;
 
-            const osc = audioCtx.createOscillator();
+            // Hoist variables so the garbage collector can find them later
+            let osc = audioCtx.createOscillator();
+            let osc2 = null;
+            let noise = null;
+            let filter = null;
             const mainGain = audioCtx.createGain();
 
-            // ROUTING MAGIC: Go to specific Looper Track, OR the Drum Mixer Bus, OR fallback to compressor
             const targetDest = destination || (typeof drumGain !== 'undefined' ? drumGain : compressor);
             mainGain.connect(targetDest);
 
@@ -3660,9 +3673,11 @@
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
 
-                const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass';
+                noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                filter = audioCtx.createBiquadFilter();
+                filter.type = 'highpass';
                 filter.frequency.value = type === 'cymbal' ? 5000 : 7000;
 
                 noise.connect(filter); filter.connect(mainGain);
@@ -3687,8 +3702,11 @@
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
-                const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass';
+
+                noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
                 filter.frequency.value = 1200; filter.Q.value = 0.8;
 
                 noise.connect(filter); filter.connect(mainGain);
@@ -3697,7 +3715,7 @@
                 mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
                 noise.start(time);
             } else if (type === 'cowbell') {
-                const osc2 = audioCtx.createOscillator();
+                osc2 = audioCtx.createOscillator();
                 osc.type = 'square'; osc2.type = 'square';
                 osc.frequency.setValueAtTime(800, time);
                 osc2.frequency.setValueAtTime(540, time);
@@ -3712,8 +3730,11 @@
                 const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
-                const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass';
+
+                noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                filter = audioCtx.createBiquadFilter();
+                filter.type = 'bandpass';
                 filter.frequency.value = 4000; filter.Q.value = 2;
 
                 noise.connect(filter); filter.connect(mainGain);
@@ -3730,6 +3751,18 @@
                 mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
                 osc.start(time); osc.stop(time + 0.05);
             }
+
+            // Auto-Destruct Drum Nodes to save Mobile CPU
+            const tailMs = (type === 'cymbal' || type === 'ride') ? 2000 : 800;
+            setTimeout(() => {
+                try {
+                    if (osc) osc.disconnect();
+                    if (osc2) osc2.disconnect();
+                    if (noise) noise.disconnect();
+                    if (filter) filter.disconnect();
+                    if (mainGain) mainGain.disconnect();
+                } catch (e) { }
+            }, tailMs);
         }
 
         function triggerSequencerDrum(type, playTime, velocity = 1) {
