@@ -688,7 +688,8 @@
                 <div class="control-row" style="border: none; padding: 0;">
                     <div class="control-group"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
                     <div class="control-group"><label id="lblGlide">Glide (Porta): 0.0s</label><input type="range" id="glide" min="0" max="1" step="0.01" value="0"></div>
-                    <div class="control-group" style="grid-column: span 2;">
+                    <div class="control-group"><label id="lblOvertones">Overtones: 0%</label><input type="range" id="overtones" min="0" max="1" step="0.01" value="0"></div>
+                    <div class="control-group">
                         <label>Filter Type</label>
                         <select id="filterType" class="ui-select">
                             <option value="lowpass" selected>Lowpass</option>
@@ -1601,7 +1602,7 @@
                 echo: document.getElementById('echo').value, reverbMix: document.getElementById('reverbMix').value, lfoSpeed: document.getElementById('lfoSpeed').value, vibrato: document.getElementById('vibrato').value,
                 tremolo: document.getElementById('tremolo').value, sweep: document.getElementById('sweep').value, detune: document.getElementById('detune').value, subOsc: document.getElementById('subOsc').value,
                 noise: document.getElementById('noise').value, filterEnv: document.getElementById('filterEnv').value, padHeight: document.getElementById('padHeightSlider').value, drumHeight: document.getElementById('drumHeightSlider').value,
-
+                overtones: document.getElementById('overtones').value,
                 masterVol: document.getElementById('masterVol').value, synthVol: document.getElementById('synthVol').value, drumVol: document.getElementById('drumVol').value, looperMasterVol: document.getElementById('looperMasterVol').value, mixerImportVol: document.getElementById('mixerImportVol').value, eqLow: document.getElementById('eqLow').value, eqMid: document.getElementById('eqMid').value, eqHigh: document.getElementById('eqHigh').value,
                 oscMix: document.getElementById('oscMix').value, glide: document.getElementById('glide').value, filterType: document.getElementById('filterType').value,
                 midiVelocity: document.getElementById('midiVelocity').value, looperLength: document.getElementById('looperLength').value,
@@ -1630,7 +1631,7 @@
                         const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
 
                         // NEW: Added busComp and mixerHeightSlider to the auto-restore array
-                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode'].forEach(k => av(k, s[k]));
+                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones'].forEach(k => av(k, s[k]));
 
                         av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
 
@@ -2324,12 +2325,20 @@
         let currentReverb = 0;
         let currentOsc1 = 'triangle', currentOsc2 = 'sine', currentDetune = 2, currentOsc2Mult = 1;
         let currentSubOsc = 0.05, currentNoise = 0.03, currentOscMix = 0.5, currentGlide = 0, currentFilterType = 'lowpass';
+        let currentOvertones = 0;
+        let acousticWaveCache = null;
         let currentAttack = 0.01, currentDecay = 0.4, currentSustain = 0.2, currentRelease = 0.3;
         let currentDistortion = 0, currentBrightness = 2.2, currentResonance = 1, currentFilterEnv = 3;
         let currentLfoSpeed = 5.5, currentVibrato = 0, currentSweep = 0, currentTremolo = 0;
         let currentChorus = 2, currentEcho = 0.05, currentReverbMix = 0.25;
         let currentVelocity = 100, lastPlayedFreq = null;
         let midiOutMode = 'both';
+
+        // Pre-allocate memory for Fourier Transform arrays to prevent Garbage Collection stutters!
+        const numHarmonics = 8;
+        const overtoneReal = new Float32Array(numHarmonics);
+        const overtoneImag = new Float32Array(numHarmonics);
+
         document.getElementById('btnMidiOutput')?.addEventListener('click', e => {
             midiOutMode = midiOutMode === 'both' ? 'midi' : 'both';
             e.target.textContent = midiOutMode === 'both' ? 'MIDI OUT: MIDI + BROWSER' : 'MIDI OUT: MIDI ONLY';
@@ -2337,41 +2346,60 @@
         });
 
         const presets = {
-            piano: { attack: 0.01, decay: 0.4, sustain: 0.2, release: 0.3, distortion: 0, brightness: 2.2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.85, filterEnv: 3, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.05, noise: 0.03 },
-            epiano: { attack: 0.02, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 0, brightness: 3.5, resonance: 1.5, chorus: 10, echo: 0.12, reverbMix: 0.15, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.6, filterEnv: 1, filterType: 'lowpass', glide: 0, lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.2, noise: 0 },
-            lofi_keys: { attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.5, distortion: 6, brightness: 0.8, resonance: 1, chorus: 20, echo: 0.2, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.7, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 3.2, vibrato: 28, sweep: 0, tremolo: 0.15, detune: 18, subOsc: 0.1, noise: 0.5 },
-            organ: { attack: 0.01, decay: 0.15, sustain: 0.85, release: 0.1, distortion: 3, brightness: 7, resonance: 1.5, chorus: 18, echo: 0, reverbMix: 0.25, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 6.8, vibrato: 6, sweep: 0, tremolo: 0.3, detune: 16, subOsc: 0.8, noise: 0.02 },
-            harpsichord: { attack: 0.01, decay: 0.3, sustain: 0.2, release: 0.1, distortion: 0, brightness: 5.0, resonance: 1.5, chorus: 0, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.7, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.05 },
-            accordion: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.2, distortion: 2, brightness: 2.5, resonance: 1.2, chorus: 15, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 10, subOsc: 0, noise: 0.02 },
-            musicbox: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.8, distortion: 0, brightness: 6.0, resonance: 2.0, chorus: 5, echo: 0.2, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, oscMix: 0.5, filterEnv: 0, filterType: 'bandpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0 },
-            pad: { attack: 0.6, decay: 1.0, sustain: 0.8, release: 1.8, distortion: 0, brightness: 2.0, resonance: 3, chorus: 25, echo: 0.3, reverbMix: 0.6, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 1.5, filterType: 'lowpass', glide: 0.05, lfoSpeed: 0.4, vibrato: 5, sweep: 1000, tremolo: 0, detune: 22, subOsc: 0.5, noise: 0.05 },
-            glasspad: { attack: 0.8, decay: 0.5, sustain: 0.8, release: 2.0, distortion: 0, brightness: 4.0, resonance: 3.0, chorus: 25, echo: 0.4, reverbMix: 0.8, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, oscMix: 0.6, filterEnv: 0.5, filterType: 'bandpass', glide: 0.1, lfoSpeed: 0.2, vibrato: 5, sweep: 500, tremolo: 0.2, detune: 15, subOsc: 0.2, noise: 0.02 },
-            pluck: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 1.2, distortion: 0, brightness: 1.5, resonance: 5, chorus: 2, echo: 0.15, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, oscMix: 0.5, filterEnv: 7, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.1, noise: 0.1 },
-            harp: { attack: 0.02, decay: 0.4, sustain: 0.1, release: 1.5, distortion: 0, brightness: 2.0, resonance: 1, chorus: 5, echo: 0.1, reverbMix: 0.4, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.7, filterEnv: 1.0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.02 },
-            guitar: { attack: 0.01, decay: 0.4, sustain: 0.2, release: 1.0, distortion: 1, brightness: 1.5, resonance: 3, chorus: 4, echo: 0.1, reverbMix: 0.15, osc1: 'triangle', osc2: 'square', osc2Mult: 0.5, oscMix: 0.8, filterEnv: 6, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.1, noise: 0.2 },
-            banjo: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.2, distortion: 2, brightness: 4.0, resonance: 1.5, chorus: 0, echo: 0.05, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.6, filterEnv: 2.0, filterType: 'highpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.1 },
-            sitar: { attack: 0.02, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 3, brightness: 3.5, resonance: 4.0, chorus: 15, echo: 0.15, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.5, filterEnv: 2.0, filterType: 'lowpass', glide: 0.05, lfoSpeed: 5.5, vibrato: 10, sweep: 0, tremolo: 0, detune: 12, subOsc: 0.1, noise: 0.05 },
-            bass: { attack: 0.01, decay: 0.3, sustain: 0.3, release: 0.2, distortion: 12, brightness: 1.5, resonance: 7, chorus: 5, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, oscMix: 0.5, filterEnv: 5, filterType: 'lowpass', glide: 0.02, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0 },
-            slapbass: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2, distortion: 8, brightness: 3.5, resonance: 4.0, chorus: 4, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.7, filterEnv: 6.0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.8, noise: 0.15 },
-            acid303: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 0.1, distortion: 25, brightness: 1.0, resonance: 15.0, chorus: 0, echo: 0.15, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 8.0, filterType: 'lowpass', glide: 0.12, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.2, noise: 0 },
-            synthlead: { attack: 0.05, decay: 0.3, sustain: 0.8, release: 0.5, distortion: 6, brightness: 4.5, resonance: 8, chorus: 15, echo: 0.3, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.5, filterEnv: 3, filterType: 'lowpass', glide: 0.08, lfoSpeed: 4.5, vibrato: 10, sweep: 1500, tremolo: 0, detune: 14, subOsc: 0.5, noise: 0 },
-            chiptune: { attack: 0.01, decay: 0.1, sustain: 1.0, release: 0.05, distortion: 0, brightness: 8.0, resonance: 0, chorus: 0, echo: 0, reverbMix: 0, osc1: 'square', osc2: 'square', osc2Mult: 0.5, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 10, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0, noise: 0 },
-            synthbrass: { attack: 0.18, decay: 0.4, sustain: 0.7, release: 0.5, distortion: 0, brightness: 3.5, resonance: 2.5, chorus: 18, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 6, filterType: 'lowpass', glide: 0.04, lfoSpeed: 5.0, vibrato: 4, sweep: 0, tremolo: 0, detune: 15, subOsc: 0.3, noise: 0 },
-            sax: { attack: 0.08, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 8, brightness: 3.0, resonance: 3, chorus: 5, echo: 0.15, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.6, filterEnv: 1.0, filterType: 'lowpass', glide: 0.05, lfoSpeed: 5.2, vibrato: 20, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.2, noise: 0.3 },
-            trumpet: { attack: 0.06, decay: 0.15, sustain: 0.8, release: 0.2, distortion: 5, brightness: 3.5, resonance: 3.5, chorus: 3, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.5, filterEnv: 4.5, filterType: 'lowpass', glide: 0.02, lfoSpeed: 5.8, vibrato: 14, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.1 },
-            frenchhorn: { attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 1, brightness: 1.5, resonance: 1.5, chorus: 8, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, oscMix: 0.4, filterEnv: 1.5, filterType: 'lowpass', glide: 0.05, lfoSpeed: 4.5, vibrato: 8, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.1, noise: 0.02 },
-            tuba: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 2, brightness: 1.2, resonance: 1, chorus: 0, echo: 0, reverbMix: 0.2, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.8, filterEnv: 1.0, filterType: 'lowpass', glide: 0.02, lfoSpeed: 4.0, vibrato: 5, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.8, noise: 0.05 },
-            clarinet: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2, distortion: 0, brightness: 1.5, resonance: 1, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'square', osc2: 'triangle', osc2Mult: 1, oscMix: 0.7, filterEnv: 0.5, filterType: 'lowpass', glide: 0.03, lfoSpeed: 5.0, vibrato: 10, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05 },
-            oboe: { attack: 0.04, decay: 0.1, sustain: 0.8, release: 0.2, distortion: 0, brightness: 3.5, resonance: 1.2, chorus: 3, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.6, filterEnv: 0, filterType: 'bandpass', glide: 0.03, lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.02 },
-            violin: { attack: 0.25, decay: 0.4, sustain: 0.9, release: 0.7, distortion: 0, brightness: 3.0, resonance: 1.5, chorus: 10, echo: 0.25, reverbMix: 0.45, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 0.5, filterType: 'lowpass', glide: 0.06, lfoSpeed: 6.2, vibrato: 26, sweep: 0, tremolo: 0, detune: 10, subOsc: 0, noise: 0.15 },
-            cello: { attack: 0.2, decay: 0.3, sustain: 0.8, release: 0.6, distortion: 1, brightness: 1.8, resonance: 2.5, chorus: 6, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 0.5, oscMix: 0.7, filterEnv: 2.5, filterType: 'lowpass', glide: 0.06, lfoSpeed: 5.5, vibrato: 16, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.3, noise: 0.08 },
-            pizzicato: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1, distortion: 0, brightness: 2.5, resonance: 1.5, chorus: 4, echo: 0.05, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, oscMix: 0.6, filterEnv: 1.0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05 },
-            choir: { attack: 0.6, decay: 0.5, sustain: 0.8, release: 1.2, distortion: 0, brightness: 1.8, resonance: 1.5, chorus: 22, echo: 0.2, reverbMix: 0.7, osc1: 'sine', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.4, filterEnv: 0, filterType: 'lowpass', glide: 0.1, lfoSpeed: 4.2, vibrato: 12, sweep: 0, tremolo: 0, detune: 18, subOsc: 0.4, noise: 0.25 },
-            marimba: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.25, distortion: 0, brightness: 2.5, resonance: 4, chorus: 0, echo: 0.15, reverbMix: 0.15, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, oscMix: 0.3, filterEnv: 2.5, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0.2, noise: 0.12 },
-            vibraphone: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 0, brightness: 2.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, oscMix: 0.4, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 5.8, vibrato: 0, sweep: 0, tremolo: 0.45, detune: 1, subOsc: 0, noise: 0 },
-            flute: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.35, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 3, echo: 0.2, reverbMix: 0.35, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, oscMix: 0.6, filterEnv: 0, filterType: 'lowpass', glide: 0.04, lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.4 },
-            theremin: { attack: 0.25, decay: 0.1, sustain: 1.0, release: 0.5, distortion: 0, brightness: 1.2, resonance: 1, chorus: 5, echo: 0.25, reverbMix: 0.6, osc1: 'sine', osc2: 'sine', osc2Mult: 1, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0.2, lfoSpeed: 6.5, vibrato: 36, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.1, noise: 0 }
+            piano: { attack: 0.01, decay: 0.4, sustain: 0.2, release: 0.3, distortion: 0, brightness: 2.2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.85, filterEnv: 3, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.05, noise: 0.03, overtones: 0 },
+            epiano: { attack: 0.02, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 0, brightness: 3.5, resonance: 1.5, chorus: 10, echo: 0.12, reverbMix: 0.15, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.6, filterEnv: 1, filterType: 'lowpass', glide: 0, lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.2, noise: 0, overtones: 0.35 },
+            lofi_keys: { attack: 0.05, decay: 0.3, sustain: 0.6, release: 0.5, distortion: 6, brightness: 0.8, resonance: 1, chorus: 20, echo: 0.2, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.7, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 3.2, vibrato: 28, sweep: 0, tremolo: 0.15, detune: 18, subOsc: 0.1, noise: 0.5, overtones: 0 },
+            organ: { attack: 0.01, decay: 0.15, sustain: 0.85, release: 0.1, distortion: 3, brightness: 7, resonance: 1.5, chorus: 18, echo: 0, reverbMix: 0.25, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 6.8, vibrato: 6, sweep: 0, tremolo: 0.3, detune: 16, subOsc: 0.8, noise: 0.02, overtones: 0.15 },
+            harpsichord: { attack: 0.01, decay: 0.3, sustain: 0.2, release: 0.1, distortion: 0, brightness: 5.0, resonance: 1.5, chorus: 0, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.7, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.05, overtones: 0 },
+            accordion: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.2, distortion: 2, brightness: 2.5, resonance: 1.2, chorus: 15, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 10, subOsc: 0, noise: 0.02, overtones: 0 },
+            musicbox: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.8, distortion: 0, brightness: 6.0, resonance: 2.0, chorus: 5, echo: 0.2, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, oscMix: 0.5, filterEnv: 0, filterType: 'bandpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0, overtones: 0.5 },
+            pad: { attack: 0.6, decay: 1.0, sustain: 0.8, release: 1.8, distortion: 0, brightness: 2.0, resonance: 3, chorus: 25, echo: 0.3, reverbMix: 0.6, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 1.5, filterType: 'lowpass', glide: 0.05, lfoSpeed: 0.4, vibrato: 5, sweep: 1000, tremolo: 0, detune: 22, subOsc: 0.5, noise: 0.05, overtones: 0 },
+            glasspad: { attack: 0.8, decay: 0.5, sustain: 0.8, release: 2.0, distortion: 0, brightness: 4.0, resonance: 3.0, chorus: 25, echo: 0.4, reverbMix: 0.8, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, oscMix: 0.6, filterEnv: 0.5, filterType: 'bandpass', glide: 0.1, lfoSpeed: 0.2, vibrato: 5, sweep: 500, tremolo: 0.2, detune: 15, subOsc: 0.2, noise: 0.02, overtones: 0.2 },
+            pluck: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 1.2, distortion: 0, brightness: 1.5, resonance: 5, chorus: 2, echo: 0.15, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, oscMix: 0.5, filterEnv: 7, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.1, noise: 0.1, overtones: 0 },
+            harp: { attack: 0.02, decay: 0.4, sustain: 0.1, release: 1.5, distortion: 0, brightness: 2.0, resonance: 1, chorus: 5, echo: 0.1, reverbMix: 0.4, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, oscMix: 0.7, filterEnv: 1.0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.02, overtones: 0.15 },
+            guitar: { attack: 0.01, decay: 0.4, sustain: 0.2, release: 1.0, distortion: 1, brightness: 1.5, resonance: 3, chorus: 4, echo: 0.1, reverbMix: 0.15, osc1: 'triangle', osc2: 'square', osc2Mult: 0.5, oscMix: 0.8, filterEnv: 6, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.1, noise: 0.2, overtones: 0 },
+            banjo: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.2, distortion: 2, brightness: 4.0, resonance: 1.5, chorus: 0, echo: 0.05, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.6, filterEnv: 2.0, filterType: 'highpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.1, overtones: 0 },
+            sitar: { attack: 0.02, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 3, brightness: 3.5, resonance: 4.0, chorus: 15, echo: 0.15, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.5, filterEnv: 2.0, filterType: 'lowpass', glide: 0.05, lfoSpeed: 5.5, vibrato: 10, sweep: 0, tremolo: 0, detune: 12, subOsc: 0.1, noise: 0.05, overtones: 0 },
+            bass: { attack: 0.01, decay: 0.3, sustain: 0.3, release: 0.2, distortion: 12, brightness: 1.5, resonance: 7, chorus: 5, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, oscMix: 0.5, filterEnv: 5, filterType: 'lowpass', glide: 0.02, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0, overtones: 0 },
+            slapbass: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2, distortion: 8, brightness: 3.5, resonance: 4.0, chorus: 4, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.7, filterEnv: 6.0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.8, noise: 0.15, overtones: 0 },
+            acid303: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 0.1, distortion: 25, brightness: 1.0, resonance: 15.0, chorus: 0, echo: 0.15, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 8.0, filterType: 'lowpass', glide: 0.12, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.2, noise: 0, overtones: 0 },
+            synthlead: { attack: 0.05, decay: 0.3, sustain: 0.8, release: 0.5, distortion: 6, brightness: 4.5, resonance: 8, chorus: 15, echo: 0.3, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.5, filterEnv: 3, filterType: 'lowpass', glide: 0.08, lfoSpeed: 4.5, vibrato: 10, sweep: 1500, tremolo: 0, detune: 14, subOsc: 0.5, noise: 0, overtones: 0 },
+            chiptune: { attack: 0.01, decay: 0.1, sustain: 1.0, release: 0.05, distortion: 0, brightness: 8.0, resonance: 0, chorus: 0, echo: 0, reverbMix: 0, osc1: 'square', osc2: 'square', osc2Mult: 0.5, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 10, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0, noise: 0, overtones: 0 },
+            synthbrass: { attack: 0.18, decay: 0.4, sustain: 0.7, release: 0.5, distortion: 0, brightness: 3.5, resonance: 2.5, chorus: 18, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 6, filterType: 'lowpass', glide: 0.04, lfoSpeed: 5.0, vibrato: 4, sweep: 0, tremolo: 0, detune: 15, subOsc: 0.3, noise: 0, overtones: 0 },
+            sax: { attack: 0.08, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 8, brightness: 3.0, resonance: 3, chorus: 5, echo: 0.15, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.6, filterEnv: 1.0, filterType: 'lowpass', glide: 0.05, lfoSpeed: 5.2, vibrato: 20, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.2, noise: 0.3, overtones: 0 },
+            trumpet: { attack: 0.06, decay: 0.15, sustain: 0.8, release: 0.2, distortion: 5, brightness: 3.5, resonance: 3.5, chorus: 3, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.5, filterEnv: 4.5, filterType: 'lowpass', glide: 0.02, lfoSpeed: 5.8, vibrato: 14, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.1, overtones: 0 },
+            frenchhorn: { attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 1, brightness: 1.5, resonance: 1.5, chorus: 8, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, oscMix: 0.4, filterEnv: 1.5, filterType: 'lowpass', glide: 0.05, lfoSpeed: 4.5, vibrato: 8, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.1, noise: 0.02, overtones: 0 },
+            tuba: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 2, brightness: 1.2, resonance: 1, chorus: 0, echo: 0, reverbMix: 0.2, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.8, filterEnv: 1.0, filterType: 'lowpass', glide: 0.02, lfoSpeed: 4.0, vibrato: 5, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.8, noise: 0.05, overtones: 0 },
+            clarinet: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2, distortion: 0, brightness: 1.5, resonance: 1, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'square', osc2: 'triangle', osc2Mult: 1, oscMix: 0.7, filterEnv: 0.5, filterType: 'lowpass', glide: 0.03, lfoSpeed: 5.0, vibrato: 10, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0 },
+            oboe: { attack: 0.04, decay: 0.1, sustain: 0.8, release: 0.2, distortion: 0, brightness: 3.5, resonance: 1.2, chorus: 3, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, oscMix: 0.6, filterEnv: 0, filterType: 'bandpass', glide: 0.03, lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.02, overtones: 0 },
+            violin: { attack: 0.25, decay: 0.4, sustain: 0.9, release: 0.7, distortion: 0, brightness: 3.0, resonance: 1.5, chorus: 10, echo: 0.25, reverbMix: 0.45, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.5, filterEnv: 0.5, filterType: 'lowpass', glide: 0.06, lfoSpeed: 6.2, vibrato: 26, sweep: 0, tremolo: 0, detune: 10, subOsc: 0, noise: 0.15, overtones: 0 },
+            cello: { attack: 0.2, decay: 0.3, sustain: 0.8, release: 0.6, distortion: 1, brightness: 1.8, resonance: 2.5, chorus: 6, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 0.5, oscMix: 0.7, filterEnv: 2.5, filterType: 'lowpass', glide: 0.06, lfoSpeed: 5.5, vibrato: 16, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.3, noise: 0.08, overtones: 0 },
+            pizzicato: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1, distortion: 0, brightness: 2.5, resonance: 1.5, chorus: 4, echo: 0.05, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, oscMix: 0.6, filterEnv: 1.0, filterType: 'lowpass', glide: 0, lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0 },
+            choir: { attack: 0.6, decay: 0.5, sustain: 0.8, release: 1.2, distortion: 0, brightness: 1.8, resonance: 1.5, chorus: 22, echo: 0.2, reverbMix: 0.7, osc1: 'sine', osc2: 'sawtooth', osc2Mult: 1, oscMix: 0.4, filterEnv: 0, filterType: 'lowpass', glide: 0.1, lfoSpeed: 4.2, vibrato: 12, sweep: 0, tremolo: 0, detune: 18, subOsc: 0.4, noise: 0.25, overtones: 0.1 },
+            marimba: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.25, distortion: 0, brightness: 2.5, resonance: 4, chorus: 0, echo: 0.15, reverbMix: 0.15, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, oscMix: 0.3, filterEnv: 2.5, filterType: 'lowpass', glide: 0, lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0.2, noise: 0.12, overtones: 0.6 },
+            vibraphone: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 0, brightness: 2.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, oscMix: 0.4, filterEnv: 0, filterType: 'lowpass', glide: 0, lfoSpeed: 5.8, vibrato: 0, sweep: 0, tremolo: 0.45, detune: 1, subOsc: 0, noise: 0, overtones: 0.3 },
+            flute: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.35, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 3, echo: 0.2, reverbMix: 0.35, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, oscMix: 0.6, filterEnv: 0, filterType: 'lowpass', glide: 0.04, lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.4, overtones: 0 },
+            theremin: { attack: 0.25, decay: 0.1, sustain: 1.0, release: 0.5, distortion: 0, brightness: 1.2, resonance: 1, chorus: 5, echo: 0.25, reverbMix: 0.6, osc1: 'sine', osc2: 'sine', osc2Mult: 1, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0.2, lfoSpeed: 6.5, vibrato: 36, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.1, noise: 0, overtones: 0 }
         };
+
+        // Uses Fourier Transforms to permanently bake overtones into a single waveform (Zero CPU cost at runtime!)
+        function updateAcousticWave() {
+            if (!audioCtx || currentOvertones === 0) {
+                acousticWaveCache = null;
+                return;
+            }
+
+            overtoneReal[0] = 0; overtoneImag[0] = 0; // DC offset
+            overtoneReal[1] = 1; overtoneImag[1] = 0; // Fundamental frequency
+
+            // Overwrite existing memory with new overtone calculations
+            for (let i = 2; i < numHarmonics; i++) {
+                overtoneReal[i] = currentOvertones * (1 / i);
+                overtoneImag[i] = 0; // Phase stays at 0
+            }
+
+            acousticWaveCache = audioCtx.createPeriodicWave(overtoneReal, overtoneImag);
+        }
 
         function makeDistortionCurve(amount) {
             const n_samples = 44100;
@@ -2419,7 +2447,7 @@
         document.getElementById('instrumentPreset')?.addEventListener('change', e => {
             const p = presets[e.target.value]; if (!p) return;
             currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
-            ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv'].forEach(id => {
+            ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && p[id] !== undefined) {
                     el.value = p[id]; el.dispatchEvent(new Event('input'));
@@ -2512,6 +2540,11 @@
         document.getElementById('noise')?.addEventListener('input', e => {
             currentNoise = parseFloat(e.target.value);
             updateLabel('noise', currentNoise.toFixed(2), 'Noise');
+        });
+        document.getElementById('overtones')?.addEventListener('input', e => {
+            currentOvertones = parseFloat(e.target.value);
+            updateLabel('overtones', Math.round(currentOvertones * 100), 'Overtones', '%');
+            updateAcousticWave();
         });
         document.getElementById('filterEnv')?.addEventListener('input', e => {
             currentFilterEnv = parseFloat(e.target.value);
@@ -2963,6 +2996,9 @@
             }
 
             if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            // Bake the acoustic wave (overtones emulation)
+            updateAcousticWave();
         }
 
         const playingMidiNotes = new Set();
@@ -3163,8 +3199,18 @@
                 oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType
             };
 
-            const osc1 = audioCtx.createOscillator(); osc1.type = s.osc1;
-            const osc2 = audioCtx.createOscillator(); osc2.type = s.osc2;
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+
+            // If acoustic overtones are dialed in, they completely replace the standard waveform!
+            if (acousticWaveCache) {
+                osc1.setPeriodicWave(acousticWaveCache);
+                osc2.setPeriodicWave(acousticWaveCache);
+            } else {
+                osc1.type = s.osc1;
+                osc2.type = s.osc2;
+            }
+
             const targetFreq2 = freq * Math.pow(2, s.detune / 1200) * s.osc2Mult;
 
             // GLIDE (Portamento) LOGIC
