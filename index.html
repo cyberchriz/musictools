@@ -6,30 +6,96 @@
     <title>Tonnetz Pro</title>
     <style>
         :root {
-            --bg-color: #ffffff; --panel-bg: #f8f9fa; --border-color: #dddddd; --grid-line: #cccccc;
-            --text-main: #222222; --text-muted: #555555; --main-node: #6a1b9a; --whole-step: #0277bd; 
-            --half-step: #c2185b; --passing-tone: #d4d4d4; --cof-maj3: #e65100; --cof-min3: #00897b;
-            --major-bg: rgba(255, 179, 0, 0.25); --minor-bg: rgba(3, 155, 229, 0.2); --dimmed-fill: #f0f0f0;
-            --text-light: #ffffff; --text-dark: #333333; --text-accidental: rgba(255, 255, 255, 0.9);
-            --text-triad-stroke: #ffffff; --ext-highlight-fill: #d4edda; --ext-highlight-stroke: #4caf50;
-            --active-overlay-height: 0px; --active-overlay-width: 0px; --looper-height: 0px;
-            --c-sus-bg: #e0f2f1; --c-sus-txt: #00796b; --c-oct-bg: #e3f2fd; --c-oct-txt: #1976d2;
-            --c-add-bg: #f3e5f5; --c-add-txt: #7b1fa2; --c-arp-bg: #fff3e0; --c-arp-txt: #f57c00;
-            --c-loc-bg: #eceff1; --c-loc-txt: #546e7a;
-			--settings-height: 0px; --synth-gap: 0px;
+            --bg-color: #ffffff;
+            --panel-bg: #f8f9fa;
+            --border-color: #dddddd;
+            --grid-line: #cccccc;
+            --theme-glow: rgba(106, 27, 154, 0.2);
+            --text-main: #222222;
+            --text-muted: #555555;
+            --main-node: #6a1b9a;
+            --whole-step: #0277bd;
+            --half-step: #c2185b;
+            --passing-tone: #d4d4d4;
+            --cof-maj3: #e65100;
+            --cof-min3: #00897b;
+            --major-bg: rgba(255, 179, 0, 0.25);
+            --minor-bg: rgba(3, 155, 229, 0.2);
+            --dimmed-fill: #f0f0f0;
+            --text-light: #ffffff;
+            --text-dark: #333333;
+            --text-accidental: rgba(255, 255, 255, 0.9);
+            --text-triad-stroke: #ffffff;
+            --ext-highlight-fill: #d4edda;
+            --ext-highlight-stroke: #4caf50;
+            --active-overlay-height: 0px;
+            --active-overlay-width: 0px;
+            --looper-height: 0px;
+            --c-sus-bg: #e0f2f1;
+            --c-sus-txt: #00796b;
+            --c-oct-bg: #e3f2fd;
+            --c-oct-txt: #1976d2;
+            --c-add-bg: #f3e5f5;
+            --c-add-txt: #7b1fa2;
+            --c-arp-bg: #fff3e0;
+            --c-arp-txt: #f57c00;
+            --c-loc-bg: #eceff1;
+            --c-loc-txt: #546e7a;
+            --settings-height: 0px;
+            --synth-gap: 0px;
             --mixer-fader-height: 100px;
         }
 
         body.dark-theme {
-            --bg-color: #1a1a1a; --panel-bg: #222222; --border-color: #3a3a3a; --grid-line: #333333;
-            --text-main: #f0f0f0; --text-muted: #bbbbbb; --main-node: #9c27b0; --whole-step: #03a9f4; 
-            --half-step: #e91e63; --passing-tone: #555555; --cof-maj3: #ff9800; --cof-min3: #26a69a; 
-            --major-bg: rgba(255, 193, 7, 0.35); --minor-bg: rgba(3, 169, 244, 0.35); --dimmed-fill: #1e1e1e;
-            --text-dark: #eeeeee; --text-triad-stroke: #000000; --ext-highlight-fill: #1b5e20;
-            --c-sus-bg: #004d40; --c-sus-txt: #80cbc4; --c-oct-bg: #0d47a1; --c-oct-txt: #90caf9;
-            --c-add-bg: #4a148c; --c-add-txt: #ce93d8; --c-arp-bg: #bf360c; --c-arp-txt: #ffb74d;
-            --c-loc-bg: #37474f; --c-loc-txt: #b0bec5;
+            --bg-color: #1a1a1a;
+            --panel-bg: #222222;
+            --border-color: #3a3a3a;
+            --grid-line: #333333;
+            --theme-glow: rgba(213, 0, 249, 0.2);
+            --text-main: #f0f0f0;
+            --text-muted: #bbbbbb;
+            --main-node: #9c27b0;
+            --whole-step: #03a9f4;
+            --half-step: #e91e63;
+            --passing-tone: #555555;
+            --cof-maj3: #ff9800;
+            --cof-min3: #26a69a;
+            --major-bg: rgba(255, 193, 7, 0.35);
+            --minor-bg: rgba(3, 169, 244, 0.35);
+            --dimmed-fill: #1e1e1e;
+            --text-dark: #eeeeee;
+            --text-triad-stroke: #000000;
+            --ext-highlight-fill: #1b5e20;
+            --c-sus-bg: #004d40;
+            --c-sus-txt: #80cbc4;
+            --c-oct-bg: #0d47a1;
+            --c-oct-txt: #90caf9;
+            --c-add-bg: #4a148c;
+            --c-add-txt: #ce93d8;
+            --c-arp-bg: #bf360c;
+            --c-arp-txt: #ffb74d;
+            --c-loc-bg: #37474f;
+            --c-loc-txt: #b0bec5;
         }
+
+        /* --- CUSTOM COLOR THEMES --- */
+        /* Default Purple is natively handled by :root and body.dark-theme */
+
+        /* Cyber Blue */
+        body.theme-blue { --main-node: #0288d1; --whole-step: #0277bd; --theme-glow: rgba(2, 136, 209, 0.2); }
+        body.dark-theme.theme-blue { --main-node: #00e5ff; --whole-step: #29b6f6; --theme-glow: rgba(0, 229, 255, 0.2); }
+
+        /* Matrix Green */
+        body.theme-green { --main-node: #2e7d32; --whole-step: #388e3c; --theme-glow: rgba(46, 125, 50, 0.2); }
+        body.dark-theme.theme-green { --main-node: #00e676; --whole-step: #66bb6a; --theme-glow: rgba(0, 230, 118, 0.2); }
+
+        /* Sunset Orange */
+        body.theme-orange { --main-node: #e65100; --whole-step: #f57c00; --theme-glow: rgba(230, 81, 0, 0.2); }
+        body.dark-theme.theme-orange { --main-node: #ff9100; --whole-step: #ffa726; --theme-glow: rgba(255, 145, 0, 0.2); }
+
+        /* Synthwave Pink */
+        body.theme-pink { --main-node: #c2185b; --whole-step: #d81b60; --theme-glow: rgba(194, 24, 91, 0.2); }
+        body.dark-theme.theme-pink { --main-node: #ff4081; --whole-step: #ec407a; --theme-glow: rgba(255, 64, 129, 0.2); }
 
         .close-btn-sm {
             background: #f44336; color: white; border: none; border-radius: 4px; width: 20px; height: 20px; 
@@ -92,12 +158,15 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 100vh; /* Permanently full screen! */
-            background: var(--bg-color);
+            height: 100vh;
+            background-color: var(--bg-color);
+            background-image: /* Stacking the gradient twice doubles the brightness in the center! */
+                radial-gradient(circle at 50% 50%, var(--theme-glow) 0%, transparent calc(var(--bg-pulse-size, 0%) * 0.7)),
+                radial-gradient(circle at 50% 50%, var(--theme-glow) 0%, transparent var(--bg-pulse-size, 0%));
             cursor: grab;
             z-index: 1;
             overflow: hidden;
-            transition: background 0.3s;
+            transition: background-color 0.3s;
         }
 
         .svg-wrapper:active {
@@ -230,8 +299,8 @@
             font-size: 0.8rem;
         }
         .dark-theme select.highlight-select {
-            border: 2px solid #d500f9; /* Bright neon purple border for dark mode */
-            box-shadow: 0 2px 8px rgba(213, 0, 249, 0.15); /* Subtle glowing shadow */
+            border: 2px solid var(--main-node);
+            box-shadow: 0 2px 10px var(--theme-glow);
         }
         select.highlight-select:focus { 
             outline: none; 
@@ -264,7 +333,7 @@
         .btn-cat-loc.active-btn { background: var(--c-loc-txt) !important; color: var(--c-loc-bg) !important; border-color: var(--c-loc-txt) !important; }
 
         .pad-header { font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center; }
-        .lock-btn { height: 35px; font-size: 0.75rem; border-radius: 6px; }
+        .lock-btn { height: 35px; font-size: 0.75rem; border-radius: 8px; }
 
         .cof-overlay { position: absolute; top: var(--active-overlay-height, 0px); left: var(--active-overlay-width, 0px); width: 55vmin; height: 55vmin; background: var(--panel-bg); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); border-bottom-right-radius: 12px; z-index: 15; transition: top 0.3s, left 0.3s, transform 0.3s, opacity 0.2s; transform: translateX(-100%); opacity: 0; pointer-events: none; display: flex; justify-content: center; align-items: center; padding: 1vmin; box-sizing: border-box; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
         .cof-overlay.active { transform: translateX(0); opacity: 1; pointer-events: auto; }
@@ -425,6 +494,10 @@
         input[type=range].reverb-send {
             accent-color: #e91e63 !important;
         }
+        input[type=range].pan-slider {
+            accent-color: #9e9e9e !important; /* Silver for panning */
+            margin-bottom: 6px; /* Extra padding above the fader */
+        }
 
         input[type=range].v-slider { -webkit-appearance: slider-vertical; appearance: slider-vertical; width: 24px; height: var(--mixer-fader-height); cursor: pointer; margin: 0; background: transparent; }
 
@@ -562,25 +635,13 @@
 
             <div class="control-row">
                 <div class="control-group" style="grid-column: span 2;">
-                    <label>Metronome / Drum Beat</label>
-                    <select id="metronomeMode">
-                        <option value="none">None</option>
-                        <option value="click">Click</option>
-                        <option value="basic">Basic Beat</option>
-                        <option value="rock">Rock Beat</option>
-                        <option value="swing">Swing Beat</option>
-                        <option value="house">House</option>
-                        <option value="techno">Techno</option>
-                        <option value="breakbeat">Breakbeat</option>
-                        <option value="dnb">Drum & Bass</option>
-                        <option value="reggae">Reggae</option>
-                        <option value="reggaeton">Reggaeton</option>
-                        <option value="trap">Trap</option>
-                        <option value="bossa">Bossa Nova</option>
-                        <option value="funk">Funk</option>
-                        <option value="hiphop">Hip Hop</option>
-                        <option value="rnb">R&B</option>
-                        <option value="latin">Latin Groove</option>
+                    <label>App Theme Color</label>
+                    <select id="themeColorSelect" class="highlight-select">
+                        <option value="purple" selected>Neon Purple</option>
+                        <option value="blue">Cyber Blue</option>
+                        <option value="green">Matrix Green</option>
+                        <option value="orange">Sunset Orange</option>
+                        <option value="pink">Synthwave Pink</option>
                     </select>
                 </div>
                 <div class="control-group"><label>Extensions</label><button id="btnExtensions" class="btn-sm active-btn">7th/9th Highlights: ON</button></div>
@@ -590,20 +651,39 @@
             <div class="control-row" style="border: none; padding: 0;">
                 <div class="control-group"><label id="lblMasterTune">Master Tune: 440 Hz</label><input type="range" id="masterTune" min="415" max="465" step="1" value="440"></div>
                 <div class="control-group"><label id="lblHideDelay">Auto-Hide: 700ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="700"></div>
-                <div class="control-group" style="display:none;"></div><div class="control-group" style="display:none;"></div>
+
+                <div class="control-group">
+                    <label>Reactive BG</label>
+                    <select id="bgEffectMode" class="ui-select">
+                        <option value="off">Off (Save Battery)</option>
+                        <option value="pulse" selected>Subtle Pulse</option>
+                        <option value="glow">Deep Glow</option>
+                    </select>
+                </div>
+                <div class="control-group"><label id="lblBgIntensity">BG Intensity: 5%</label><input type="range" id="bgIntensity" min="0" max="1" step="0.01" value="0.05"></div>
             </div>
 
             <!-- MIDI & Hardware Well Box -->
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">MIDI & Hardware Settings</div>
-                <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+
+                <div class="control-row" style="grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group"><label>Hardware</label><button id="btnMidi">Connect MIDI</button></div>
                     <div class="control-group"><label>Routing</label><button id="btnMidiOutput">MIDI OUT: BROWSER</button></div>
+                    <div class="control-group">
+                        <label>MIDI Sync</label>
+                        <select id="midiSyncMode" class="ui-select">
+                            <option value="off" selected>Internal</option>
+                            <option value="master">Out (Master)</option>
+                            <option value="slave">In (Slave)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-row" style="grid-template-columns: repeat(3, 1fr); border: none; padding: 0;">
                     <div class="control-group"><label id="lblMidiVelocity">Velocity: 100</label><input type="range" id="midiVelocity" min="1" max="127" step="1" value="100"></div>
                     <div class="control-group"><label id="lblMidiModWheel">Mod Wheel: 0</label><input type="range" id="midiModWheel" min="0" max="127" step="1" value="0"></div>
-                </div>
-                <div class="control-row" style="grid-template-columns: 1fr; border: none; padding: 0;">
-                    <div class="control-group"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0" style="margin-top: 4px;"></div>
+                    <div class="control-group"><label id="lblMidiPitchBend">Pitch Bend: Center</label><input type="range" id="midiPitchBend" min="-8192" max="8191" step="64" value="0"></div>
                 </div>
             </div>
         </div>
@@ -617,40 +697,47 @@
                 <div class="control-group" style="grid-column: span 2;">
                     <label style="color: var(--main-node);">Instrument</label>
                     <select id="instrumentPreset" class="highlight-select">
-                        <option value="piano">Acoustic Piano</option>
-                        <option value="epiano">Electric Piano</option>
-                        <option value="lofi_keys">Lo-Fi Keys</option>
-                        <option value="organ">Hammond Organ</option>
-                        <option value="harpsichord">Harpsichord</option>
-                        <option value="accordion">Accordion</option>
-                        <option value="musicbox">Music Box / Celesta</option>
-                        <option value="pad">Synth Pad</option>
-                        <option value="glasspad">Glass Pad</option>
-                        <option value="pluck">Plucked Harp</option>
-                        <option value="harp">Concert Harp</option>
-                        <option value="guitar">Acoustic Guitar</option>
-                        <option value="banjo">Banjo</option>
-                        <option value="sitar">Sitar</option>
-                        <option value="bass">Synth Bass</option>
-                        <option value="slapbass">Slap Bass</option>
-                        <option value="acid303">Acid Synth (303)</option>
-                        <option value="synthlead">Synth Lead</option>
-                        <option value="chiptune">8-Bit Chiptune</option>
-                        <option value="synthbrass">80s Synth Brass</option>
-                        <option value="sax">Saxophone</option>
-                        <option value="trumpet">Trumpet</option>
-                        <option value="frenchhorn">French Horn</option>
-                        <option value="tuba">Tuba</option>
-                        <option value="clarinet">Clarinet</option>
-                        <option value="oboe">Oboe</option>
-                        <option value="violin">Violin / Strings</option>
-                        <option value="cello">Solo Cello</option>
-                        <option value="pizzicato">Pizzicato Strings</option>
-                        <option value="choir">Choir / Voices</option>
-                        <option value="marimba">Marimba</option>
-                        <option value="vibraphone">Vibraphone</option>
-                        <option value="flute">Flute</option>
-                        <option value="theremin">Theremin</option>
+                        <optgroup label="--- ANALOG SYNTHS ---">
+                            <option value="piano">Acoustic Piano</option>
+                            <option value="epiano">Electric Piano</option>
+                            <option value="lofi_keys">Lo-Fi Keys</option>
+                            <option value="organ">Hammond Organ</option>
+                            <option value="harpsichord">Harpsichord</option>
+                            <option value="accordion">Accordion</option>
+                            <option value="musicbox">Music Box / Celesta</option>
+                            <option value="pad">Synth Pad</option>
+                            <option value="glasspad">Glass Pad</option>
+                            <option value="pluck">Plucked Harp</option>
+                            <option value="harp">Concert Harp</option>
+                            <option value="guitar">Acoustic Guitar</option>
+                            <option value="banjo">Banjo</option>
+                            <option value="sitar">Sitar</option>
+                            <option value="bass">Synth Bass</option>
+                            <option value="slapbass">Slap Bass</option>
+                            <option value="acid303">Acid Synth (303)</option>
+                            <option value="synthlead">Synth Lead</option>
+                            <option value="chiptune">8-Bit Chiptune</option>
+                            <option value="synthbrass">80s Synth Brass</option>
+                            <option value="sax">Saxophone</option>
+                            <option value="trumpet">Trumpet</option>
+                            <option value="frenchhorn">French Horn</option>
+                            <option value="tuba">Tuba</option>
+                            <option value="clarinet">Clarinet</option>
+                            <option value="oboe">Oboe</option>
+                            <option value="violin">Violin / Strings</option>
+                            <option value="cello">Solo Cello</option>
+                            <option value="pizzicato">Pizzicato Strings</option>
+                            <option value="choir">Choir / Voices</option>
+                            <option value="marimba">Marimba</option>
+                            <option value="vibraphone">Vibraphone</option>
+                            <option value="flute">Flute</option>
+                            <option value="theremin">Theremin</option>
+                        </optgroup>
+                        <optgroup label="--- HARDWARE SAMPLER ---">
+                            <option value="sample_fm">80s FM Bass (Built-in)</option>
+                            <option value="sample_choir">Lo-Fi Choir (Built-in)</option>
+                            <option value="sample_custom">📂 Custom Sample...</option>
+                        </optgroup>
                     </select>
                 </div>
                 <div class="control-group"><label id="lblAttack">Attack: 0.03s</label><input type="range" id="attack" min="0.01" max="1" step="0.01" value="0.03"></div>
@@ -668,11 +755,34 @@
                 <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
                 <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
             </div>
-            <div class="control-row" style="border: none; padding: 0;">
-                <div class="control-group"><label id="lblLfoSpeed">LFO Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
-                <div class="control-group"><label id="lblVibrato">Vibrato: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
-                <div class="control-group"><label id="lblTremolo">Tremolo: 0.00</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
-                <div class="control-group"><label id="lblSweep">Sweep: 0</label><input type="range" id="sweep" min="0" max="2400" step="10" value="0"></div>
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">LFO Modulation</div>
+                <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+                    <div class="control-group">
+                        <label>Shape</label>
+                        <select id="lfoShape" class="ui-select">
+                            <option value="sine" selected>Sine</option>
+                            <option value="triangle">Tri</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Saw</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Mode</label>
+                        <select id="lfoSync" class="ui-select">
+                            <option value="free" selected>Free Run</option>
+                            <option value="sync">BPM Sync</option>
+                        </select>
+                    </div>
+                    <div class="control-group"><label>Retrigger</label><button id="btnLfoRetrigger" class="btn-sm">Key Sync: OFF</button></div>
+                    <div class="control-group"><label id="lblLfoSpeed">Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
+                </div>
+                <div class="control-row" style="border: none; padding: 0;">
+                    <div class="control-group"><label id="lblVibrato">Vib: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
+                    <div class="control-group"><label id="lblTremolo">Trem: 0</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
+                    <div class="control-group"><label id="lblAutoPan">Pan: 0%</label><input type="range" id="autoPan" min="0" max="1" step="0.01" value="0"></div>
+                    <div class="control-group"><label id="lblSweep">Sweep: 0</label><input type="range" id="sweep" min="0" max="2400" step="10" value="0"></div>
+                </div>
             </div>
 
             <!-- Deep Synthesis Well Box -->
@@ -686,8 +796,22 @@
                 </div>
 
                 <div class="control-row" style="border: none; padding: 0;">
-                    <div class="control-group"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
-                    <div class="control-group"><label id="lblGlide">Glide (Porta): 0.0s</label><input type="range" id="glide" min="0" max="1" step="0.01" value="0"></div>
+                    <div class="control-group" id="grpOscMix"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
+                    <div class="control-group" id="grpCustomSample" style="display: none;">
+                        <label>User Sample</label>
+                        <button id="btnLoadCustomSample" class="btn-sm" style="background: var(--main-node); color: white; border: none;">Load SAMPLE</button>
+                        <input type="file" id="customSampleInput" accept="audio/*" style="display: none;">
+                    </div>
+                    <div class="control-group">
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span id="lblGlideText">Glide: 0.0s</span>
+                            <select id="glideMode" style="width: auto; height: 14px; font-size: 0.55rem; padding: 0; border: none; background: transparent; color: var(--main-node); cursor: pointer; outline: none; font-weight:bold;">
+                                <option value="always" selected>Always</option>
+                                <option value="legato">Legato</option>
+                            </select>
+                        </label>
+                        <input type="range" id="glide" min="0" max="1" step="0.01" value="0">
+                    </div>
                     <div class="control-group"><label id="lblOvertones">Overtones: 0%</label><input type="range" id="overtones" min="0" max="1" step="0.01" value="0"></div>
                     <div class="control-group">
                         <label>Filter Type</label>
@@ -714,8 +838,9 @@
                         <button id="btnClosePads" class="close-btn-sm" title="Close">✕</button>
                     </div>
                 </div>
-                <div class="thumb-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div class="thumb-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
                     <div class="big-tap-btn btn-cat-sus" id="tapSustain"><span class="icon">〰️</span>SUSTAIN<span class="kb-shortcut">[Space]</span></div>
+                    <div class="big-tap-btn btn-cat-sus" id="tapGlide"><span class="icon">🛝</span>GLIDE<span class="kb-shortcut">[Shift]</span></div>
                     <div class="big-tap-btn btn-cat-sus" id="tapDampen"><span class="icon">🔇</span>DAMPEN<span class="kb-shortcut">[L-Alt]</span></div>
                 </div>
                 <div class="pad-grid">
@@ -743,11 +868,12 @@
                     <div class="big-tap-btn btn-cat-add" id="tapSharp11">♯11<span class="kb-shortcut">[V]</span></div>
                     <div class="big-tap-btn btn-cat-add" id="tapFlat13">♭13<span class="kb-shortcut">[B]</span></div>
                 </div>
-                <div class="lock-row">
-                    <button class="lock-btn btn-cat-loc" id="lockSustain">Lock Sustain</button>
+                <div class="lock-row" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;">
+                    <button class="lock-btn btn-cat-loc" id="lockSustain">Lock Sus</button>
+                    <button class="lock-btn btn-cat-loc" id="lockGlide">Lock Glide</button>
                     <button class="lock-btn btn-cat-loc" id="lock7th">Lock +7ths</button>
-                    <button class="lock-btn btn-cat-loc" id="lockOct">Lock Octave [E]</button>
-                    <button class="lock-btn btn-cat-loc" id="lockArp">Lock Arp [R]</button>
+                    <button class="lock-btn btn-cat-loc" id="lockOct">Lock Oct</button>
+                    <button class="lock-btn btn-cat-loc" id="lockArp">Lock Arp</button>
                 </div>
             </div>
         </div>
@@ -852,11 +978,19 @@
                         <button id="btnLooperRec" class="looper-btn">⏺ Record</button>
                         <button id="btnLooperPlay" class="looper-btn">▶ Play</button>
                         <button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button>
-                        <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold; padding-left: 10px;">
+                        <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold;">
                             <option value="1">1 Bar</option>
                             <option value="2">2 Bars</option>
                             <option value="4" selected>4 Bars</option>
                             <option value="8">8 Bars</option>
+                        </select>
+                    </div>
+                    <div class="looper-actions" style="margin-top: 5px;">
+                        <button id="btnLooperQuantize" class="looper-btn" style="flex: 1;">Input Snap: OFF</button>
+                        <select id="looperQuantizeRes" class="looper-btn" style="flex: 1; text-align: center; appearance: none; font-weight: bold;">
+                            <option value="8">Grid: 1/8 Notes</option>
+                            <option value="16" selected>Grid: 1/16 Notes</option>
+                            <option value="32">Grid: 1/32 Notes</option>
                         </select>
                     </div>
                 </div>
@@ -975,15 +1109,15 @@
                 </div>
                 <div class="mixer-grid-8">
                     <!-- V1 to V4 -->
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0"><label>V1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0"><label>V2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0"><label>V3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0"><label>V4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="0" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>V1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="1" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>V2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="2" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>V3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="3" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>V4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
                     <!-- D1 to D4 -->
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0"><label>D1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0"><label>D2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0"><label>D3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0"><label>D4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="4" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>D1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="5" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>D2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="6" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>D3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="7" min="-1" max="1" step="0.01" value="0" title="Pan (L/R)"><label>D4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
                 </div>
             </div>
 
@@ -1127,6 +1261,7 @@
 
         let currentArpBPM = 120, currentArpRhythm = 'slow', currentArpSwing = 0, currentArpLoop = true;
         let sustainHeld = false, sustainLocked = false, dampenHeld = false;
+        let glideHeld = false, glideLocked = false, currentGlideMode = 'always';
         let octDownHeld = false, octUpHeld = false, octLocked = false, octMode = 'up';
         let arpUpHeld = false, arpDownHeld = false, arpUpDownHeld = false, arpRandomHeld = false, arpLocked = false, arpMode = 'up';
         let add6Held = false, add7Held = false, add7Locked = false, add9Held = false, add11Held = false;
@@ -1142,6 +1277,7 @@
         }
 
         function isSustainOn() { return sustainLocked || sustainHeld; }
+        function isGlidePadOn() { return glideLocked || glideHeld; }
         function is6thOn() { return add6Held; }
         function is7thOn() { return add7Locked || add7Held; }
         function is9thOn() { return add9Held; }
@@ -1404,7 +1540,7 @@
             t_panX = Math.max(minX, Math.min(maxX, t_panX));
             t_panY = Math.max(minY, Math.min(maxY, t_panY));
 
-            // Prevent drag desync: If the user is dragging against the hard wall, 
+            // Prevent drag desync: If the user is dragging against the hard wall,
             // update the anchor coordinates so the grid instantly responds when they change direction!
             if (t_isDragging) {
                 if (oldPanX !== t_panX) t_startX += (oldPanX - t_panX);
@@ -1433,7 +1569,7 @@
         }
 
         function centerOnRoot(animate = false) {
-            // Because the offset is injected in applyTransform, 
+            // Because the offset is injected in applyTransform,
             // true center is ALWAYS mathematically (0,0)!
             targetPanX = 0;
             targetPanY = 0;
@@ -1594,12 +1730,13 @@
             const s = {
                 keyCenter: document.getElementById('keyCenter').value, scaleOverlay: document.getElementById('scaleOverlay').value, labelType: document.getElementById('labelType').value,
                 transpose: document.getElementById('transpose').value, tuningMode: document.getElementById('tuningMode').value, arpBpm: document.getElementById('arpBpm').value,
-                arpRhythm: document.getElementById('arpRhythm').value, arpSwing: document.getElementById('arpSwing').value, arpLoop: document.getElementById('arpLoop').value,
-                metronomeMode: document.getElementById('metronomeMode').value, masterTune: document.getElementById('masterTune').value,
+                arpRhythm: document.getElementById('arpRhythm').value, arpSwing: document.getElementById('arpSwing').value, arpLoop: document.getElementById('arpLoop').value, drumPreset: currentDrumPreset,
+                themeColorSelect: document.getElementById('themeColorSelect')?.value, masterTune: document.getElementById('masterTune').value, bgEffectMode: bgEffectMode, bgIntensity: bgEffectIntensity,
                 uiHideDelay: document.getElementById('uiHideDelay').value, instrumentPreset: document.getElementById('instrumentPreset').value,
                 attack: document.getElementById('attack').value, decay: document.getElementById('decay').value, sustain: document.getElementById('sustain').value, release: document.getElementById('release').value,
                 brightness: document.getElementById('brightness').value, resonance: document.getElementById('resonance').value, chorus: document.getElementById('chorus').value, distortion: document.getElementById('distortion').value,
                 echo: document.getElementById('echo').value, reverbMix: document.getElementById('reverbMix').value, lfoSpeed: document.getElementById('lfoSpeed').value, vibrato: document.getElementById('vibrato').value,
+                lfoShape: currentLfoShape, lfoSync: currentLfoSync, lfoRetrigger: lfoRetrigger,
                 tremolo: document.getElementById('tremolo').value, sweep: document.getElementById('sweep').value, detune: document.getElementById('detune').value, subOsc: document.getElementById('subOsc').value,
                 noise: document.getElementById('noise').value, filterEnv: document.getElementById('filterEnv').value, padHeight: document.getElementById('padHeightSlider').value, drumHeight: document.getElementById('drumHeightSlider').value,
                 overtones: document.getElementById('overtones').value,
@@ -1607,14 +1744,17 @@
                 oscMix: document.getElementById('oscMix').value, glide: document.getElementById('glide').value, filterType: document.getElementById('filterType').value,
                 midiVelocity: document.getElementById('midiVelocity').value, looperLength: document.getElementById('looperLength').value,
                 drumEmbellish: document.getElementById('drum-embellish').checked, showExtensions: showExtensions, showChordDegrees: showChordDegrees, isDarkMode: isDarkMode,
-
-                // NEW: Aux Sends, Track Vols, and Dynamics!
                 looperTrackVols: Array.from(document.querySelectorAll('.track-vol')).map(el => el.value),
                 looperEchoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => el.value),
                 looperReverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => el.value),
                 busComp: document.getElementById('busComp').value,
                 mixerHeightSlider: document.getElementById('mixerHeightSlider').value,
-                limiterMode: document.getElementById('limiterMode').value
+                limiterMode: document.getElementById('limiterMode').value,
+                autoPan: currentAutoPan,
+                glideMode: currentGlideMode,
+                midiSyncMode: midiSyncMode,
+                looperQuantize: looperQuantize, looperQuantizeRes: looperQuantizeRes,
+                looperTrackPans: Array.from(document.querySelectorAll('.pan-slider')).map(el => el.value)
             };
             const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'TonnetzPro_Settings.json'; a.click(); URL.revokeObjectURL(url); showToast("Settings saved to file.");
@@ -1630,10 +1770,37 @@
                         const s = JSON.parse(ev.target.result);
                         const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
 
-                        // NEW: Added busComp and mixerHeightSlider to the auto-restore array
-                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'metronomeMode', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones'].forEach(k => av(k, s[k]));
+                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'themeColorSelect', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones', 'bgEffectMode', 'bgIntensity', 'autoPan', 'lfoShape', 'lfoSync', 'glideMode', 'looperQuantizeRes', 'midiSyncMode'].forEach(k => av(k, s[k]));
 
-                        av('padHeightSlider', s.padHeight); av('drumHeightSlider', s.drumHeight);
+                        av('padHeightSlider', s.padHeight);
+                        av('drumHeightSlider', s.drumHeight);
+
+                        // restore LFO Retrigger button
+                        if (s.lfoRetrigger !== undefined && lfoRetrigger !== s.lfoRetrigger) {
+                            lfoRetrigger = s.lfoRetrigger;
+                            const btnReq = document.getElementById('btnLfoRetrigger');
+                            if (btnReq) {
+                                btnReq.textContent = `Key Sync: ${lfoRetrigger ? 'ON' : 'OFF'}`;
+                                btnReq.classList.toggle('active-btn', lfoRetrigger);
+                            }
+                        }
+
+                        // Restore Quantization Button state
+                        if (s.looperQuantize !== undefined && looperQuantize !== s.looperQuantize) {
+                            looperQuantize = s.looperQuantize;
+                            const btnQ = document.getElementById('btnLooperQuantize');
+                            if (btnQ) {
+                                btnQ.textContent = `Input Snap: ${looperQuantize ? 'ON' : 'OFF'}`;
+                                btnQ.classList.toggle('active-btn', looperQuantize);
+                            }
+                        }
+
+                        // update midi sync mode slider state
+                        document.getElementById('midiSyncMode')?.dispatchEvent(new Event('change'));
+
+                        // Restore the drum preset
+                        const presetToLoad = s.drumPreset || 'none';
+                        updateDrumUI(presetToLoad);
 
                         if (s.drumEmbellish !== undefined) document.getElementById('drum-embellish').checked = s.drumEmbellish;
                         if (s.showExtensions !== undefined && showExtensions !== s.showExtensions) { showExtensions = s.showExtensions; document.getElementById('btnExtensions').textContent = `7th/9th Ext. Highlights: ${showExtensions ? 'ON' : 'OFF'}`; document.getElementById('btnExtensions').classList.toggle('active-btn', showExtensions); updateHighlights(); }
@@ -1644,6 +1811,11 @@
                         if (s.looperTrackVols) {
                             document.querySelectorAll('.track-vol').forEach((el, idx) => {
                                 if (s.looperTrackVols[idx] !== undefined) { el.value = s.looperTrackVols[idx]; el.dispatchEvent(new Event('input')); }
+                            });
+                        }
+                        if (s.looperTrackPans) {
+                            document.querySelectorAll('.pan-slider').forEach((el, idx) => {
+                                if (s.looperTrackPans[idx] !== undefined) { el.value = s.looperTrackPans[idx]; el.dispatchEvent(new Event('input')); }
                             });
                         }
                         if (s.looperEchoSends) {
@@ -1781,6 +1953,18 @@
 
         window.addEventListener('resize', () => { updateOverlayCSSVars(); });
 
+        // --- CUSTOM COLOR THEMES ---
+        document.getElementById('themeColorSelect')?.addEventListener('change', e => {
+            const theme = e.target.value;
+            // 1. Strip out any existing theme classes
+            document.body.classList.remove('theme-blue', 'theme-green', 'theme-orange', 'theme-pink');
+
+            // 2. If it's not the default purple, append the new class!
+            if (theme !== 'purple') {
+                document.body.classList.add(`theme-${theme}`);
+            }
+        });
+
         document.getElementById('btnTheme')?.addEventListener('click', (e) => {
             isDarkMode = !isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode);
             e.target.textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; e.target.classList.toggle('active-btn', isDarkMode);
@@ -1795,6 +1979,13 @@
         document.getElementById('masterTune')?.addEventListener('input', (e) => {
             masterTune = parseInt(e.target.value); const lbl = document.getElementById('lblMasterTune');
             if (lbl) lbl.textContent = `Master Tune: ${masterTune} Hz`;
+        });
+
+        document.getElementById('bgEffectMode')?.addEventListener('change', e => { bgEffectMode = e.target.value; });
+
+        document.getElementById('bgIntensity')?.addEventListener('input', e => {
+            bgEffectIntensity = parseFloat(e.target.value);
+            updateLabel('bgIntensity', Math.round(bgEffectIntensity * 100), 'BG Intensity', '%');
         });
 
         document.getElementById('cofSizeSlider')?.addEventListener('input', (e) => {
@@ -1840,15 +2031,29 @@
             updateOverlayCSSVars();
         });
 
-        const updateDrumUI = (val) => { document.querySelectorAll('.drum-preset-btn').forEach(btn => { btn.classList.toggle('active-btn', btn.dataset.preset === val); }); };
-        document.querySelectorAll('.drum-preset-btn').forEach(btn => { btn.addEventListener('click', e => { const val = e.target.dataset.preset; const metroEl = document.getElementById('metronomeMode'); if (metroEl) metroEl.value = val; updateDrumUI(val); }); });
-        document.getElementById('metronomeMode')?.addEventListener('change', e => { updateDrumUI(e.target.value); });
+        // DRUM PRESET LOGIC
+        let currentDrumPreset = 'none';
+
+        const updateDrumUI = (val) => {
+            currentDrumPreset = val;
+            document.querySelectorAll('.drum-preset-btn').forEach(btn => {
+                btn.classList.toggle('active-btn', btn.dataset.preset === val);
+            });
+        };
+
+        document.querySelectorAll('.drum-preset-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                initAudio(); // Ensure the audio engine wakes up if they click a beat first!
+                updateDrumUI(e.target.dataset.preset);
+            });
+        });
 
         function checkSustainRelease() { if (!isSustainOn()) releaseSustainedNotes(); }
 
         function updatePadVisuals() {
             const tSus = document.getElementById('tapSustain'); if (tSus) tSus.classList.toggle('held', sustainHeld || sustainLocked);
             const tDampen = document.getElementById('tapDampen'); if (tDampen) tDampen.classList.toggle('held', dampenHeld);
+            const tGlide = document.getElementById('tapGlide'); if (tGlide) tGlide.classList.toggle('held', glideHeld || glideLocked);
             const tOctD = document.getElementById('tapOctDown'); if (tOctD) tOctD.classList.toggle('held', octDownHeld || (octLocked && octMode === 'down'));
             const tOctU = document.getElementById('tapOctUp'); if (tOctU) tOctU.classList.toggle('held', octUpHeld || (octLocked && octMode === 'up'));
 
@@ -1880,7 +2085,10 @@
                 activePointerMap.set(pointerId, el);
 
                 let count = elementTouchCount.get(el) || 0;
-                if (count === 0) el._startAction();
+                if (count === 0) {
+                    triggerHaptic();
+                    el._startAction();
+                }
                 elementTouchCount.set(el, count + 1);
             }
         }
@@ -2150,6 +2358,7 @@
 
         setupTapPad('tapSustain', () => { sustainHeld = true; sendMidiCC(64, 127); }, () => { sustainHeld = false; sendMidiCC(64, 0); checkSustainRelease(); });
         setupTapPad('tapDampen', () => { dampenHeld = true; applyDampening(true); }, () => { dampenHeld = false; applyDampening(false); });
+        setupTapPad('tapGlide', () => { glideHeld = true; }, () => { glideHeld = false; });
         setupTapPad('tapOctDown', () => { octDownHeld = true; octMode = 'down'; }, () => { octDownHeld = false; });
         setupTapPad('tapOctUp', () => { octUpHeld = true; octMode = 'up'; }, () => { octUpHeld = false; });
 
@@ -2176,6 +2385,8 @@
         setupTapPad('tapFlat13', () => { addFlat13Held = true; }, () => { addFlat13Held = false; });
 
         document.getElementById('lockSustain')?.addEventListener('click', function () { sustainLocked = !sustainLocked; this.classList.toggle('active-btn', sustainLocked); checkSustainRelease(); updatePadVisuals(); });
+        document.getElementById('lockGlide')?.addEventListener('click', function () { glideLocked = !glideLocked; this.classList.toggle('active-btn', glideLocked); updatePadVisuals(); });
+        document.getElementById('glideMode')?.addEventListener('change', e => currentGlideMode = e.target.value);
         document.getElementById('lock7th')?.addEventListener('click', function () { add7Locked = !add7Locked; this.classList.toggle('active-btn', add7Locked); updatePadVisuals(); retriggerHeldNodes(); });
         document.getElementById('lockOct')?.addEventListener('click', function () { octLocked = !octLocked; this.classList.toggle('active-btn', octLocked); if (octLocked && !octUpHeld && !octDownHeld) octMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
         document.getElementById('lockArp')?.addEventListener('click', function () { arpLocked = !arpLocked; this.classList.toggle('active-btn', arpLocked); if (arpLocked && !arpUpHeld && !arpDownHeld && !arpRandomHeld) arpMode = 'up'; updatePadVisuals(); retriggerHeldNodes(); });
@@ -2220,6 +2431,7 @@
                 case 'KeyB': addFlat13Held = true; trigger = true; break;
 
                 // Thumbs
+                case 'ShiftLeft': case 'ShiftRight': glideHeld = true; trigger = true; break;
                 case 'AltLeft': dampenHeld = true; applyDampening(true); trigger = true; break;
                 case 'Space': if (!sustainHeld) { sustainHeld = true; sendMidiCC(64, 127); trigger = true; } break;
             }
@@ -2254,6 +2466,7 @@
                 case 'KeyV': addSharp11Held = false; trigger = true; break;
                 case 'KeyB': addFlat13Held = false; trigger = true; break;
 
+                case 'ShiftLeft': case 'ShiftRight': glideHeld = false; trigger = true; break;
                 case 'AltLeft': dampenHeld = false; applyDampening(false); trigger = true; break;
                 case 'Space': sustainHeld = false; sendMidiCC(64, 0); trigger = true; checkSustainRelease(); break;
             }
@@ -2273,10 +2486,12 @@
         let audioCtx;
         let masterGain, compressor, delayNode, feedbackGain, delayMix;
         let preDistortionGain, distortionNode;
-        let globalLFO, lfoPitchGain, lfoFilterGain, lfoAmpGain;
+        let globalLFO, lfoPitchGain, lfoFilterGain, lfoAmpGain, lfoPanGain;
         let convolver, reverbGain;
         let sharedNoiseBuffer = null;
-
+        let masterSynthPanner;
+        let looperPanners = [];
+        let currentAutoPan = 0;
         let safetyClipper = null;
         let analyzer;
         let synthGain, drumGain, looperMasterGain, eqLow, eqMid, eqHigh, masterEqIn, importedAudioMasterGainNode;
@@ -2292,6 +2507,24 @@
         // If it claims to be a desktop, but has a touchscreen and a portable resolution, it is a mobile device in disguise.
         if (!isMobileDevice && navigator.maxTouchPoints > 0 && (window.innerWidth <= 1366 || window.screen.width <= 1366)) {
             isMobileDevice = true;
+        }
+
+        // --- NATIVE PLATFORM APIs (WakeLock & Haptics) ---
+        let wakeLock = null;
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try { wakeLock = await navigator.wakeLock.request('screen'); }
+                catch (err) { console.error('WakeLock Error:', err); }
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock();
+        });
+
+        function triggerHaptic() {
+            // 10ms is a crisp, premium "click" feel (only fires on supported mobile devices)
+            if (isMobileDevice && navigator.vibrate) navigator.vibrate(10);
         }
 
         // Pre-allocate memory once to prevent Garbage Collection stutter
@@ -2330,9 +2563,22 @@
         let currentAttack = 0.01, currentDecay = 0.4, currentSustain = 0.2, currentRelease = 0.3;
         let currentDistortion = 0, currentBrightness = 2.2, currentResonance = 1, currentFilterEnv = 3;
         let currentLfoSpeed = 5.5, currentVibrato = 0, currentSweep = 0, currentTremolo = 0;
+        let currentLfoShape = 'sine', currentLfoSync = 'free', lfoRetrigger = false;
         let currentChorus = 2, currentEcho = 0.05, currentReverbMix = 0.25;
         let currentVelocity = 100, lastPlayedFreq = null;
         let midiOutMode = 'both';
+
+        // --- HARDWARE SAMPLER MEMORY ---
+        let isSamplerMode = false;
+        let isSamplerLooping = true;
+        let activeSampleBuffer = null;
+        const builtInSamples = {
+            // A tiny procedural FM Bass generated via Base64
+            sample_fm: "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
+            // A tiny procedural Lo-Fi Choir
+            sample_choir: "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+        };
+        // (Note: To keep this code functioning, the above base64s are empty dummy headers. We will procedurally generate real waveforms for them on load to save 5MB of text space!)
 
         // Pre-allocate memory for Fourier Transform arrays to prevent Garbage Collection stutters!
         const numHarmonics = 8;
@@ -2444,15 +2690,126 @@
             if (lbl) lbl.textContent = `${prefix}: ${val}${suffix}`;
         };
 
-        document.getElementById('instrumentPreset')?.addEventListener('change', e => {
-            const p = presets[e.target.value]; if (!p) return;
-            currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
-            ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el && p[id] !== undefined) {
-                    el.value = p[id]; el.dispatchEvent(new Event('input'));
+        // --- SAMPLER ENGINE UI & DECODING ---
+        async function loadSampleToBuffer(id, url) {
+            initAudio();
+
+            // 1. Handle Built-In Procedural Samples
+            if (id === 'sample_fm' || id === 'sample_choir') {
+                const sr = audioCtx.sampleRate;
+                const freq = 261.625565; // Middle C (Base pitch for Tonnetz)
+
+                if (id === 'sample_fm') {
+                    // FM Bass: 2 seconds, no loop, sharp attack and decay
+                    const len = sr * 2;
+                    activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
+                    const data = activeSampleBuffer.getChannelData(0);
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const env = Math.exp(-t * 5); // Punchy bass decay
+                        const mod = Math.sin(2 * Math.PI * (freq / 2) * t) * 4 * env;
+                        data[i] = Math.sin(2 * Math.PI * freq * t + mod) * env * 0.8;
+                    }
+                } else if (id === 'sample_choir') {
+                    // Lo-Fi Choir: 2 seconds, crossfaded to loop perfectly seamlessly
+                    const len = sr * 2;
+                    activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
+                    const data = activeSampleBuffer.getChannelData(0);
+
+                    // Generate 3 seconds of raw audio to allow for a crossfaded loop point
+                    const raw = new Float32Array(sr * 3);
+                    for (let i = 0; i < raw.length; i++) {
+                        const t = i / sr;
+                        // THE FIX: Proper Phase Modulation (add to phase, do NOT multiply by t)
+                        const vib = Math.sin(2 * Math.PI * 4 * t) * 0.05; // 0.05 radians of smooth wobble
+                        const o1 = Math.sin(2 * Math.PI * freq * t + vib);
+                        const o2 = Math.sin(2 * Math.PI * (freq * 1.008) * t + vib);
+                        const o3 = Math.sin(2 * Math.PI * (freq * 0.992) * t + vib);
+                        const noise = (Math.random() * 2 - 1) * 0.05; // Breath noise
+                        raw[i] = (o1 + o2 + o3 + noise) * 0.15;
+                    }
+
+                    // Crossfade the last 0.5s into the first 0.5s
+                    const fadeLen = sr * 0.5;
+                    for (let i = 0; i < len; i++) {
+                        if (i < fadeLen) {
+                            const fadeOut = raw[len + i] * (1 - (i / fadeLen));
+                            const fadeIn = raw[i] * (i / fadeLen);
+                            data[i] = fadeOut + fadeIn;
+                        } else {
+                            data[i] = raw[i];
+                        }
+                    }
                 }
-            });
+                showToast(id === 'sample_fm' ? "FM Bass Loaded!" : "Choir Sample Loaded!");
+                return;
+            }
+
+            // 2. Handle Custom User Uploads
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                activeSampleBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                showToast("Custom Sample loaded into RAM!");
+            } catch (e) {
+                showToast("Error loading custom sample.");
+            }
+        }
+
+        document.getElementById('btnLoadCustomSample')?.addEventListener('click', () => {
+            document.getElementById('customSampleInput').click();
+        });
+
+        document.getElementById('customSampleInput')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            loadSampleToBuffer('sample_custom', url);
+        });
+
+        // Intercept the Instrument Dropdown to handle Samplers
+        document.getElementById('instrumentPreset')?.addEventListener('change', e => {
+            const val = e.target.value;
+            isSamplerMode = val.startsWith('sample_');
+
+            // NEW: Set loop behavior based on instrument
+            isSamplerLooping = (val !== 'sample_fm');
+
+            // Toggle UI Elements safely
+            const grpOscMix = document.getElementById('grpOscMix');
+            const grpCustomSample = document.getElementById('grpCustomSample');
+
+            if (grpOscMix) grpOscMix.style.display = isSamplerMode ? 'none' : 'flex';
+            if (grpCustomSample) grpCustomSample.style.display = (val === 'sample_custom') ? 'flex' : 'none';
+
+            if (isSamplerMode) {
+                // Force a clean state for samples so old synth LFOs/Filters don't ruin the audio
+                syncADSR('attack', 0.01); syncADSR('decay', 1.0); syncADSR('sustain', 0.8); syncADSR('release', 0.4);
+
+                // Zero out synth-specific modulations
+                ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.value = 0; el.dispatchEvent(new Event('input')); }
+                });
+
+                // Open the filter all the way to let the sample shine
+                const br = document.getElementById('brightness');
+                if (br) { br.value = 8; br.dispatchEvent(new Event('input')); }
+
+                if (val !== 'sample_custom') {
+                    loadSampleToBuffer(val, null);
+                }
+                // Note: We leave the 'sample_custom' logic to the dedicated "Load .WAV" button, 
+                // as browsers actively block file dialogs triggered by <select> menus!
+            } else {
+                // Load Analog Synth Preset
+                const p = presets[val]; if (!p) return;
+                currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
+                ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones', 'autoPan'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && p[id] !== undefined) { el.value = p[id]; el.dispatchEvent(new Event('input')); }
+                });
+            }
             drawEnvelope();
         });
 
@@ -2506,7 +2863,17 @@
             if (reverbGain) reverbGain.gain.setTargetAtTime(currentReverb, audioCtx.currentTime, 0.05);
             updateLabel('reverbMix', currentReverb.toFixed(2), 'Reverb');
         });
-
+        document.getElementById('autoPan')?.addEventListener('input', e => {
+            currentAutoPan = parseFloat(e.target.value);
+            if (lfoPanGain) lfoPanGain.gain.setTargetAtTime(currentAutoPan, audioCtx.currentTime, 0.05);
+            updateLabel('autoPan', Math.round(currentAutoPan * 100), 'Pan', '%');
+        });
+        document.querySelectorAll('.pan-slider').forEach(slider => {
+            slider.addEventListener('input', e => {
+                const trackIdx = parseInt(e.target.getAttribute('data-track'));
+                if (looperPanners[trackIdx]) looperPanners[trackIdx].pan.value = parseFloat(e.target.value);
+            });
+        });
         document.getElementById('lfoSpeed')?.addEventListener('input', e => {
             currentLfoSpeed = parseFloat(e.target.value);
             if (globalLFO) globalLFO.frequency.setTargetAtTime(currentLfoSpeed, audioCtx.currentTime, 0.05);
@@ -2527,7 +2894,13 @@
             if (lfoAmpGain) lfoAmpGain.gain.setTargetAtTime(currentTremolo, audioCtx.currentTime, 0.05);
             updateLabel('tremolo', currentTremolo.toFixed(2), 'Tremolo');
         });
-
+        document.getElementById('lfoShape')?.addEventListener('change', e => currentLfoShape = e.target.value);
+        document.getElementById('lfoSync')?.addEventListener('change', e => currentLfoSync = e.target.value);
+        document.getElementById('btnLfoRetrigger')?.addEventListener('click', e => {
+            lfoRetrigger = !lfoRetrigger;
+            e.target.textContent = `Key Sync: ${lfoRetrigger ? 'ON' : 'OFF'}`;
+            e.target.classList.toggle('active-btn', lfoRetrigger);
+        });
         document.getElementById('detune')?.addEventListener('input', e => {
             currentDetune = parseFloat(e.target.value);
             if (audioCtx) { activeNodes.forEach(nodeData => nodeData.voices.forEach(({ osc2, freq }) => osc2.frequency.setTargetAtTime(freq * Math.pow(2, currentDetune / 1200) * currentOsc2Mult, audioCtx.currentTime, 0.05))); }
@@ -2577,10 +2950,19 @@
 
         // Synth additions
         document.getElementById('oscMix')?.addEventListener('input', e => { currentOscMix = parseFloat(e.target.value); updateLabel('oscMix', Math.round(currentOscMix * 100), 'Osc Mix (1-2)', '%'); });
-        document.getElementById('glide')?.addEventListener('input', e => { currentGlide = parseFloat(e.target.value); updateLabel('glide', currentGlide.toFixed(2), 'Glide (Porta)', 's'); });
+        document.getElementById('glide')?.addEventListener('input', e => { currentGlide = parseFloat(e.target.value); const lbl = document.getElementById('lblGlideText'); if (lbl) lbl.textContent = `Glide: ${currentGlide.toFixed(2)}s`; });
         document.getElementById('filterType')?.addEventListener('change', e => { currentFilterType = e.target.value; });
 
         // MIDI additions
+        document.getElementById('midiSyncMode')?.addEventListener('change', e => {
+            midiSyncMode = e.target.value;
+            const bpmSlider = document.getElementById('arpBpm');
+            if (bpmSlider) {
+                // If we are slaved to external hardware, disable the manual BPM slider!
+                bpmSlider.disabled = (midiSyncMode === 'slave');
+                bpmSlider.style.opacity = (midiSyncMode === 'slave') ? '0.5' : '1';
+            }
+        });
         document.getElementById('midiVelocity')?.addEventListener('input', e => { currentVelocity = parseInt(e.target.value); updateLabel('midiVelocity', currentVelocity, 'Velocity'); });
 
         document.getElementById('midiModWheel')?.addEventListener('input', e => {
@@ -2602,6 +2984,127 @@
         // Snap Pitch Bend back to center on release!
         const snapPitchBend = () => { if (pbSlider) { pbSlider.value = 0; updateLabel('midiPitchBend', 'Center', 'Pitch Bend'); sendPitchBend(0); } };
         pbSlider?.addEventListener('mouseup', snapPitchBend); pbSlider?.addEventListener('touchend', snapPitchBend);
+
+        // --- SAMPLER ENGINE UI & DECODING ---
+        async function loadSampleToBuffer(id, url) {
+            initAudio();
+
+            // 1. Handle Built-In Procedural Samples
+            if (id === 'sample_fm' || id === 'sample_choir') {
+                const sr = audioCtx.sampleRate;
+                const freq = 261.625565; // Middle C (Base pitch for Tonnetz)
+
+                if (id === 'sample_fm') {
+                    // FM Bass: 2 seconds, no loop, sharp attack and decay
+                    const len = sr * 2;
+                    activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
+                    const data = activeSampleBuffer.getChannelData(0);
+                    for (let i = 0; i < len; i++) {
+                        const t = i / sr;
+                        const env = Math.exp(-t * 5); // Punchy bass decay
+                        const mod = Math.sin(2 * Math.PI * (freq / 2) * t) * 4 * env;
+                        data[i] = Math.sin(2 * Math.PI * freq * t + mod) * env * 0.8;
+                    }
+                } else if (id === 'sample_choir') {
+                    // Lo-Fi Choir: 2 seconds, crossfaded to loop perfectly seamlessly
+                    const len = sr * 2;
+                    activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
+                    const data = activeSampleBuffer.getChannelData(0);
+
+                    // Generate 3 seconds of raw audio to allow for a crossfaded loop point
+                    const raw = new Float32Array(sr * 3);
+                    for (let i = 0; i < raw.length; i++) {
+                        const t = i / sr;
+                        // Proper Phase Modulation for smooth vibrato
+                        const vib = Math.sin(2 * Math.PI * 4 * t) * 0.05;
+                        const o1 = Math.sin(2 * Math.PI * freq * t + vib);
+                        const o2 = Math.sin(2 * Math.PI * (freq * 1.008) * t + vib);
+                        const o3 = Math.sin(2 * Math.PI * (freq * 0.992) * t + vib);
+                        const noise = (Math.random() * 2 - 1) * 0.05; // Breath noise
+                        raw[i] = (o1 + o2 + o3 + noise) * 0.15;
+                    }
+
+                    // Crossfade the last 0.5s into the first 0.5s
+                    const fadeLen = sr * 0.5;
+                    for (let i = 0; i < len; i++) {
+                        if (i < fadeLen) {
+                            const fadeOut = raw[len + i] * (1 - (i / fadeLen));
+                            const fadeIn = raw[i] * (i / fadeLen);
+                            data[i] = fadeOut + fadeIn;
+                        } else {
+                            data[i] = raw[i];
+                        }
+                    }
+                }
+                showToast(id === 'sample_fm' ? "FM Bass Loaded!" : "Choir Sample Loaded!");
+                return;
+            }
+
+            // 2. Handle Custom User Uploads
+            try {
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                activeSampleBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                showToast("Custom Sample loaded into RAM!");
+            } catch (e) {
+                showToast("Error loading custom sample.");
+            }
+        }
+
+        document.getElementById('btnLoadCustomSample')?.addEventListener('click', () => {
+            document.getElementById('customSampleInput').click();
+        });
+
+        document.getElementById('customSampleInput')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            loadSampleToBuffer('sample_custom', url);
+        });
+
+        // Intercept the Instrument Dropdown to handle Samplers
+        document.getElementById('instrumentPreset')?.addEventListener('change', e => {
+            const val = e.target.value;
+            isSamplerMode = val.startsWith('sample_');
+
+            // NEW: Set loop behavior based on instrument
+            isSamplerLooping = (val !== 'sample_fm');
+
+            // Toggle UI Elements safely
+            const grpOscMix = document.getElementById('grpOscMix');
+            const grpCustomSample = document.getElementById('grpCustomSample');
+
+            if (grpOscMix) grpOscMix.style.display = isSamplerMode ? 'none' : 'flex';
+            if (grpCustomSample) grpCustomSample.style.display = (val === 'sample_custom') ? 'flex' : 'none';
+
+            if (isSamplerMode) {
+                // Force a default ADSR for samples
+                syncADSR('attack', 0.01); syncADSR('decay', 1.0); syncADSR('sustain', 0.8); syncADSR('release', 0.4);
+
+                // Disable LFOs and Filters so they don't chew up the audio sample
+                ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.value = 0; el.dispatchEvent(new Event('input')); }
+                });
+                const br = document.getElementById('brightness');
+                if (br) { br.value = 8; br.dispatchEvent(new Event('input')); }
+
+                if (val !== 'sample_custom') {
+                    loadSampleToBuffer(val, null);
+                }
+                // Note: We leave the 'sample_custom' logic to the dedicated "Load Sample" button, 
+                // as browsers actively block file dialogs triggered by <select> menus!
+            } else {
+                // Load Analog Synth Preset
+                const p = presets[val]; if (!p) return;
+                currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
+                ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones', 'autoPan'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && p[id] !== undefined) { el.value = p[id]; el.dispatchEvent(new Event('input')); }
+                });
+            }
+            drawEnvelope();
+        });
 
         // --- Audio Import & Playback logic ---
         let importedAudioSourceNode = null;
@@ -2705,21 +3208,66 @@
             }
         }
 
-        // --- Master Meter State Variables ---
+        // --- Global Visuals Engine (Oscilloscope & Background) ---
         let clipHoldUntil = 0;
         let peakHoldDb = -100;
+        let bgEffectMode = 'pulse';
+        let bgEffectIntensity = 0.5;
+        let smoothedRms = 0;
 
-        // --- Oscilloscope & VU Meter Drawing ---
-        function drawOscilloscope() {
-            requestAnimationFrame(drawOscilloscope);
+        function renderVisuals() {
+            requestAnimationFrame(renderVisuals);
+            if (!window.analyser) return;
 
-            // Only calculate when Mixer is visible to save CPU!
-            if (!isMixerActive || !window.analyser) return;
+            // 1. Fetch High-Precision Audio Data
+            const bufferLength = window.analyser.frequencyBinCount;
+            if (!window.floatDataArray || window.floatDataArray.length !== bufferLength) {
+                window.floatDataArray = new Float32Array(bufferLength);
+            }
+            window.analyser.getFloatTimeDomainData(window.floatDataArray);
+
+            // 2. Audio Math: RMS and True Peak
+            let sumSquares = 0;
+            let peak = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const val = window.floatDataArray[i];
+                sumSquares += val * val;
+                const absVal = Math.abs(val);
+                if (absVal > peak) peak = absVal;
+            }
+            const rms = Math.sqrt(sumSquares / bufferLength);
+
+            // 3. REACTIVE BACKGROUND CALCULATION (Runs Always)
+            if (bgEffectMode !== 'off' && bgEffectIntensity > 0) {
+                // THE FIX: Combine the thick RMS body with the sharp Peak transients
+                // This makes it throb with the bass, but visibly flash on snare/kick hits!
+                const audioPunch = (rms * 2.5) + (peak * 0.8);
+
+                // Faster attack (0.15) so drums hit hard, smooth release (0.85)
+                smoothedRms = smoothedRms * 0.85 + audioPunch * 0.15;
+
+                const isGlow = bgEffectMode === 'glow';
+                const baseSize = isGlow ? 35 : 0;
+
+                // THE FIX: Massive multipliers so the pulse reaches the edges of the screen!
+                const multiplier = isGlow ? 350 : 1200;
+
+                const dynamicSize = baseSize + (smoothedRms * multiplier * bgEffectIntensity);
+
+                // Cap it at 150% so a massive audio spike doesn't cause a CSS rendering glitch
+                const finalSize = Math.min(150, dynamicSize);
+
+                document.body.style.setProperty('--bg-pulse-size', `${finalSize}%`);
+            } else {
+                document.body.style.setProperty('--bg-pulse-size', `0%`);
+            }
+
+            // 4. OSCILLOSCOPE (Only draw if Mixer is visible to save CPU!)
+            if (!isMixerActive) return;
 
             const oscCanvas = document.getElementById('oscilloscope');
             if (!oscCanvas) return;
 
-            // 1. High-DPI Canvas Fix (Makes it razor-sharp on Retina/Mobile screens)
             const dpr = window.devicePixelRatio || 1;
             const rect = oscCanvas.getBoundingClientRect();
             if (oscCanvas.width !== Math.floor(rect.width * dpr) || oscCanvas.height !== Math.floor(rect.height * dpr)) {
@@ -2731,122 +3279,57 @@
             const w = oscCanvas.width;
             const h = oscCanvas.height;
 
-            // 2. Fetch High-Precision Audio Data
-            const bufferLength = window.analyser.frequencyBinCount;
-            if (!window.floatDataArray || window.floatDataArray.length !== bufferLength) {
-                window.floatDataArray = new Float32Array(bufferLength);
-            }
-            window.analyser.getFloatTimeDomainData(window.floatDataArray);
-
-            // 3. Audio Math: RMS and True Peak
-            let sumSquares = 0;
-            let peak = 0;
-            for (let i = 0; i < bufferLength; i++) {
-                const val = window.floatDataArray[i];
-                sumSquares += val * val;
-                const absVal = Math.abs(val);
-                if (absVal > peak) peak = absVal;
-            }
-            const rms = Math.sqrt(sumSquares / bufferLength);
-
-            // Convert to Decibels (Clamp minimum to -60dB)
             const peakDb = peak > 0.001 ? 20 * Math.log10(peak) : -60;
             const rmsDb = rms > 0.001 ? 20 * Math.log10(rms) : -60;
 
-            // 4. Clip Hold Logic (Stays lit for 1.5 seconds)
             if (peak >= 0.99) clipHoldUntil = Date.now() + 1500;
             const isClipping = Date.now() < clipHoldUntil;
 
-            // 5. Smooth Peak Falloff
-            if (peakDb > peakHoldDb) peakHoldDb = peakDb;
-            else peakHoldDb -= 0.8; // Falloff speed
+            if (peakDb > peakHoldDb) peakHoldDb = peakDb; else peakHoldDb -= 0.8;
 
-            // 6. Layout Math (Top 60% Waveform, Bottom 40% VU Meter)
-            const vuH = Math.floor(h * 0.40);
-            const waveH = h - vuH;
-            const vuY = waveH;
+            const vuH = Math.floor(h * 0.40); const waveH = h - vuH; const vuY = waveH;
 
-            // Clear Canvas
-            ctx.fillStyle = '#111';
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#111'; ctx.fillRect(0, 0, w, h);
 
-            // ==========================================
-            // PART A: MATRIX WAVEFORM (Top section)
-            // ==========================================
-            ctx.lineWidth = 1 * dpr;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-            ctx.beginPath();
-            for (let i = 1; i < 10; i++) {
-                ctx.moveTo(w * i / 10, 0); ctx.lineTo(w * i / 10, waveH);
-            }
-            ctx.moveTo(0, waveH / 2); ctx.lineTo(w, waveH / 2);
-            ctx.stroke();
+            ctx.lineWidth = 1 * dpr; ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; ctx.beginPath();
+            for (let i = 1; i < 10; i++) { ctx.moveTo(w * i / 10, 0); ctx.lineTo(w * i / 10, waveH); }
+            ctx.moveTo(0, waveH / 2); ctx.lineTo(w, waveH / 2); ctx.stroke();
 
-            ctx.lineWidth = 2 * dpr;
-            ctx.strokeStyle = '#00ff41'; // Matrix green
-            ctx.beginPath();
-            const sliceWidth = w * 1.0 / bufferLength;
-            let x = 0;
+            ctx.lineWidth = 2 * dpr; ctx.strokeStyle = '#00ff41'; ctx.beginPath();
+            const sliceWidth = w * 1.0 / bufferLength; let x = 0;
             for (let i = 0; i < bufferLength; i++) {
-                // Invert Y so positive voltage goes UP
                 const y = (window.floatDataArray[i] * -1) * (waveH / 2) + (waveH / 2);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                 x += sliceWidth;
             }
             ctx.stroke();
 
-            // ==========================================
-            // PART B: TRUE RMS / PEAK VU METER (Bottom)
-            // ==========================================
-            const minDb = -48;
-            const maxDb = 3;
-            const rangeDb = maxDb - minDb;
+            const minDb = -48; const maxDb = 3; const rangeDb = maxDb - minDb;
             const getX = (db) => Math.max(0, Math.min(1, (db - minDb) / rangeDb)) * w;
 
-            // Background Track
-            ctx.fillStyle = '#222';
-            ctx.fillRect(0, vuY, w, vuH);
+            ctx.fillStyle = '#222'; ctx.fillRect(0, vuY, w, vuH);
 
-            // Color Gradient (-48 Green -> -12 Yellow -> -3 Orange -> 0+ Red)
             const gradient = ctx.createLinearGradient(0, 0, w, 0);
-            gradient.addColorStop(0, '#4caf50');
-            gradient.addColorStop(getX(-12) / w, '#4caf50');
-            gradient.addColorStop(getX(-6) / w, '#ffeb3b');
-            gradient.addColorStop(getX(-1) / w, '#ff9800');
-            gradient.addColorStop(getX(0) / w, '#f44336');
-            gradient.addColorStop(1, '#f44336');
+            gradient.addColorStop(0, '#4caf50'); gradient.addColorStop(getX(-12) / w, '#4caf50');
+            gradient.addColorStop(getX(-6) / w, '#ffeb3b'); gradient.addColorStop(getX(-1) / w, '#ff9800');
+            gradient.addColorStop(getX(0) / w, '#f44336'); gradient.addColorStop(1, '#f44336');
 
-            // Draw Solid RMS Bar
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, vuY + (2 * dpr), getX(rmsDb), vuH - (4 * dpr));
+            ctx.fillStyle = gradient; ctx.fillRect(0, vuY + (2 * dpr), getX(rmsDb), vuH - (4 * dpr));
 
-            // Draw Peak Hold Line
             const peakX = getX(peakHoldDb);
-            if (peakX > 0) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(peakX - (2 * dpr), vuY + (2 * dpr), 2 * dpr, vuH - (4 * dpr));
-            }
+            if (peakX > 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(peakX - (2 * dpr), vuY + (2 * dpr), 2 * dpr, vuH - (4 * dpr)); }
 
-            // Draw dB Text Markers
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = `bold ${9 * dpr}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.font = `bold ${9 * dpr}px sans-serif`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
             [-36, -24, -12, -6, -3, 0].forEach(db => {
                 const markX = getX(db);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.fillRect(markX, vuY, 1 * dpr, vuH); // Tick mark
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.fillText(db, markX, vuY + (2 * dpr)); // Number
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'; ctx.fillRect(markX, vuY, 1 * dpr, vuH);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.fillText(db, markX, vuY + (2 * dpr));
             });
 
-            // Draw CLIP Warning Box on far right
             const clipBoxW = 28 * dpr;
-            ctx.fillStyle = isClipping ? '#f44336' : '#333';
-            ctx.fillRect(w - clipBoxW, vuY, clipBoxW, vuH);
-            ctx.fillStyle = isClipping ? '#ffffff' : '#666';
-            ctx.font = `bold ${10 * dpr}px sans-serif`;
+            ctx.fillStyle = isClipping ? '#f44336' : '#333'; ctx.fillRect(w - clipBoxW, vuY, clipBoxW, vuH);
+            ctx.fillStyle = isClipping ? '#ffffff' : '#666'; ctx.font = `bold ${10 * dpr}px sans-serif`;
             ctx.fillText('CLIP', w - (clipBoxW / 2), vuY + Math.floor(vuH / 2) - (4 * dpr));
         }
 
@@ -2856,6 +3339,7 @@
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
             const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (wakeLock === null) requestWakeLock();
 
             masterGain = audioCtx.createGain();
             masterGain.gain.value = parseFloat(document.getElementById('masterVol')?.value || 1.0);
@@ -2888,7 +3372,14 @@
             window.mediaStreamDest = audioCtx.createMediaStreamDestination();
             safetyClipper.connect(window.mediaStreamDest);
 
-            drawOscilloscope(); // Start the graphics loop!
+            // Compile and load the AudioWorklet in the background exactly once
+            if (!workletPromise) {
+                const blob = new Blob([recorderWorkletCode], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                workletPromise = audioCtx.audioWorklet.addModule(url);
+            }
+
+            renderVisuals(); // Start the graphics loop!
 
             // === 2. MASTER 3-BAND EQ ===
             masterEqIn = audioCtx.createGain();
@@ -2923,18 +3414,23 @@
             for (let i = 0; i < 8; i++) {
                 let g = audioCtx.createGain();
                 g.gain.value = parseFloat(document.querySelector(`.track-vol[data-track="${i}"]`)?.value || 1.0);
-                g.connect(looperMasterGain);
                 looperGainNodes.push(g);
+
+                let p = audioCtx.createStereoPanner();
+                p.pan.value = parseFloat(document.querySelector(`.pan-slider[data-track="${i}"]`)?.value || 0.0);
+                looperPanners.push(p);
+
+                // Wire Track Fader -> Panner -> Master Looper Bus
+                g.connect(p);
+                p.connect(looperMasterGain);
 
                 let eSend = audioCtx.createGain();
                 eSend.gain.value = parseFloat(document.querySelector(`.echo-send[data-track="${i}"]`)?.value || 0);
-                g.connect(eSend);
-                looperEchoSends.push(eSend);
+                g.connect(eSend); looperEchoSends.push(eSend);
 
                 let rSend = audioCtx.createGain();
                 rSend.gain.value = parseFloat(document.querySelector(`.reverb-send[data-track="${i}"]`)?.value || 0);
-                g.connect(rSend);
-                looperReverbSends.push(rSend);
+                g.connect(rSend); looperReverbSends.push(rSend);
             }
 
             // === 4. SYNTH FX CHAIN ===
@@ -2949,10 +3445,17 @@
             reverbGain = audioCtx.createGain();
             reverbGain.gain.value = typeof currentReverb !== 'undefined' ? currentReverb : 0;
 
-            synthGain.connect(reverbGain);
+            // STEREO PANNER FOR MAIN SYNTH
+            masterSynthPanner = audioCtx.createStereoPanner();
+            synthGain.connect(masterSynthPanner);
+
+            masterSynthPanner.connect(reverbGain);
             reverbGain.connect(convolver);
             convolver.connect(masterEqIn); // Reverb goes to EQ
-            synthGain.connect(masterEqIn); // Dry synth goes to EQ
+            masterSynthPanner.connect(masterEqIn); // Dry synth goes to EQ
+
+            // Also wire the panner output to the delay node later:
+            // (You will need to scroll down ~15 lines to ECHO / DELAY and change `synthGain.connect(delayNode);` to `masterSynthPanner.connect(delayNode);`)
 
             // SMART DISTORTION
             preDistortionGain = audioCtx.createGain();
@@ -2972,7 +3475,11 @@
             lfoPitchGain = audioCtx.createGain(); lfoPitchGain.gain.value = typeof currentVibrato !== 'undefined' ? currentVibrato : 0;
             lfoFilterGain = audioCtx.createGain(); lfoFilterGain.gain.value = typeof currentSweep !== 'undefined' ? currentSweep : 0;
             lfoAmpGain = audioCtx.createGain(); lfoAmpGain.gain.value = typeof currentTremolo !== 'undefined' ? currentTremolo : 0;
+            lfoPanGain = audioCtx.createGain();
+            lfoPanGain.gain.value = currentAutoPan || 0;
 
+            globalLFO.connect(lfoPanGain);
+            lfoPanGain.connect(masterSynthPanner.pan);
             globalLFO.connect(lfoPitchGain);
             globalLFO.connect(lfoFilterGain);
             globalLFO.connect(lfoAmpGain);
@@ -2987,7 +3494,7 @@
             feedbackGain.connect(delayNode);
             delayNode.connect(delayMix);
             delayMix.connect(masterEqIn); // Delay feeds into EQ
-            synthGain.connect(delayNode);
+            masterSynthPanner.connect(delayNode);
 
             // Connect Aux Sends to Master FX
             for (let i = 0; i < 8; i++) {
@@ -3190,7 +3697,7 @@
             else { isAccent = true; }
             const accentMult = isAccent ? 1.4 : 0.8;
 
-            // 🎵 NEW: Load historical parameters if this is a looper track, otherwise use live UI
+            // Load historical parameters if this is a looper track, otherwise use live UI
             const s = synthState || {
                 osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
                 subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
@@ -3199,35 +3706,59 @@
                 oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType
             };
 
-            const osc1 = audioCtx.createOscillator();
-            const osc2 = audioCtx.createOscillator();
+            const osc1Gain = audioCtx.createGain();
+            const osc2Gain = audioCtx.createGain();
 
-            // If acoustic overtones are dialed in, they completely replace the standard waveform!
-            if (acousticWaveCache) {
-                osc1.setPeriodicWave(acousticWaveCache);
-                osc2.setPeriodicWave(acousticWaveCache);
-            } else {
-                osc1.type = s.osc1;
-                osc2.type = s.osc2;
+            let osc1 = null; let osc2 = null; let sampleSource = null;
+
+            const effectiveGlideTime = isGlidePadOn() ? Math.max(0.15, s.glide) : s.glide;
+            const isLegato = activeUserNotes > 1 || sustainedVoices.size > 0;
+            const shouldGlide = lastPlayedFreq && effectiveGlideTime > 0 &&
+                (s.glideMode === 'always' || (s.glideMode === 'legato' && isLegato) || isGlidePadOn());
+
+            // --- HARDWARE SAMPLER MODE ---
+            if (isSamplerMode && activeSampleBuffer) {
+                sampleSource = audioCtx.createBufferSource();
+                sampleSource.buffer = activeSampleBuffer;
+                sampleSource.loop = isSamplerLooping;
+
+                // Mathematical Pitch Shifting (Assuming loaded samples are Middle C / 261.63Hz)
+                const baseFreq = masterTune * Math.pow(2, (60 - 69) / 12);
+                const targetRate = freq / baseFreq;
+
+                if (shouldGlide) {
+                    const lastRate = lastPlayedFreq / baseFreq;
+                    sampleSource.playbackRate.setValueAtTime(lastRate, startTime);
+                    sampleSource.playbackRate.exponentialRampToValueAtTime(targetRate, startTime + effectiveGlideTime);
+                } else {
+                    sampleSource.playbackRate.value = targetRate;
+                }
+
+                osc1Gain.gain.value = 1.0; osc2Gain.gain.value = 0.0;
+                sampleSource.connect(osc1Gain);
+            }
+            // --- ANALOG SYNTH MODE ---
+            else {
+                osc1 = audioCtx.createOscillator(); osc2 = audioCtx.createOscillator();
+                if (acousticWaveCache) { osc1.setPeriodicWave(acousticWaveCache); osc2.setPeriodicWave(acousticWaveCache); }
+                else { osc1.type = s.osc1; osc2.type = s.osc2; }
+
+                const targetFreq2 = freq * Math.pow(2, s.detune / 1200) * s.osc2Mult;
+
+                if (shouldGlide) {
+                    osc1.frequency.setValueAtTime(lastPlayedFreq, startTime);
+                    osc1.frequency.exponentialRampToValueAtTime(freq, startTime + effectiveGlideTime);
+                    osc2.frequency.setValueAtTime(lastPlayedFreq * s.osc2Mult, startTime);
+                    osc2.frequency.exponentialRampToValueAtTime(targetFreq2, startTime + effectiveGlideTime);
+                } else {
+                    osc1.frequency.value = freq; osc2.frequency.value = targetFreq2;
+                }
+
+                osc1Gain.gain.value = 1.0 - s.oscMix; osc2Gain.gain.value = s.oscMix;
+                osc1.connect(osc1Gain); osc2.connect(osc2Gain);
             }
 
-            const targetFreq2 = freq * Math.pow(2, s.detune / 1200) * s.osc2Mult;
-
-            // GLIDE (Portamento) LOGIC
-            if (s.glide > 0 && lastPlayedFreq) {
-                osc1.frequency.setValueAtTime(lastPlayedFreq, startTime);
-                osc1.frequency.exponentialRampToValueAtTime(freq, startTime + s.glide);
-                osc2.frequency.setValueAtTime(lastPlayedFreq * s.osc2Mult, startTime);
-                osc2.frequency.exponentialRampToValueAtTime(targetFreq2, startTime + s.glide);
-            } else {
-                osc1.frequency.value = freq; osc2.frequency.value = targetFreq2;
-            }
-            lastPlayedFreq = freq; // Update global state for next note
-
-            // OSCILLATOR MIX LOGIC
-            const osc1Gain = audioCtx.createGain(); osc1Gain.gain.value = 1.0 - s.oscMix;
-            const osc2Gain = audioCtx.createGain(); osc2Gain.gain.value = s.oscMix;
-            osc1.connect(osc1Gain); osc2.connect(osc2Gain);
+            lastPlayedFreq = freq;
 
             let subOsc = null; let subGain = null;
             if (s.subOsc > 0) {
@@ -3259,8 +3790,9 @@
             const gainNode = audioCtx.createGain();
             let ampLfoGain = audioCtx.createGain(); ampLfoGain.gain.value = 1.0;
 
-            lfoPitchGain.connect(osc1.detune);
-            lfoPitchGain.connect(osc2.detune);
+            if (osc1) lfoPitchGain.connect(osc1.detune);
+            if (osc2) lfoPitchGain.connect(osc2.detune);
+
             lfoFilterGain.connect(filter.detune);
             lfoAmpGain.connect(ampLfoGain.gain);
 
@@ -3289,7 +3821,10 @@
                 gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + s.attack + s.decay);
             }
 
-            osc1.start(startTime); osc2.start(startTime);
+            // Safely check if nodes exist before starting them!
+            if (osc1) osc1.start(startTime);
+            if (osc2) osc2.start(startTime);
+            if (sampleSource) sampleSource.start(startTime); // Start the sample!
             if (subOsc) subOsc.start(startTime);
             if (noiseSrc) noiseSrc.start(startTime);
 
@@ -3301,8 +3836,7 @@
                 }, timeToStart * 1000);
             }
 
-            // Export the specific releaseTime so the cleanup engine knows how long the tail is!
-            return { osc1, osc2, subOsc, noiseSrc, gainNode, filter, ampLfoGain, freq, midiNote, isChord, startTime, accentMult, releaseTime: s.release };
+            return { osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, ampLfoGain, freq, midiNote, isChord, startTime, accentMult, releaseTime: s.release };
         }
 
         const tunings = {
@@ -3368,21 +3902,28 @@
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
 
-            voices.forEach(({ osc1, osc2, subOsc, noiseSrc, gainNode, filter, ampLfoGain, midiNote, isChord, releaseTime }) => {
+            voices.forEach(({ osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, ampLfoGain, midiNote, isChord, releaseTime }) => {
                 try {
                     gainNode.gain.cancelScheduledValues(now);
 
                     const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
                     const relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
 
-                    // 🧹 THE FIX: Physically destroy the nodes to free Mobile CPU!
+                    // Physically destroy the nodes to free Mobile CPU!
                     const cleanup = () => {
                         try {
-                            osc1.stop(); osc2.stop(); if (subOsc) subOsc.stop(); if (noiseSrc) noiseSrc.stop();
+                            if (osc1) osc1.stop();
+                            if (osc2) osc2.stop();
+                            if (sampleSource) sampleSource.stop();
+                            if (subOsc) subOsc.stop();
+                            if (noiseSrc) noiseSrc.stop();
 
-                            osc1.disconnect(); osc2.disconnect();
+                            if (osc1) osc1.disconnect();
+                            if (osc2) osc2.disconnect();
+                            if (sampleSource) sampleSource.disconnect();
                             if (subOsc) subOsc.disconnect();
                             if (noiseSrc) noiseSrc.disconnect();
+
                             filter.disconnect();
                             gainNode.disconnect();
                             if (ampLfoGain) ampLfoGain.disconnect();
@@ -3431,6 +3972,8 @@
 
         // --- 8-Track Looper System ---
         const looper = { isRecording: false, isPlaying: false, isArmed: false, activeVoiceTrack: 0, activeDrumTrack: 4, activeTrackToClear: 0, tracks: [[], [], [], [], [], [], [], []], muted: [false, false, false, false, false, false, false, false], startTime: 0, recordingType: null };
+        let looperQuantize = false;
+        let looperQuantizeRes = 16;
 
         function updateLooperUI() {
             const btnRec = document.getElementById('btnLooperRec'); const btnPlay = document.getElementById('btnLooperPlay'); const statusTxt = document.getElementById('looper-status-text');
@@ -3483,7 +4026,23 @@
         });
 
         document.getElementById('btnLooperRec')?.addEventListener('click', e => { if (!looper.isPlaying && !looper.isArmed) { looper.isArmed = true; looper.recordingType = null; } else if (looper.isArmed) { looper.isArmed = false; } else { looper.isRecording = !looper.isRecording; if (looper.isRecording) looper.recordingType = 'both'; } updateLooperUI(); });
-        document.getElementById('btnLooperPlay')?.addEventListener('click', e => { if (looper.isPlaying) { looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false; looper.recordingType = null; const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%'; } else { looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0; } updateLooperUI(); });
+
+        document.getElementById('btnLooperPlay')?.addEventListener('click', e => {
+            if (looper.isPlaying) {
+                looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false; looper.recordingType = null;
+                const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%';
+                // MASTER MODE: Send MIDI Stop
+                if (midiSyncMode === 'master' && midiOut) midiOut.send([252]);
+            } else {
+                looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0;
+                // MASTER MODE: Send MIDI Start and lock phase
+                if (midiSyncMode === 'master' && midiOut) {
+                    midiOut.send([250]);
+                    nextMidiPulseTime = audioCtx.currentTime;
+                }
+            }
+            updateLooperUI();
+        });
 
         document.getElementById('btnLooperClear')?.addEventListener('click', () => {
             looper.tracks[looper.activeTrackToClear] = [];
@@ -3495,6 +4054,16 @@
             if (labelEl) labelEl.textContent = '';
         });
 
+        document.getElementById('btnLooperQuantize')?.addEventListener('click', e => {
+            looperQuantize = !looperQuantize;
+            e.target.textContent = `Input Snap: ${looperQuantize ? 'ON' : 'OFF'}`;
+            e.target.classList.toggle('active-btn', looperQuantize);
+        });
+
+        document.getElementById('looperQuantizeRes')?.addEventListener('change', e => {
+            looperQuantizeRes = parseInt(e.target.value);
+        });
+
         function recordLooperEvent(element, freqs, type, originalStArray, drumType = null, velocity = 1, exactTime = null) {
             if (!audioCtx) return null;
             const lenEl = document.getElementById('looperLength');
@@ -3504,6 +4073,19 @@
 
             let offset = (timeToUse - looper.startTime) % loopSec;
             if (offset < 0) offset += loopSec;
+
+            // Quantization Engine
+            // If Input Snap is ON, mathematically round the timestamp to the nearest grid step
+            if (looperQuantize) {
+                const beatDuration = 60 / currentArpBPM; // Length of 1 quarter note in seconds
+                // Calculate the grid line distance (e.g., 1/16 res = 4 grid points per quarter note)
+                const stepDuration = beatDuration * (4 / looperQuantizeRes);
+
+                offset = Math.round(offset / stepDuration) * stepDuration;
+
+                // Edge case: If it snaps exactly to the end of the loop, wrap it to the very beginning!
+                if (offset >= loopSec) offset = 0;
+            }
 
             let targetTrack = (type === 'drum') ? looper.activeDrumTrack : looper.activeVoiceTrack;
 
@@ -3596,10 +4178,37 @@
         let recordedChunks = [];
         let isCustomWavRecording = false;
         let wavRecordingBuffers = [];
-        let wavScriptProcessor = null;
+
+        let recorderWorkletNode = null;
+        let workletPromise = null;
 
         let masterBlob = null;
         let masterAudioUrl = null;
+
+        // AUDIO WORKLET: This code runs on a completely isolated background CPU thread!
+        const recorderWorkletCode = `
+                    class RecorderProcessor extends AudioWorkletProcessor {
+                        process(inputs, outputs, parameters) {
+                            const input = inputs[0];
+                            if (input && input.length >= 2) {
+                                // Send a copy of the Left and Right channel arrays back to the main thread
+                                this.port.postMessage({
+                                    left: new Float32Array(input[0]),
+                                    right: new Float32Array(input[1])
+                                });
+                            }
+
+                            // Pass audio through seamlessly
+                            if (input && outputs[0]) {
+                                for (let channel = 0; channel < input.length; ++channel) {
+                                    if (outputs[0][channel]) outputs[0][channel].set(input[channel]);
+                                }
+                            }
+                            return true; // Keep the processor alive
+                        }
+                    }
+                    registerProcessor('recorder-processor', RecorderProcessor);
+                    `;
 
         const btnMasterRec = document.getElementById('btn-master-rec');
         const btnMasterSave = document.getElementById('btn-master-save');
@@ -3644,13 +4253,14 @@
                 clearInterval(recTimerInterval); // Stop the live stopwatch
 
                 const format = exportFormatSel.value;
-                if (isCustomWavRecording && wavScriptProcessor) {
-                    wavScriptProcessor.disconnect();
-                    compressor.disconnect(wavScriptProcessor);
+                if (isCustomWavRecording && recorderWorkletNode) {
+                    recorderWorkletNode.disconnect();
+                    compressor.disconnect(recorderWorkletNode);
                     if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
-                        try { importedAudioMasterGainNode.disconnect(wavScriptProcessor); } catch (e) { }
+                        try { importedAudioMasterGainNode.disconnect(recorderWorkletNode); } catch (e) { }
                     }
                     isCustomWavRecording = false;
+                    recorderWorkletNode = null; // Clear from memory
                     setupPlaybackAndUnlock(exportWAV(wavRecordingBuffers, audioCtx.sampleRate));
                 } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
                     await new Promise(resolve => {
@@ -3677,15 +4287,24 @@
             if (format === 'audio/wav') {
                 isCustomWavRecording = true;
                 wavRecordingBuffers = [[], []]; // L & R channels
-                wavScriptProcessor = audioCtx.createScriptProcessor(4096, 2, 2);
-                compressor.connect(wavScriptProcessor);
+
+                // Guarantee the background thread is loaded before proceeding
+                await workletPromise;
+
+                recorderWorkletNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
+                compressor.connect(recorderWorkletNode);
+
                 if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
-                    try { importedAudioMasterGainNode.connect(wavScriptProcessor); } catch (e) { }
+                    try { importedAudioMasterGainNode.connect(recorderWorkletNode); } catch (e) { }
                 }
-                wavScriptProcessor.connect(audioCtx.destination);
-                wavScriptProcessor.onaudioprocess = (e) => {
-                    wavRecordingBuffers[0].push(new Float32Array(e.inputBuffer.getChannelData(0)));
-                    wavRecordingBuffers[1].push(new Float32Array(e.inputBuffer.getChannelData(1)));
+                recorderWorkletNode.connect(audioCtx.destination);
+
+                // Listen for the batches of audio coming from the background thread
+                recorderWorkletNode.port.onmessage = (e) => {
+                    if (isCustomWavRecording) {
+                        wavRecordingBuffers[0].push(e.data.left);
+                        wavRecordingBuffers[1].push(e.data.right);
+                    }
                 };
             } else {
                 isCustomWavRecording = false;
@@ -4093,8 +4712,7 @@
 
         function scheduleMetronome() {
             if (!audioCtx) return;
-            const metroModeEl = document.getElementById('metronomeMode');
-            const metroMode = metroModeEl ? metroModeEl.value : 'none';
+            const metroMode = currentDrumPreset;
             if (metroMode === 'none') return;
 
             const now = audioCtx.currentTime;
@@ -4226,6 +4844,22 @@
             scheduleMetronome();
             processLooperPlayback();
 
+            // --- MIDI MASTER CLOCK SENDER ---
+            if (midiSyncMode === 'master' && midiOut && audioCtx) {
+                const now = audioCtx.currentTime;
+                if (now > 0) {
+                    const pulseInterval = (60 / currentArpBPM) / 24; // 24 pulses per quarter note
+                    if (nextMidiPulseTime === 0) nextMidiPulseTime = now + 0.1;
+
+                    // Lookahead schedule for MIDI clock (prevents javascript timer jitter)
+                    while (nextMidiPulseTime < now + 0.1) {
+                        const timeToStart = Math.max(0, nextMidiPulseTime - now);
+                        setTimeout(() => { if (midiOut) midiOut.send([248]); }, timeToStart * 1000);
+                        nextMidiPulseTime += pulseInterval;
+                    }
+                }
+            }
+
             if ((isArpOn() && activeNodes.size > 0) || looper.isPlaying) {
                 highlightUpdatePending = false;
                 updateHighlights();
@@ -4237,6 +4871,9 @@
         // 3. MIDI INTEGRATION
         // ==========================================
         let midiAccess = null; let midiOut = null; const midiActiveNotes = new Map();
+        let midiSyncMode = 'off'; // 'off', 'master', or 'slave'
+        let clockPulses = []; // Tracks incoming slave pulses
+        let nextMidiPulseTime = 0; // Tracks outgoing master pulses
 
         document.getElementById('btnMidi')?.addEventListener('click', (e) => {
             const btn = document.getElementById('btnMidi');
@@ -4266,8 +4903,43 @@
 
         function onMIDIMessage(message) {
             const [status, data1, data2] = message.data;
-            const command = status >> 4; const note = data1; const velocity = data2;
 
+            // --- MIDI CLOCK SYNC (SLAVE MODE) ---
+            if (midiSyncMode === 'slave') {
+                if (status === 248) { // 0xF8 Timing Clock (24 times per beat)
+                    const now = performance.now();
+                    clockPulses.push(now);
+                    if (clockPulses.length > 24) clockPulses.shift();
+
+                    if (clockPulses.length === 24) {
+                        // Calculate exact BPM based on the time it took to receive 24 pulses
+                        const elapsed = now - clockPulses[0];
+                        const bpm = Math.round(60000 / elapsed);
+                        if (bpm !== currentArpBPM && bpm >= 40 && bpm <= 240) {
+                            currentArpBPM = bpm;
+                            const bpmSlider = document.getElementById('arpBpm');
+                            if (bpmSlider) bpmSlider.value = bpm;
+                            updateLabel('arpBpm', bpm, 'Arp/Metron', ' BPM');
+                        }
+                    }
+                    return; // Don't process clock ticks as notes
+                }
+                else if (status === 250 || status === 251) { // 0xFA Start or 0xFB Continue
+                    // Hard-reset the internal phase grid to perfectly lock the downbeat!
+                    nextMetroTime = audioCtx ? audioCtx.currentTime : 0;
+                    metroStep = 0;
+                    if (looper.isPlaying) looper.startTime = nextMetroTime;
+                    activeNodes.forEach(n => { if (n.type === 'arp') n.nextNoteTime = nextMetroTime; });
+                    return;
+                }
+                else if (status === 252) { // 0xFC Stop
+                    // Optional: You could stop the looper here if desired
+                    return;
+                }
+            }
+
+            // --- STANDARD MIDI NOTES ---
+            const command = status >> 4; const note = data1; const velocity = data2;
             if (command === 9 && velocity > 0) { midiActiveNotes.set(note, velocity); playMidiNote(note); }
             else if (command === 8 || (command === 9 && velocity === 0)) { midiActiveNotes.delete(note); stopMidiNote(note); }
             else if (command === 11 && note === 64) {
@@ -4543,6 +5215,9 @@
         // Force UI sync for sliders rendered inside hidden overlays
         const hideSlider = document.getElementById('uiHideDelay');
         if (hideSlider) hideSlider.value = uiHideDelay;
+
+        // Force Theme sync on startup to guarantee colors match the dropdown!
+        document.getElementById('themeColorSelect')?.dispatchEvent(new Event('change'));
     </script>
 </body>
 </html>
