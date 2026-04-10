@@ -12,7 +12,7 @@
 </div>
 
 ---
-Run directly in browser at:
+Run directly in browser (recommended for best performance: Firefox) at:
 
 ### https://cyberchriz.github.io/musictools/index.html
 ---
