@@ -9,7 +9,7 @@
 Tonnetz Pro maps harmonic relationships to physical space, allowing for the intuitive visualization and performance of complex chord structures. By translating musical intervals into a two-dimensional grid, users can explore tonal gravity, voice leading, and advanced chord extensions using visual memory rather than traditional keyboard linear mapping.
 ---
 ### **INSTALL:** select the installer for your Operating System under "Releases".
-### **Live WEB VERSION:** [Tonnetz Pro (Browser)](https://cyberchriz.github.io/musictools/ui/index.html) **NOTE: FIREFOX IS STRONGLY RECOMMENDED FOR THE BROWSER VERSION DUE TO SUPERIOR PERFORMANCE.**
+### ... or simply run directly in browser: [Tonnetz Pro](https://cyberchriz.github.io/musictools/ui/index.html) **NOTE: FIREFOX IS STRONGLY RECOMMENDED FOR THE BROWSER VERSION DUE TO SUPERIOR PERFORMANCE.**
 
 ---
 
