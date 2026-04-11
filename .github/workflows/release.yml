@@ -85,7 +85,7 @@ jobs:
       - name: Build Android APK
         run: |
           export NDK_HOME=$ANDROID_NDK_HOME
-          npx tauri android build --apk
+          npx tauri android build --apk --debug
         
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
