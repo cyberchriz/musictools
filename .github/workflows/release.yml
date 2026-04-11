@@ -1,14 +1,20 @@
 name: "Release Builders"
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release Version (e.g., v1.0.1)'
+        required: true
+        default: 'v1.0.1'
 
 jobs:
-  release:
-    # 1. Grant the workflow permission to create a Release page
+  # ==========================================
+  # JOB 1: DESKTOP BUILDERS (Mac, Win, Linux)
+  # ==========================================
+  desktop-release:
     permissions:
       contents: write 
-
     strategy:
       fail-fast: false
       matrix:
@@ -36,15 +42,51 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
       
-      - name: Build Tauri App
+      - name: Build Desktop Apps
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           buildRunnerCommand: "npx tauri"
-          # 2. Use tagName to force the creation of a new release
-          tagName: v1.0.0
-          releaseName: 'Tonnetz Pro v1.0.0'
+          tagName: ${{ github.event.inputs.version }}
+          releaseName: 'Tonnetz Pro ${{ github.event.inputs.version }}'
           releaseBody: 'Automated build from GitHub Actions.'
           releaseDraft: true
           prerelease: false
+
+  # ==========================================
+  # JOB 2: ANDROID BUILDER
+  # ==========================================
+  android-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Java (Required for Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install Rust and Android Targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Build Android APK
+        run: npx tauri android build --apk
+        
+      - name: Upload APK to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tonnetz-Pro-Android-APK
+          path: src-tauri/gen/android/**/*.apk
