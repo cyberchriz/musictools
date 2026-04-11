@@ -1,97 +1,83 @@
-# Tonnetz Pro
 <div align="center">
-  <br>
-    <img src="Screenshot 2026-04-05 182741.png" alt="App Screenshot" width="1000" height="500"/>
-  <br>
-  <p align="center">
-      Tonnetz Pro is an advanced music theory workstation and performance environment
-      based on Euler’s Tonnetz (German for "tone network").
-      It offers a geometric representation of tonal space where harmonic relationships
-      become physical connections, allowing musicians to visualize and play complex structures with mathematical precision.
-  </p>
+  <img src="src-tauri/icons/Square310x310Logo.png" alt="Tonnetz Pro Logo" width="180" height="180"/>
+  <h1>Tonnetz Pro</h1>
+  <p>A music theory workstation, synthesizer, and live performance environment based on Euler's Tonnetz.</p>
 </div>
 
 ---
-Run directly in browser (recommended for best performance: Firefox) at:
 
-### https://cyberchriz.github.io/musictools/index.html
----
+Tonnetz Pro maps harmonic relationships to physical space, allowing for the intuitive visualization and performance of complex chord structures. By translating musical intervals into a two-dimensional grid, users can explore tonal gravity, voice leading, and advanced chord extensions using visual memory rather than traditional keyboard linear mapping.
 
-## 🔺 Geometric Navigation & Chords
-
-Experience music theory through a geometric lens. Make harmony visible!
-
-    - Horizontal Axis: Moving left to right moves in perfect fifths (C -> G -> D).
-    - Diagonal Axes: Moving along diagonals steps in major and minor thirds.
-    - Triangles = Triads: Click any upward-facing triangle to play a Major chord.
-      Click any downward-facing triangle to play a Minor chord.
-    - Navigation: Move the grid by clicking and dragging (desktop) or using the
-      on-screen D-Pad. Zoom with the scroll wheel or the + / - buttons.
----
-## 🎛️ Performance Pads & Arpeggiator
-
-Play complex jazz chords and textures without leaving the grid: use keyboard shortcuts
-to modify chords or the corresponding tap buttons on touchscreens.
-
-    - Extensions: Hold A, S, D, F or G to add a 6th, 7th, 9th, 11th or 13th to your chord.
-    - Use 'Lock' buttons for permanent extensions.
-    - Special Chords: use keyboard rows QWERT or YXCVB / ZXCVB for all that jazzy stuff.
-    - Octave Jumps: Use key 1/2 shift octaves instantly up/down
-    - Arpeggiator: Hold Shift (Up) or Ctrl (Down) to step through notes.
-      Control arpeggio speed, rhythm, and Swing Effect
-      via the BPM and Swing slider in the main settings menu.
-      Use buttons 3, 4 or 5 to change arpeggio direction (up, down, random)
-    - Dampen / Sustain: Hold Space Bar or Left Alt to smoothly sustain or muffle voices
-      (una corda simulation).
----
-## 🔁 Live 8-Track Looper & Audio Processing
-
-A built-in workstation for capturing your performance in real-time.
-
-    - Independent Tracks: 4 Voice tracks (Synth/Piano) and 4 Drum tracks.
-    - Smart Recording: The ⏺ Record button arms the looper
-      recording begins the moment you trigger a note.
-    - Preset Sync: Synchronize drum machine presets to the downbeat for perfect loop timing.
-    - Master Bounce: Export your entire session to WebM, MP4, MP3, or WAV.
-    - Audio Import: Load backing tracks to play along with the internal engine.
----
-## 🥁 Drum Machine & Metronome
-
-    - 16 Rhythm Presets: From Rock and Breakbeat to House and Bossa Nova.
-    - Auto-Embellish: Intelligent ghost notes and varying velocities
-      for an organic, human feel.
-    - Manual Triggers: Finger-drum custom beats using on-screen pads.
----
-## 📈 Synthesizer Engine & Modulations
-
-A dual-oscillator engine with 33 calibrated presets (Piano, Lo-Fi Keys, 80s Brass, etc.).
-
-    - Visual ADSR: Sculpt Attack, Decay, Sustain, and Release times.
-    - Filter Control: Adjust Brightness, Resonance, and Filter Env for automated sweeps.
-    - Sub & Noise: Thicken the low-end with a sub-oscillator or add breath with white noise.
-    - Multi-LFO: Independent control over Vibrato, Tremolo, and Sweep (Auto-Wah).
-    - FX Rack: Distortion, Chorus, Echo, and Reverb.
----
-## ⚙️ Advanced Music Theory & Setup
-
-    - Circle of Fifths: Interactive minimap that highlights current chord structures.
-    - Snap to Scale: Lock the grid to specific scales (Dorian, Lydian Dominant, etc.).
-    - Node Labels: Absolute notes, Scale Degrees, Roman Numerals, or Solfege.
-    - Alternative Tuning: Switch to Just Intonation or Pythagorean Tuning.
-    - State Saving: Export/Import your settings as a JSON file.
+## **Live Web Version:** [Tonnetz Pro (Browser)](https://cyberchriz.github.io/musictools/ui/index.html)
+**NOTE: FIREFOX IS STRONGLY RECOMMENDED FOR THE BROWSER VERSION DUE TO SUPERIOR PERFORMANCE.**
 
 ---
-## 🔌 MIDI Connectivity
 
-    - MIDI IN: Use any USB MIDI keyboard to play the internal synthesizer.
-    - MIDI OUT: Use Tonnetz Pro as a geometric controller to drive
-      external hardware or DAWs.
+# Architecture & Features
+
+### Interface & Navigation
+* **Tonal Mapping:** perfect fifths on the horizontal axes, major & minor thirds on the diagonals.
+* **Triads:** Upward-facing triangles for major triads; downward-facing triangles for minor triads.
+* **Extended Chords:** Use multi-touch or "performance pads" panel to add notes or play complex voicings. On desktop: use keyboard shortcuts via key rows QWERT / ASDFG / YXCVB.
+* **Sustain / Dampen / Legato / Arpeggio:**: used keyboard shortcuts or "performance pads" panel. The arpeggiator supports directional and randomized arpeggiation with adjustable swing, subdivisions, and continuous looping.
+* **Viewport Control:** use the core menu (bottom right) for zoom, pan and various docking panels. The desktop version supports mouse wheel zoom.
+* **Scale Overlay:** Select from 20+ scale presets to overlay the grid with color-coded scale nodes.
+
+### Audio Engine & Sampling
+* **Dual-Oscillator Synthesizer:** Procedural audio engine featuring 33 pre-calibrated acoustic and analog presets.
+* **Hardware-Style Sampler:** Supports internal WAV/OGG file loading, pitch-shifting, and local directory scanning (available in Desktop build).
+* **Modulation & Dynamics:** Visual ADSR envelope, multi-LFO system (routing to pitch, amplitude, and filter cutoff), and dedicated sub/noise oscillators.
+* **Effects Chain:** Global distortion, chorus, delay, and convolution/algorithmic reverb.
+
+### 8-Track Looper & Drum Machine
+* **Live Sequencer:** 4 polyphonic voice tracks and 4 independent drum tracks with overdubbing capabilities.
+* **Rhythm Engine:** 16 genre-specific rhythm presets featuring intelligent auto-embellishment (humanized ghost notes and velocity variations). Includes manual trigger pads for finger-drumming.
+* **Audio Routing:** Import external backing tracks into the master mix, and export the live master output to uncompressed WAV, MP3, MP4, or WebM.
+
+### Advanced Music Theory Tools
+* **Interactive Circle of Fifths:** A synchronized harmonic minimap that tracks and highlights active chord structures in real-time.
+* **Scale Constraints:** Snap-to-scale functionality locking the grid to standard modes, pentatonics, or exotic scales (e.g., Lydian Dominant, Hungarian Minor).
+* **Tuning Systems:** Switch the engine from Equal Temperament to Just Intonation or Pythagorean Tuning for mathematically perfect, beatless ratios. Use Master Tuning slider e.g. if you prefer A=432 Hz.
+* **Dynamic Labels:** Toggle node labels between absolute pitch, scale degrees, Roman numerals, or Solfege.
+
+### Hardware & MIDI Integration
+* **MIDI I/O:** Full duplex Web MIDI API support (SLAVE / MASTER). Play the internal engine using USB MIDI controllers, or use Tonnetz Pro as a geometric MIDI controller to drive external DAW hardware.
+* **Clock Synchronization:** Configurable MIDI Clock routing. Act as a Master clock to drive external gear, or slave the internal Arpeggiator and Looper to an external tempo.
+
 ---
-## 📄 License
+
+# Local Build (Desktop)
+
+Tonnetz Pro is engineered as a zero-dependency vanilla HTML/JS application wrapped in a native Rust backend via [Tauri](https://tauri.app/). 
+
+**Prerequisites:**
+* [Node.js](https://nodejs.org/)
+* [Rust Toolchain](https://rustup.rs/)
+
+**Run in Development Mode:**
+```bash
+npm install
+npx tauri dev
+```
+---
+# License
 
 Copyright (c) 2026 Christian Suer (GitHub: cyberchriz). All rights reserved.
-Permission is granted for personal, non-commercial use and execution only.
-No part of this software may be redistributed, modified, or used for
-commercial purposes without explicit written permission from the author.
 
-For commercial licensing inquiries or acquisition offers, please contact the author via GitHub.
+<details>
+<summary><strong>View Full License Terms</strong></summary>
+
+<br>
+
+> Permission is granted for personal, non-commercial use and execution only. 
+> No part of this software may be redistributed or used for 
+> commercial purposes without explicit written permission from the author.
+> Modification and derivative works are permitted for personal use as local builds
+> in accordance with the above terms, but may not be distributed or used commercially.
+>
+> For commercial licensing inquiries or acquisition offers, please contact 
+> the author via GitHub.
+
+</details>
+
+*For more details, see the full [LICENSE.md](LICENSE.md) file.*

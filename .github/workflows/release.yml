@@ -1,0 +1,47 @@
+name: "Release Builders"
+
+# trigger cloud compilation manually from the GitHub website
+on:
+  workflow_dispatch: 
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        # These are the cloud servers GitHub will spawn:
+        platform: [macos-latest, ubuntu-22.04, windows-latest]
+    
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install Linux Dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      
+      - name: Install Frontend Dependencies
+        run: npm install
+      
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # tell GitHub to package the executables into a Draft Release page
+          releaseId: 'Draft'
+          releaseName: 'Tonnetz Pro Draft Release'
+          releaseBody: 'Automated build from GitHub Actions.'
+          releaseDraft: true
+          prerelease: false

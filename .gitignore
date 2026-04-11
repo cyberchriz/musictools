@@ -1,0 +1,22 @@
+# 1. Node Dependencies
+node_modules/
+
+# 2. Rust/Tauri Build Artifacts (The heavy compiler stuff)
+src-tauri/target/
+
+# 3. OS Hidden Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 4. IDEs and Editors (Visual Studio, VS Code, JetBrains)
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
