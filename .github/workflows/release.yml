@@ -1,15 +1,17 @@
 name: "Release Builders"
 
-# trigger cloud compilation manually from the GitHub website
 on:
   workflow_dispatch: 
 
 jobs:
   release:
+    # 1. Grant the workflow permission to create a Release page
+    permissions:
+      contents: write 
+
     strategy:
       fail-fast: false
       matrix:
-        # These are the cloud servers GitHub will spawn:
         platform: [macos-latest, ubuntu-22.04, windows-latest]
     
     runs-on: ${{ matrix.platform }}
@@ -39,9 +41,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # tell GitHub to package the executables into a Draft Release page
-          releaseId: 'Draft'
-          releaseName: 'Tonnetz Pro Draft Release'
+          buildRunnerCommand: "npx tauri"
+          # 2. Use tagName to force the creation of a new release
+          tagName: v1.0.0
+          releaseName: 'Tonnetz Pro v1.0.0'
           releaseBody: 'Automated build from GitHub Actions.'
           releaseDraft: true
           prerelease: false
