@@ -83,6 +83,8 @@ jobs:
         run: npm install
 
       - name: Build Android APK
+        env:
+          NDK_HOME: ${{ env.ANDROID_NDK_HOME }}  # This tells Tauri to use the NDK pre-installed on GitHub's cloud server!
         run: npx tauri android build --apk
         
       - name: Upload APK to Artifacts
