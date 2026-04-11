@@ -460,9 +460,9 @@
                 transform: translateX(-105%);
             }
 
-                .overlay.primary.active {
-                    transform: translateX(0);
-                }
+            .overlay.primary.active {
+                transform: translateX(0);
+            }
 
             #looper-overlay {
                 top: 0;
@@ -6800,22 +6800,30 @@
         // --- TAURI NATIVE OS INTEGRATION ---
         if (window.__TAURI__) {
             console.log("Native Tauri Environment Detected!");
-            // Tauri v2 uses .core.invoke
-            window.__TAURI__.core.invoke('get_samples')
-                .then((files) => {
-                    const group = document.getElementById('folderSamplesGroup');
-                    if (group && files.length > 0) {
-                        files.forEach(file => {
-                            const opt = document.createElement('option');
-                            opt.value = `sample_folder:samples/${file}`;
-                            opt.textContent = `💾 ${file.replace('.wav', '')}`;
-                            group.appendChild(opt);
-                        });
-                    } else if (group) {
-                        group.innerHTML = '<option disabled>No .wav files found in /samples/</option>';
-                    }
-                })
-                .catch(err => console.error("Tauri FS Error:", err));
+            try {
+                // Safely handle different Tauri versions/injection states without crashing
+                const tauriInvoke = (window.__TAURI__.core && window.__TAURI__.core.invoke) || window.__TAURI__.invoke;
+
+                if (tauriInvoke) {
+                    tauriInvoke('get_samples')
+                        .then((files) => {
+                            const group = document.getElementById('folderSamplesGroup');
+                            if (group && files.length > 0) {
+                                files.forEach(file => {
+                                    const opt = document.createElement('option');
+                                    opt.value = `sample_folder:samples/${file}`;
+                                    opt.textContent = `💾 ${file.replace('.wav', '')}`;
+                                    group.appendChild(opt);
+                                });
+                            } else if (group) {
+                                group.innerHTML = '<option disabled>No .wav files found in /samples/</option>';
+                            }
+                        })
+                        .catch(err => console.error("Tauri FS Error:", err));
+                }
+            } catch (err) {
+                console.warn("Tauri file system integration skipped:", err);
+            }
         }
 
         updateLabels(); updateScaleOverlay(); applyTransform(); drawEnvelope(); centerOnRoot(false);
