@@ -202,7 +202,7 @@
                 border-right: 1px solid var(--border-color);
                 border-bottom: 1px solid var(--border-color);
                 border-bottom-right-radius: 12px;
-                transform: translateX(-105%);
+                transform: translate3d(-105%, 0, 0);
             }
 
             .overlay.primary .control-row {
@@ -250,7 +250,7 @@
                 border-right: none;
                 border-bottom-left-radius: 12px;
                 border-bottom-right-radius: 12px;
-                transform: translateY(-105%);
+                transform: translate3d(0, -105%, 0);
             }
 
             .overlay.primary .control-row {
@@ -364,6 +364,7 @@
             z-index: 1;
             overflow: hidden;
             transition: background-color 0.3s;
+            touch-action: none;
         }
 
         .svg-wrapper:active {
@@ -376,6 +377,9 @@
             display: block;
             user-select: none;
             touch-action: none;
+            /* THE CHROME FIX: Forces the entire SVG canvas onto the GPU */
+            transform: translateZ(0); 
+            will-change: transform;
         }
 
         /* --- DOCKED PANEL ARCHITECTURE --- */
@@ -457,11 +461,11 @@
                 border-right: 1px solid var(--border-color);
                 border-bottom: 1px solid var(--border-color);
                 border-bottom-right-radius: 12px;
-                transform: translateX(-105%);
+                transform: translate3d(-105%, 0, 0);
             }
 
             .overlay.primary.active {
-                transform: translateX(0);
+                transform: translate3d(0, 0, 0);
             }
 
             #looper-overlay {
@@ -473,11 +477,11 @@
                 border-left: 1px solid var(--border-color);
                 border-bottom: 1px solid var(--border-color);
                 border-bottom-left-radius: 12px;
-                transform: translateX(105%);
+                transform: translate3d(105%, 0, 0);
             }
 
                 #looper-overlay.active {
-                    transform: translateX(0);
+                    transform: translate3d(0, 0, 0);
                 }
         }
 
@@ -494,7 +498,7 @@
                 border-right: none;
                 border-bottom: 2px solid var(--main-node);
                 border-radius: 0 0 16px 16px;
-                transform: translateY(-105%);
+                transform: translate3d(0, -105%, 0);
                 padding: 10px;
                 gap: 8px;
             }
@@ -505,7 +509,7 @@
             }
 
             .overlay.primary.active, #looper-overlay.active {
-                transform: translateY(0);
+                transform: translate3d(0, 0, 0);
             }
 
             /* Squeeze all internal wells, sections, and headers */
@@ -814,16 +818,16 @@
             min-width: 0;
         }
 
-            .control-group label {
-                font-size: 0.65rem;
-                color: var(--text-muted);
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                line-height: 1;
-                margin: 0 0 3px 0;
-                padding: 0;
-            }
+        .control-group label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1;
+            margin: 0 0 3px 0;
+            padding: 0;
+        }
 
         input[type=range] {
             width: 100%;
@@ -851,14 +855,14 @@
             width: 100%;
         }
 
-            select.highlight-select {
-                background: var(--bg-color);
-                color: var(--text-main);
-                font-weight: bold;
-                border: 2px solid var(--main-node);
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                font-size: 0.8rem;
-            }
+        select.highlight-select {
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-weight: bold;
+            border: 2px solid var(--main-node);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 0.8rem;
+        }
 
         .dark-theme select.highlight-select {
             border: 2px solid var(--main-node);
@@ -930,15 +934,15 @@
             overflow: hidden;
         }
 
-            .big-tap-btn * {
-                pointer-events: none;
-            }
+        .big-tap-btn * {
+            pointer-events: none;
+        }
 
-            .big-tap-btn span.icon {
-                font-size: clamp(1rem, 2.5vw, 1.4rem);
-                margin-bottom: 1px;
-                display: block;
-            }
+        .big-tap-btn span.icon {
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            margin-bottom: 1px;
+            display: block;
+        }
 
         .kb-shortcut {
             font-size: 0.6rem;
@@ -959,11 +963,11 @@
             border-color: var(--c-sus-bg);
         }
 
-            .btn-cat-sus.held {
-                background: var(--c-sus-txt);
-                color: var(--c-sus-bg);
-                border-color: var(--c-sus-txt);
-            }
+        .btn-cat-sus.held {
+            background: var(--c-sus-txt);
+            color: var(--c-sus-bg);
+            border-color: var(--c-sus-txt);
+        }
 
         .btn-cat-oct {
             background: var(--c-oct-bg);
@@ -971,11 +975,11 @@
             border-color: var(--c-oct-bg);
         }
 
-            .btn-cat-oct.held {
-                background: var(--c-oct-txt);
-                color: var(--c-oct-bg);
-                border-color: var(--c-oct-txt);
-            }
+        .btn-cat-oct.held {
+            background: var(--c-oct-txt);
+            color: var(--c-oct-bg);
+            border-color: var(--c-oct-txt);
+        }
 
         .btn-cat-add {
             background: var(--c-add-bg);
@@ -983,11 +987,11 @@
             border-color: var(--c-add-bg);
         }
 
-            .btn-cat-add.held {
-                background: var(--c-add-txt);
-                color: var(--c-add-bg);
-                border-color: var(--c-add-txt);
-            }
+        .btn-cat-add.held {
+            background: var(--c-add-txt);
+            color: var(--c-add-bg);
+            border-color: var(--c-add-txt);
+        }
 
         .btn-cat-arp {
             background: var(--c-arp-bg);
@@ -995,11 +999,11 @@
             border-color: var(--c-arp-bg);
         }
 
-            .btn-cat-arp.held {
-                background: var(--c-arp-txt);
-                color: var(--c-arp-bg);
-                border-color: var(--c-arp-txt);
-            }
+        .btn-cat-arp.held {
+            background: var(--c-arp-txt);
+            color: var(--c-arp-bg);
+            border-color: var(--c-arp-txt);
+        }
 
         .btn-cat-loc {
             background: var(--c-loc-bg);
@@ -1008,11 +1012,11 @@
             transition: all 0.15s;
         }
 
-            .btn-cat-loc.active-btn {
-                background: var(--c-loc-txt) !important;
-                color: var(--c-loc-bg) !important;
-                border-color: var(--c-loc-txt) !important;
-            }
+        .btn-cat-loc.active-btn {
+            background: var(--c-loc-txt) !important;
+            color: var(--c-loc-bg) !important;
+            border-color: var(--c-loc-txt) !important;
+        }
 
         .pad-header {
             font-size: 0.8rem;
@@ -1043,7 +1047,7 @@
             border-bottom-right-radius: 12px;
             z-index: 15;
             transition: top 0.3s, left 0.3s, transform 0.3s, opacity 0.2s;
-            transform: translateX(-100%);
+            transform: translate3d(-100%, 0, 0);
             opacity: 0;
             pointer-events: none;
             display: flex;
@@ -1054,11 +1058,11 @@
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
         }
 
-            .cof-overlay.active {
-                transform: translateX(0);
-                opacity: 1;
-                pointer-events: auto;
-            }
+        .cof-overlay.active {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+            pointer-events: auto;
+        }
 
         #cof-container {
             width: 100%;
@@ -1068,11 +1072,11 @@
             align-items: center;
         }
 
-            #cof-container svg {
-                width: 100%;
-                height: 100%;
-                display: block;
-            }
+        #cof-container svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
 
         .canvas-controls {
             position: absolute;
@@ -1123,55 +1127,64 @@
             transition: background 0.1s, transform 0.1s;
         }
 
-            .nav-btn:hover {
-                background: var(--border-color);
-            }
+        .nav-btn:hover {
+            background: var(--border-color);
+        }
 
-            .nav-btn:active {
-                transform: scale(0.9);
-            }
+        .nav-btn:active {
+            transform: scale(0.9);
+        }
 
-            .nav-btn.toggled {
-                background: var(--main-node);
-                color: white;
-                border-color: var(--main-node);
-            }
+        .nav-btn.toggled {
+            background: var(--main-node);
+            color: white;
+            border-color: var(--main-node);
+        }
 
-        /* --- FAB MENU & MOBILE NAV GRID --- */
-        @keyframes fab-pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7), 0 4px 12px rgba(0,0,0,0.4);
-            }
-
-            70% {
-                box-shadow: 0 0 0 15px rgba(255, 152, 0, 0), 0 4px 12px rgba(0,0,0,0.4);
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(255, 152, 0, 0), 0 4px 12px rgba(0,0,0,0.4);
-            }
+        /* GPU-Accelerated FAB Pulse */
+        @keyframes fab-pulse-gpu {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.6); opacity: 0; }
         }
 
         .fab-menu-btn {
             display: none;
             width: 56px;
-            height: 56px; /* Slightly larger for a better touch target */
+            height: 56px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #ffca28, #ff5722); /* Vibrant Amber to Deep Orange */
+            background: linear-gradient(135deg, #ffca28, #ff5722);
             color: white;
-            border: 3px solid rgba(255, 255, 255, 0.9); /* Crisp outer ring */
+            border: 3px solid rgba(255, 255, 255, 0.9);
             cursor: pointer;
             z-index: 101;
             transition: all 0.2s cubic-bezier(0.1, 0.8, 0.3, 1);
             font-size: 1.5rem;
             align-items: center;
             justify-content: center;
-            animation: fab-pulse 2s infinite cubic-bezier(0.66, 0, 0, 1); /* Sonar pulse effect */
+            position: relative; /* Needed for the pseudo-element */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Static shadow is fine */
         }
 
-            .fab-menu-btn:active {
-                transform: scale(0.9) !important;
-            }
+        /* The GPU-friendly animated ring */
+        .fab-menu-btn::after {
+            content: '';
+            position: absolute;
+            top: -3px; left: -3px; right: -3px; bottom: -3px;
+            border-radius: 50%;
+            border: 3px solid #ff9800;
+            animation: fab-pulse-gpu 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+            pointer-events: none;
+        }
+
+        .fab-menu-btn:active {
+            transform: scale(0.9) !important;
+        }
+
+        /* Hide the pulse when menu is open */
+        .canvas-controls.menu-open .fab-menu-btn::after {
+            animation: none;
+            opacity: 0;
+        }
 
         /* Dark mode adjustment for the outer ring */
         .dark-theme .fab-menu-btn {
@@ -1185,7 +1198,7 @@
 
             .nav-grid {
                 position: absolute;
-                bottom: 70px; /* Adjusted slightly for the larger FAB */
+                bottom: 70px;
                 top: auto;
                 right: 0;
                 transform-origin: bottom right;
@@ -1193,13 +1206,11 @@
                 opacity: 0;
                 pointer-events: none;
                 transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
-                background: rgba(248, 249, 250, 0.85);
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
+                background: var(--panel-bg); 
             }
 
             .dark-theme .nav-grid {
-                background: rgba(34, 34, 34, 0.85);
+                background: var(--panel-bg); 
             }
 
             /* The Open State */
@@ -1833,7 +1844,7 @@
             display: flex;
             z-index: 15;
             background: #111;
-            transform: translateY(100%);
+            transform: translate3d(0, 100%, 0);
             transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
             border-top: 2px solid var(--main-node);
             overflow-x: hidden;
@@ -1843,7 +1854,7 @@
         }
 
             .piano-overlay.active {
-                transform: translateY(0);
+                transform: translate3d(0, 0, 0);
             }
 
         .piano-key {
@@ -1879,7 +1890,7 @@
                 position: absolute;
                 bottom: 12px;
                 left: 50%;
-                transform: translateX(-50%);
+                transform: translate3d(-50%, 0, 0);
                 width: max(12px, calc(var(--key-width) * 0.48));
                 height: max(12px, calc(var(--key-width) * 0.48));
                 background-color: var(--ext-highlight-stroke);
@@ -1908,26 +1919,11 @@
                 z-index: 5;
             }
 
-            /* Hardware Optimization for Chromium / Tauri */
-            .low-graphics-mode .node {
-                filter: none !important;
-                box-shadow: none !important;
-                /* Forces GPU acceleration for basic transforms */
-                will-change: fill, transform;
-                transform: translateZ(0); 
-            }
-
-            /* Force WebView to render SVGs for speed, not pixel-perfect beauty */
-            .low-graphics-mode svg {
-                shape-rendering: optimizeSpeed;
-                text-rendering: optimizeSpeed;
-            }
-
             #toast-container {
                 position: fixed;
                 bottom: 20px;
                 left: 50%;
-                transform: translateX(-50%);
+                transform: translate3d(-50%, 0, 0);
                 background: rgba(0,0,0,0.85);
                 color: white;
                 padding: 12px 24px;
@@ -1944,8 +1940,53 @@
 
             #toast-container.show {
                 opacity: 1;
-                transform: translateX(-50%) translateY(-10px);
+                transform: translate3d(-50%, -10px, 0);
             }
+
+        /* =========================================================
+           CONDITIONAL PERFORMANCE CSS
+           ========================================================= */
+        
+        /* HIGH TIER: Full eye-candy and glassmorphism (All Orientations) */
+        body.perf-high .nav-grid {
+            background: rgba(248, 249, 250, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        body.dark-theme.perf-high .nav-grid { 
+            background: rgba(34, 34, 34, 0.85); 
+        }
+
+        /* LOW TIER: Maximum CPU/GPU survival mode */
+        body.perf-low .svg-wrapper {
+            background-image: none !important; 
+            background-color: var(--bg-color) !important;
+        }
+
+        body.perf-low * {
+            box-shadow: none !important; 
+            text-shadow: none !important;
+            filter: none !important; 
+        }
+
+        /* LOW TIER SAFETIES: Add flat borders since we killed the 3D shadows */
+        body.perf-low .overlay.primary, 
+        body.perf-low #looper-overlay, 
+        body.perf-low .nav-grid {
+            border: 2px solid var(--grid-line);
+        }
+
+        body.perf-low .piano-key.piano-ext-active::after {
+            box-shadow: none !important;
+            border: 1px solid var(--ext-highlight-stroke);
+            background-color: transparent;
+        }
+        
+        body.perf-low svg {
+            shape-rendering: optimizeSpeed;
+            text-rendering: optimizeSpeed;
+        }
+
     </style>
 </head>
 <body>
@@ -2656,7 +2697,7 @@
 
     <script>
         // =====================================================================
-        // ENVIRONMENT, HARDWARE & PERFORMANCE PROFILING
+        // 1. HARDWARE PROFILER & PERFORMANCE TIERS
         // =====================================================================
 
         // A. Base Platform Detection
@@ -2670,24 +2711,39 @@
         }
 
         // --- NATIVE WEBVIEW OPTIMIZATIONS ---
-        // Disable Right-Click menus and native text dragging to save CPU cycles
         window.addEventListener('contextmenu', e => e.preventDefault());
         window.addEventListener('dragstart', e => e.preventDefault());
 
-        // C. Performance Profile Evaluation
-        // Chromium engines (especially in Tauri) struggle with SVG + Audio. Mobile needs battery savings.
-        const isPerformanceRestricted = isTauri || isMobileDevice || !isFirefox;
+        // C. Hardware Profiler
+        const perfProfile = {
+            cores: navigator.hardwareConcurrency || 2, 
+            ram: navigator.deviceMemory || 2,
+            isMobile: isMobileDevice,
+            isTauri: isTauri,
+            tier: 'high'
+        };
 
-        console.log(`Environment - Mobile: ${isMobileDevice}, Tauri: ${isTauri}, Firefox: ${isFirefox}`);
-        console.log(`Profile - Performance Restricted Mode: ${isPerformanceRestricted}`);
+        // Determine Performance Tier
+        if (perfProfile.isMobile && (perfProfile.cores <= 4 || perfProfile.ram <= 3)) {
+            perfProfile.tier = 'low'; // Old phones, cheap tablets
+        } else if (perfProfile.isMobile || perfProfile.cores <= 4) {
+            perfProfile.tier = 'mid'; // Modern phones, older laptops
+        } else {
+            perfProfile.tier = 'high'; // Modern desktops, M-series Macs
+        }
 
-        // D. Engine Constants based on Profile
-        let maxVoices = isPerformanceRestricted ? 8 : 12;
-        let globalVoicePool = []; // Tracks active oscillators for Voice Stealing
+        console.log(`Hardware Profile: ${perfProfile.cores} Cores, ${perfProfile.ram}GB RAM. Tier: ${perfProfile.tier}`);
 
-        const targetFPS = isPerformanceRestricted ? 30 : 60;
+        // Inject the tier directly into the CSS engine
+        document.body.classList.add(`perf-${perfProfile.tier}`);
+
+        // D. Dynamic Engine Constants
+        let maxVoices = perfProfile.tier === 'low' ? 6 : (perfProfile.tier === 'mid' ? 12 : 24);
+        let globalVoicePool = [];
+
+        const targetFPS = perfProfile.tier === 'high' ? 60 : 30;
         const frameInterval = 1000 / targetFPS;
-        let lastVisualFrameTime = 0; // High-res timestamp for visual throttling
+        let lastVisualFrameTime = 0;
 
         // Pre-allocate massive arrays globally to bypass the Garbage Collector
         const VISUALIZER_BUFFER_SIZE = 2048;
@@ -3024,21 +3080,23 @@
 
         let transformPending = false;
         function applyTransform() {
-            constrainView();
+            constrainView(); 
             if (transformPending) return;
             transformPending = true;
+            
             requestAnimationFrame(() => {
                 const zoomGroup = document.getElementById('tonnetz-zoom-group');
                 if (zoomGroup) {
-                    zoomGroup.style.willChange = 'transform';
-
-                    // Add the Safe Area offset directly to the camera matrix!
                     const finalX = t_panX + lastSafeOffsetX;
                     const finalY = t_panY + lastSafeOffsetY;
 
+                    // THE CHROME FIX: Strip the broken CSS and use native SVG math
+                    zoomGroup.style.transform = ''; 
+                    zoomGroup.style.willChange = 'auto';
                     zoomGroup.setAttribute("transform", `translate(${finalX}, ${finalY}) scale(${t_scale})`);
                 }
-                updatePianoRange(); transformPending = false;
+                updatePianoRange(); 
+                transformPending = false;
             });
         }
 
@@ -3646,6 +3704,8 @@
         }, { passive: false });
 
         const lastTouchMap = new Map();
+        let isGlissando = false;
+        let glissandoTimeout = null;
 
         document.addEventListener('touchmove', e => {
             if (e.target.closest('svg') || e.target.closest('.piano-overlay') || e.target.closest('.manual-drum-grid') || e.target.closest('.pad-grid')) {
@@ -3653,22 +3713,54 @@
                 wakeNav();
             }
 
+            const now = Date.now();
+
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let touch = e.changedTouches[i];
 
+                // 1. PANNING OVERRIDE
                 if (touch.identifier === panningPointerId && t_isDragging) {
-                    t_panX = touch.clientX - t_startX; t_panY = touch.clientY - t_startY;
+                    t_panX = touch.clientX - t_startX; 
+                    t_panY = touch.clientY - t_startY;
                     applyTransform();
                     continue;
                 }
 
-                // PERFORMANCE FIX: Throttle elementFromPoint. Only query DOM if finger moved > 4px
-                let lastTouch = lastTouchMap.get(touch.identifier);
-                if (lastTouch && Math.abs(touch.clientX - lastTouch.x) < 4 && Math.abs(touch.clientY - lastTouch.y) < 4) {
-                    continue;
-                }
-                lastTouchMap.set(touch.identifier, { x: touch.clientX, y: touch.clientY });
+                // 2. HIT-TESTING SUSPENSION
+                if (t_isDragging) continue;
 
+                // 3. VELOCITY CALCULATION
+                let lastTouch = lastTouchMap.get(touch.identifier);
+                if (lastTouch) {
+                    const dx = touch.clientX - lastTouch.x;
+                    const dy = touch.clientY - lastTouch.y;
+                    const dt = now - lastTouch.time;
+
+                    if (dt > 0) {
+                        const speed = Math.sqrt(dx * dx + dy * dy) / dt; // Pixels per millisecond
+                        
+                        // If moving faster than ~1.5px/ms, trigger Glissando Mode
+                        if (speed > 1.5) {
+                            isGlissando = true;
+                            clearTimeout(glissandoTimeout);
+                            
+                            // Return to normal rendering 50ms after the finger slows down/stops
+                            glissandoTimeout = setTimeout(() => {
+                                isGlissando = false;
+                                updateHighlights(); 
+                            }, 50);
+                        }
+                    }
+                }
+
+                // Update memory cache
+                if (lastTouch) {
+                    lastTouch.time = now; lastTouch.x = touch.clientX; lastTouch.y = touch.clientY;
+                } else {
+                    lastTouchMap.set(touch.identifier, { x: touch.clientX, y: touch.clientY, time: now });
+                }
+
+                // 4. UNTHROTTLED HIT TESTING: Guarantees perfect audio on fast swipes
                 let el = getInteractiveElement(touch.clientX, touch.clientY);
                 if (el) {
                     triggerElementStart(el, touch.identifier);
@@ -4800,8 +4892,8 @@
             for (let i = 1; i < 10; i++) { ctx.moveTo(w * i / 10, 0); ctx.lineTo(w * i / 10, waveH); }
             ctx.moveTo(0, waveH / 2); ctx.lineTo(w, waveH / 2); ctx.stroke();
 
-            // Draw Oscilloscope Wave using sharedVisualizerData
-            if (!isPerformanceRestricted) {
+// Draw Oscilloscope Wave using sharedVisualizerData
+            if (perfProfile.tier !== 'low') {
                 ctx.lineWidth = 2 * dpr; ctx.strokeStyle = '#00ff41'; ctx.beginPath();
                 const sliceWidth = w * 1.0 / bufferLength; let x = 0;
                 for (let i = 0; i < bufferLength; i++) {
@@ -5037,11 +5129,17 @@
 
         let highlightUpdatePending = false;
         let previousHighlightState = "";
+        let cachedGridNodes = null; // RAM Cache for Chrome
 
         function updateHighlights() {
-            if (highlightUpdatePending) return; highlightUpdatePending = true;
+            if (highlightUpdatePending) return; 
+            highlightUpdatePending = true;
+
             requestAnimationFrame(() => {
-                highlightUpdatePending = false; playingMidiNotes.clear(); pianoExtensionNotes.clear(); const now = audioCtx ? audioCtx.currentTime : 0;
+                highlightUpdatePending = false; 
+                playingMidiNotes.clear(); 
+                pianoExtensionNotes.clear(); 
+                const now = audioCtx ? audioCtx.currentTime : 0;
 
                 activeNodes.forEach((nodeData) => {
                     if (nodeData.type === 'arp') { nodeData.voices.forEach(v => { if (now >= v.startTime && now < v.startTime + nodeData.stepDuration) { playingMidiNotes.add(v.midiNote); } }); }
@@ -5050,20 +5148,30 @@
                 });
                 midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
 
+                // 1. ALWAYS UPDATE PIANO: It's cheap and provides instant feedback during swipes
+                updatePianoVisuals(); 
+
+                // 2. THE USER'S FIX: Skip the heavy Tonnetz grid math during fast slides!
+                if (isGlissando) return;
+
+                // --- HEAVY TONNETZ LOGIC BELOW ---
                 // Track Pitch Classes (0-11) for octave-immune matching on the CoF
                 const playingPitchClasses = new Set();
                 playingMidiNotes.forEach(note => playingPitchClasses.add(((note % 12) + 12) % 12));
 
                 const currentStateStr = Array.from(playingMidiNotes).sort().join(',') + "|" + showExtensions + "|" + showChordDegrees;
-                if (currentStateStr === previousHighlightState) return; previousHighlightState = currentStateStr;
+                if (currentStateStr === previousHighlightState) return; 
+                previousHighlightState = currentStateStr;
 
                 const activeElements = new Set();
                 const extensionsToHighlight = new Set();
                 const extensionPitchClasses = new Set();
 
-                const highlightables = document.querySelectorAll('.highlightable:not(.piano-key)');
-                for (let i = 0; i < highlightables.length; i++) {
-                    let el = highlightables[i]; if (!el._st || el._st.length === 0) continue;
+                // THE CHROME FIX: Fetch from RAM instead of querying the DOM
+                if (!cachedGridNodes) cachedGridNodes = document.querySelectorAll('.highlightable:not(.piano-key)');
+                
+                for (let i = 0; i < cachedGridNodes.length; i++) {
+                    let el = cachedGridNodes[i]; if (!el._st || el._st.length === 0) continue;
                     let mappedNotes = snapStArray(el._st).map(st => { let f = getFreqFromSt(st); if (isOctUpOn()) f *= 2; if (isOctDownOn()) f *= 0.5; return Math.round(12 * Math.log2(f / masterTune) + 69); });
 
                     // CoF evaluates Pitch Classes instead of Absolute Octaves
@@ -5082,8 +5190,8 @@
                     }
                 }
 
-                for (let i = 0; i < highlightables.length; i++) {
-                    let el = highlightables[i]; const shouldBeActive = activeElements.has(el); const isActive = el._isActiveState === true;
+                for (let i = 0; i < cachedGridNodes.length; i++) {
+                    let el = cachedGridNodes[i]; const shouldBeActive = activeElements.has(el); const isActive = el._isActiveState === true;
                     if (el._highlightEl) {
                         if (shouldBeActive && !isActive) { el._isActiveState = true; el._highlightEl.classList.add(el._activeClass); el._highlightEl.style.opacity = '1'; }
                         else if (!shouldBeActive && isActive) { el._isActiveState = false; el._highlightEl.classList.remove(el._activeClass); if (!el._isExtState) el._highlightEl.style.opacity = '0'; }
@@ -5102,7 +5210,8 @@
                         }
                     }
                 }
-                updateChordDisplay(); updatePianoVisuals();
+                updateChordDisplay(); 
+                updatePianoVisuals(); // Final sweep to render any missed extensions
             });
         }
 
@@ -6767,15 +6876,23 @@
 
         document.documentElement.style.setProperty('--piano-h', isPianoActive ? 'clamp(80px, 16vh, 140px)' : '0px');
 
-        // --- AUTO-THROTTLE UI ALIGNMENT ---
-        if (isPerformanceRestricted) {
-            console.log("Applying Restricted Performance UI Profile...");
+        // --- TIERED UI SYNC ---
+        // Sync the Polyphony UI slider to whatever the Profiler decided it should be
+        const maxVoicesUI = document.getElementById('maxVoices');
+        const lblMaxVoices = document.getElementById('lblMaxVoices');
+        if (maxVoicesUI && lblMaxVoices) {
+            maxVoicesUI.value = maxVoices;
+            lblMaxVoices.textContent = `Polyphony: ${maxVoices}`;
+        }
+
+        // On Low-End devices, explicitly kill the JS math for the background pulse
+        if (perfProfile.tier === 'low') {
+            console.log("Applying Low-Tier CPU Optimizations...");
             
-            // 1. Disable Reactive Background & Zero Intensity to save GPU
             const bgMode = document.getElementById('bgEffectMode');
             if (bgMode) {
                 bgMode.value = 'off';
-                bgMode.dispatchEvent(new Event('change')); // Safely updates internal variables
+                bgMode.dispatchEvent(new Event('change'));
             }
             
             const bgIntensityUI = document.getElementById('bgIntensity');
@@ -6784,17 +6901,6 @@
                 bgIntensityUI.value = 0;
                 lblBgIntensity.textContent = `BG Intensity: 0%`;
             }
-
-            // 2. Sync Polyphony UI Slider with the background engine
-            const maxVoicesUI = document.getElementById('maxVoices');
-            const lblMaxVoices = document.getElementById('lblMaxVoices');
-            if (maxVoicesUI && lblMaxVoices) {
-                maxVoicesUI.value = maxVoices; // Grabs the global variable set at the top
-                lblMaxVoices.textContent = `Polyphony: ${maxVoices}`;
-            }
-
-            // 3. Disable heavy SVG shadows for Chromium/WebView
-            document.body.classList.add('low-graphics-mode');
         }
 
         // --- TAURI NATIVE OS INTEGRATION ---
