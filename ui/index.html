@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tonnetz Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="manifest" href="manifest.json">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9c27b0">
     <link rel="apple-touch-icon" href="icon-192.png">
@@ -155,9 +157,9 @@
             margin-left: 10px;
         }
 
-        .close-btn-sm:hover {
-            filter: brightness(0.9);
-        }
+            .close-btn-sm:hover {
+                filter: brightness(0.9);
+            }
 
         .drum-preset-wrapper {
             display: flex;
@@ -205,15 +207,15 @@
                 transform: translate3d(-105%, 0, 0);
             }
 
-            .overlay.primary .control-row {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-            }
+                .overlay.primary .control-row {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                }
 
-            .overlay.primary .pad-grid {
-                grid-template-columns: repeat(5, 1fr);
-                grid-template-rows: repeat(4, 1fr);
-            }
+                .overlay.primary .pad-grid {
+                    grid-template-columns: repeat(5, 1fr);
+                    grid-template-rows: repeat(4, 1fr);
+                }
 
             .thumb-row {
                 display: grid;
@@ -253,15 +255,15 @@
                 transform: translate3d(0, -105%, 0);
             }
 
-            .overlay.primary .control-row {
-                grid-template-columns: repeat(4, 1fr);
-                gap: 6px;
-            }
+                .overlay.primary .control-row {
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 6px;
+                }
 
-            .overlay.primary .pad-grid {
-                grid-template-columns: repeat(5, 1fr);
-                grid-template-rows: repeat(4, 1fr);
-            }
+                .overlay.primary .pad-grid {
+                    grid-template-columns: repeat(5, 1fr);
+                    grid-template-rows: repeat(4, 1fr);
+                }
 
             .thumb-row {
                 display: grid;
@@ -276,7 +278,7 @@
                 gap: 1vmin;
             }
 
-            .overlay.primary, #looper-overlay {
+            .overlay.primary, #studio-overlay {
                 padding: 10px;
                 gap: 6px;
             }
@@ -333,11 +335,11 @@
             font-size: 0.9rem;
         }
 
-        .manual-drum-btn:active, .manual-drum-btn.active-btn {
-            transform: scale(0.92);
-            filter: brightness(1.2);
-            box-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
+            .manual-drum-btn:active, .manual-drum-btn.active-btn {
+                transform: scale(0.92);
+                filter: brightness(1.2);
+                box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            }
 
         body {
             background: var(--bg-color);
@@ -367,9 +369,9 @@
             touch-action: none;
         }
 
-        .svg-wrapper:active {
-            cursor: grabbing;
-        }
+            .svg-wrapper:active {
+                cursor: grabbing;
+            }
 
         svg {
             width: 100%;
@@ -377,13 +379,11 @@
             display: block;
             user-select: none;
             touch-action: none;
-            /* THE CHROME FIX: Forces the entire SVG canvas onto the GPU */
-            transform: translateZ(0); 
-            will-change: transform;
+            transform: translateZ(0);
         }
 
         /* --- DOCKED PANEL ARCHITECTURE --- */
-        .overlay.primary, #looper-overlay {
+        .overlay.primary, #studio-overlay {
             position: absolute;
             background: var(--panel-bg);
             z-index: 20;
@@ -399,57 +399,59 @@
             pointer-events: none;
         }
 
-        .overlay.primary.active, #looper-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+            .overlay.primary.active, #studio-overlay.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
 
         /* --- CUSTOM TOUCH SCROLLBARS --- */
-        
+
         /* 1. Firefox Only (Hides the standard from Chrome) */
         @supports (-moz-appearance: none) {
             .overlay {
-                scrollbar-width: auto; 
+                scrollbar-width: auto;
                 scrollbar-color: var(--text-muted) transparent;
             }
+
             .dark-theme .overlay {
                 scrollbar-color: #666666 transparent;
             }
         }
-        
+
         /* 2. Chrome, Safari, Edge, Android */
         .overlay::-webkit-scrollbar {
             width: 22px !important; /* The massive invisible track */
         }
-        
+
         .overlay::-webkit-scrollbar-track {
-            background: transparent !important; 
+            background: transparent !important;
         }
-        
+
         .overlay::-webkit-scrollbar-thumb {
-            background-color: var(--text-muted); 
+            background-color: var(--text-muted);
             border-radius: 11px;
             /* 6px of invisible border pushes the thumb into a thick pill */
-            border: 6px solid transparent !important; 
-            background-clip: content-box !important; 
-            min-height: 40px; 
+            border: 6px solid transparent !important;
+            background-clip: content-box !important;
+            min-height: 40px;
         }
-        
-        /* Swells and lights up in the Theme Color on touch/hover! */
-        .overlay::-webkit-scrollbar-thumb:hover, 
-        .overlay::-webkit-scrollbar-thumb:active {
-            background-color: var(--main-node); 
-            border-width: 4px !important; 
-        }
-        
+
+            /* Swells and lights up in the Theme Color on touch/hover! */
+            .overlay::-webkit-scrollbar-thumb:hover,
+            .overlay::-webkit-scrollbar-thumb:active {
+                background-color: var(--main-node);
+                border-width: 4px !important;
+            }
+
         /* Dark Mode Adjustments */
         .dark-theme .overlay::-webkit-scrollbar-thumb {
             background-color: #666666;
         }
-        .dark-theme .overlay::-webkit-scrollbar-thumb:hover, 
-        .dark-theme .overlay::-webkit-scrollbar-thumb:active {
-            background-color: var(--main-node);
-        }
+
+            .dark-theme .overlay::-webkit-scrollbar-thumb:hover,
+            .dark-theme .overlay::-webkit-scrollbar-thumb:active {
+                background-color: var(--main-node);
+            }
 
         /* Desktop / Landscape: Left & Right Drawers */
         @media (orientation: landscape) {
@@ -464,11 +466,11 @@
                 transform: translate3d(-105%, 0, 0);
             }
 
-            .overlay.primary.active {
-                transform: translate3d(0, 0, 0);
-            }
+                .overlay.primary.active {
+                    transform: translate3d(0, 0, 0);
+                }
 
-            #looper-overlay {
+            #studio-overlay {
                 top: 0;
                 right: 0;
                 left: auto;
@@ -480,14 +482,14 @@
                 transform: translate3d(105%, 0, 0);
             }
 
-                #looper-overlay.active {
+                #studio-overlay.active {
                     transform: translate3d(0, 0, 0);
                 }
         }
 
         /* Mobile / Portrait: Top Dropdowns */
         @media (orientation: portrait) {
-            .overlay.primary, #looper-overlay {
+            .overlay.primary, #studio-overlay {
                 top: 0;
                 left: 0;
                 width: 100vw;
@@ -508,7 +510,7 @@
                 max-height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px)) - 15px) !important;
             }
 
-            .overlay.primary.active, #looper-overlay.active {
+            .overlay.primary.active, #studio-overlay.active {
                 transform: translate3d(0, 0, 0);
             }
 
@@ -611,35 +613,35 @@
             box-sizing: border-box;
         }
 
-        .track-btn.active {
-            background: var(--bg-color);
-            color: var(--text-main);
-            border: 2px solid var(--main-node);
-        }
+            .track-btn.active {
+                background: var(--bg-color);
+                color: var(--text-main);
+                border: 2px solid var(--text-muted); /* Neutral active border */
+            }
 
-        .track-btn.has-data {
-            border-bottom: 3px solid #4caf50;
-        }
+            /* Agnostic Type Colors (Applied via JS once recorded) */
+            .track-btn.type-voice {
+                border-bottom: 3px solid #9c27b0;
+            }
+            /* Purple for Synth */
+            .track-btn.type-drum {
+                border-bottom: 3px solid #ff9800;
+            }
+            /* Orange for Drums */
 
-        .track-btn.recording-track {
-            background: #f44336 !important;
-            color: white !important;
-            border-color: #f44336 !important;
-            animation: pulse-fast 0.5s infinite alternate;
-        }
+            .track-btn.recording-track {
+                background: #f44336 !important;
+                color: white !important;
+                border-color: #f44336 !important;
+                animation: pulse-fast 0.5s infinite alternate;
+            }
 
-        .track-btn.armed-track {
-            background: #ffeb3b !important;
-            color: #222 !important;
-            border-color: #fbc02d !important;
-            animation: pulse-fast 0.5s infinite alternate;
-        }
-
-        .dark-theme .track-btn.armed-track {
-            background: #fbc02d !important;
-            color: #111 !important;
-            border-color: #f57f17 !important;
-        }
+            .track-btn.armed-track {
+                background: #ffeb3b !important;
+                color: #222 !important;
+                border-color: #fbc02d !important;
+                animation: pulse-fast 0.5s infinite alternate;
+            }
 
         .mute-btn {
             width: 100%;
@@ -659,15 +661,15 @@
             box-sizing: border-box;
         }
 
-        .mute-btn:hover {
-            filter: brightness(0.9);
-        }
+            .mute-btn:hover {
+                filter: brightness(0.9);
+            }
 
-        .mute-btn.muted {
-            background: #f44336;
-            color: white;
-            border-color: #f44336;
-        }
+            .mute-btn.muted {
+                background: #f44336;
+                color: white;
+                border-color: #f44336;
+            }
 
         .looper-progress-bar {
             width: 100%;
@@ -715,24 +717,24 @@
             box-sizing: border-box;
         }
 
-        .looper-btn.recording {
-            background: #f44336 !important;
-            color: white !important;
-            border-color: #f44336;
-        }
+            .looper-btn.recording {
+                background: #f44336 !important;
+                color: white !important;
+                border-color: #f44336;
+            }
 
-        .looper-btn.playing {
-            background: #4caf50 !important;
-            color: white !important;
-            border-color: #4caf50;
-        }
+            .looper-btn.playing {
+                background: #4caf50 !important;
+                color: white !important;
+                border-color: #4caf50;
+            }
 
-        .looper-btn.armed {
-            background: #ff9800 !important;
-            color: white !important;
-            border-color: #ff9800;
-            animation: pulse-fast 0.5s infinite alternate;
-        }
+            .looper-btn.armed {
+                background: #ff9800 !important;
+                color: white !important;
+                border-color: #ff9800;
+                animation: pulse-fast 0.5s infinite alternate;
+            }
 
         @keyframes pulse-fast {
             from {
@@ -784,10 +786,10 @@
             padding-bottom: 6px;
         }
 
-        .control-row:last-of-type {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
+            .control-row:last-of-type {
+                border-bottom: none;
+                padding-bottom: 0;
+            }
 
         /* Inset Well for Advanced Settings */
         .control-well {
@@ -818,16 +820,16 @@
             min-width: 0;
         }
 
-        .control-group label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1;
-            margin: 0 0 3px 0;
-            padding: 0;
-        }
+            .control-group label {
+                font-size: 0.65rem;
+                color: var(--text-muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                line-height: 1;
+                margin: 0 0 3px 0;
+                padding: 0;
+            }
 
         input[type=range] {
             width: 100%;
@@ -855,14 +857,14 @@
             width: 100%;
         }
 
-        select.highlight-select {
-            background: var(--bg-color);
-            color: var(--text-main);
-            font-weight: bold;
-            border: 2px solid var(--main-node);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            font-size: 0.8rem;
-        }
+            select.highlight-select {
+                background: var(--bg-color);
+                color: var(--text-main);
+                font-weight: bold;
+                border: 2px solid var(--main-node);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                font-size: 0.8rem;
+            }
 
         .dark-theme select.highlight-select {
             border: 2px solid var(--main-node);
@@ -934,15 +936,15 @@
             overflow: hidden;
         }
 
-        .big-tap-btn * {
-            pointer-events: none;
-        }
+            .big-tap-btn * {
+                pointer-events: none;
+            }
 
-        .big-tap-btn span.icon {
-            font-size: clamp(1rem, 2.5vw, 1.4rem);
-            margin-bottom: 1px;
-            display: block;
-        }
+            .big-tap-btn span.icon {
+                font-size: clamp(1rem, 2.5vw, 1.4rem);
+                margin-bottom: 1px;
+                display: block;
+            }
 
         .kb-shortcut {
             font-size: 0.6rem;
@@ -963,11 +965,11 @@
             border-color: var(--c-sus-bg);
         }
 
-        .btn-cat-sus.held {
-            background: var(--c-sus-txt);
-            color: var(--c-sus-bg);
-            border-color: var(--c-sus-txt);
-        }
+            .btn-cat-sus.held {
+                background: var(--c-sus-txt);
+                color: var(--c-sus-bg);
+                border-color: var(--c-sus-txt);
+            }
 
         .btn-cat-oct {
             background: var(--c-oct-bg);
@@ -975,11 +977,11 @@
             border-color: var(--c-oct-bg);
         }
 
-        .btn-cat-oct.held {
-            background: var(--c-oct-txt);
-            color: var(--c-oct-bg);
-            border-color: var(--c-oct-txt);
-        }
+            .btn-cat-oct.held {
+                background: var(--c-oct-txt);
+                color: var(--c-oct-bg);
+                border-color: var(--c-oct-txt);
+            }
 
         .btn-cat-add {
             background: var(--c-add-bg);
@@ -987,11 +989,11 @@
             border-color: var(--c-add-bg);
         }
 
-        .btn-cat-add.held {
-            background: var(--c-add-txt);
-            color: var(--c-add-bg);
-            border-color: var(--c-add-txt);
-        }
+            .btn-cat-add.held {
+                background: var(--c-add-txt);
+                color: var(--c-add-bg);
+                border-color: var(--c-add-txt);
+            }
 
         .btn-cat-arp {
             background: var(--c-arp-bg);
@@ -999,11 +1001,11 @@
             border-color: var(--c-arp-bg);
         }
 
-        .btn-cat-arp.held {
-            background: var(--c-arp-txt);
-            color: var(--c-arp-bg);
-            border-color: var(--c-arp-txt);
-        }
+            .btn-cat-arp.held {
+                background: var(--c-arp-txt);
+                color: var(--c-arp-bg);
+                border-color: var(--c-arp-txt);
+            }
 
         .btn-cat-loc {
             background: var(--c-loc-bg);
@@ -1012,11 +1014,11 @@
             transition: all 0.15s;
         }
 
-        .btn-cat-loc.active-btn {
-            background: var(--c-loc-txt) !important;
-            color: var(--c-loc-bg) !important;
-            border-color: var(--c-loc-txt) !important;
-        }
+            .btn-cat-loc.active-btn {
+                background: var(--c-loc-txt) !important;
+                color: var(--c-loc-bg) !important;
+                border-color: var(--c-loc-txt) !important;
+            }
 
         .pad-header {
             font-size: 0.8rem;
@@ -1058,11 +1060,11 @@
             box-shadow: 0 8px 16px rgba(0,0,0,0.2);
         }
 
-        .cof-overlay.active {
-            transform: translate3d(0, 0, 0);
-            opacity: 1;
-            pointer-events: auto;
-        }
+            .cof-overlay.active {
+                transform: translate3d(0, 0, 0);
+                opacity: 1;
+                pointer-events: auto;
+            }
 
         #cof-container {
             width: 100%;
@@ -1072,11 +1074,11 @@
             align-items: center;
         }
 
-        #cof-container svg {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+            #cof-container svg {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
 
         .canvas-controls {
             position: absolute;
@@ -1127,24 +1129,31 @@
             transition: background 0.1s, transform 0.1s;
         }
 
-        .nav-btn:hover {
-            background: var(--border-color);
-        }
+            .nav-btn:hover {
+                background: var(--border-color);
+            }
 
-        .nav-btn:active {
-            transform: scale(0.9);
-        }
+            .nav-btn:active {
+                transform: scale(0.9);
+            }
 
-        .nav-btn.toggled {
-            background: var(--main-node);
-            color: white;
-            border-color: var(--main-node);
-        }
+            .nav-btn.toggled {
+                background: var(--main-node);
+                color: white;
+                border-color: var(--main-node);
+            }
 
         /* GPU-Accelerated FAB Pulse */
         @keyframes fab-pulse-gpu {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.6); opacity: 0; }
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.6);
+                opacity: 0;
+            }
         }
 
         .fab-menu-btn {
@@ -1165,20 +1174,23 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Static shadow is fine */
         }
 
-        /* The GPU-friendly animated ring */
-        .fab-menu-btn::after {
-            content: '';
-            position: absolute;
-            top: -3px; left: -3px; right: -3px; bottom: -3px;
-            border-radius: 50%;
-            border: 3px solid #ff9800;
-            animation: fab-pulse-gpu 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
-            pointer-events: none;
-        }
+            /* The GPU-friendly animated ring */
+            .fab-menu-btn::after {
+                content: '';
+                position: absolute;
+                top: -3px;
+                left: -3px;
+                right: -3px;
+                bottom: -3px;
+                border-radius: 50%;
+                border: 3px solid #ff9800;
+                animation: fab-pulse-gpu 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+                pointer-events: none;
+            }
 
-        .fab-menu-btn:active {
-            transform: scale(0.9) !important;
-        }
+            .fab-menu-btn:active {
+                transform: scale(0.9) !important;
+            }
 
         /* Hide the pulse when menu is open */
         .canvas-controls.menu-open .fab-menu-btn::after {
@@ -1206,11 +1218,11 @@
                 opacity: 0;
                 pointer-events: none;
                 transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
-                background: var(--panel-bg); 
+                background: var(--panel-bg);
             }
 
             .dark-theme .nav-grid {
-                background: var(--panel-bg); 
+                background: var(--panel-bg);
             }
 
             /* The Open State */
@@ -1680,7 +1692,6 @@
         .highlight-overlay {
             transition: opacity 0.1s ease-out;
             pointer-events: none;
-            will-change: opacity;
         }
 
         .extension-highlight {
@@ -1906,37 +1917,37 @@
                 height: max(12px, calc(var(--key-width) * 0.48));
             }
 
-            .degree-label {
-                position: absolute;
-                top: 4px;
-                left: 0;
-                width: 100%;
-                text-align: center;
-                color: var(--ext-highlight-stroke);
-                font-weight: bold;
-                font-size: calc(var(--key-width) * 0.28);
-                pointer-events: none;
-                z-index: 5;
-            }
+        .degree-label {
+            position: absolute;
+            top: 4px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: var(--ext-highlight-stroke);
+            font-weight: bold;
+            font-size: calc(var(--key-width) * 0.28);
+            pointer-events: none;
+            z-index: 5;
+        }
 
-            #toast-container {
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translate3d(-50%, 0, 0);
-                background: rgba(0,0,0,0.85);
-                color: white;
-                padding: 12px 24px;
-                border-radius: 8px;
-                z-index: 1000;
-                font-weight: bold;
-                font-size: 0.9rem;
-                transition: opacity 0.3s, transform 0.3s;
-                opacity: 0;
-                pointer-events: none;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                border: 1px solid rgba(255,255,255,0.2);
-            }
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translate3d(-50%, 0, 0);
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 1000;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.3s, transform 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
 
             #toast-container.show {
                 opacity: 1;
@@ -1946,32 +1957,33 @@
         /* =========================================================
            CONDITIONAL PERFORMANCE CSS
            ========================================================= */
-        
+
         /* HIGH TIER: Full eye-candy and glassmorphism (All Orientations) */
         body.perf-high .nav-grid {
             background: rgba(248, 249, 250, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
-        body.dark-theme.perf-high .nav-grid { 
-            background: rgba(34, 34, 34, 0.85); 
+
+        body.dark-theme.perf-high .nav-grid {
+            background: rgba(34, 34, 34, 0.85);
         }
 
         /* LOW TIER: Maximum CPU/GPU survival mode */
         body.perf-low .svg-wrapper {
-            background-image: none !important; 
+            background-image: none !important;
             background-color: var(--bg-color) !important;
         }
 
         body.perf-low * {
-            box-shadow: none !important; 
+            box-shadow: none !important;
             text-shadow: none !important;
-            filter: none !important; 
+            filter: none !important;
         }
 
         /* LOW TIER SAFETIES: Add flat borders since we killed the 3D shadows */
-        body.perf-low .overlay.primary, 
-        body.perf-low #looper-overlay, 
+        body.perf-low .overlay.primary,
+        body.perf-low #studio-overlay,
         body.perf-low .nav-grid {
             border: 2px solid var(--grid-line);
         }
@@ -1981,12 +1993,11 @@
             border: 1px solid var(--ext-highlight-stroke);
             background-color: transparent;
         }
-        
+
         body.perf-low svg {
             shape-rendering: optimizeSpeed;
             text-rendering: optimizeSpeed;
         }
-
     </style>
 </head>
 <body>
@@ -2009,15 +2020,15 @@
             <button id="btnHome" class="nav-btn" title="Center on Root">◎</button>
             <button id="btnPanRight" class="nav-btn" title="Pan Right">▶</button>
             <button id="btnTogglePads" class="nav-btn" title="Performance Pads (F3)">🎛️</button>
-            <button id="btnToggleSynth" class="nav-btn" title="Synth Engine">🎚️</button>
+            <button id="btnToggleSynth" class="nav-btn" title="Synth Engine">🎺</button>
             <button id="btnPanDown" class="nav-btn" title="Pan Down">▼</button>
-            <button id="btnToggleLooper" class="nav-btn" title="Live Looper">🔁</button>
+            <button id="btnToggleStudio" class="nav-btn" title="Multitrack Studio">🎙️</button>
             <button id="btnToggleDrums" class="nav-btn" title="Drum Machine">🥁</button>
             <button id="btnFullscreen" class="nav-btn" title="Fullscreen">⛶</button>
             <button id="btnToggleCOF" class="nav-btn" title="Circle of Fifths (F4)">⭕</button>
             <button id="btnTogglePiano" class="nav-btn toggled" title="Piano Keyboard">🎹</button>
             <button id="btnInfo" class="nav-btn" title="Info & Theory (F1)">ℹ️</button>
-            <button id="btnToggleMixer" class="nav-btn" title="Mixer & EQ Desk" style="grid-column: span 4; font-size: 0.75rem; font-weight: bold; border-radius: 4px;">MIX/EQ</button>
+            <button id="btnToggleMixer" class="nav-btn" title="Mixer & EQ Desk" style="grid-column: span 4; font-size: 0.75rem; font-weight: bold; border-radius: 4px;">🎚️MIX/EQ</button>
         </div>
     </div>
 
@@ -2400,119 +2411,140 @@
         <div id="cof-container"></div>
     </div>
 
-    <!-- OVERLAY 4: 8-Track Looper/Sequencer -->
-    <div id="looper-overlay" class="overlay primary">
+    <!-- Unified Studio Overlay -->
+    <div id="studio-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
-                Live 8-Track Looper
-                <span style="flex-grow:1; text-align:right; margin-right: 10px;"><span id="looper-status-text" style="font-size:0.65rem; color:var(--text-muted); font-weight:bold;">STOPPED</span></span>
-                <button id="btnCloseLooper" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                Multitrack Studio
+                <button id="btnCloseStudio" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
             </div>
 
-            <!-- Main 8-Track Sequencer Well -->
             <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); display: flex; justify-content: space-between;">
+                    <span>Live Looper (Cycles)</span>
+                    <span id="looper-status-text">STOPPED</span>
+                </div>
                 <div class="looper-grid">
                     <div class="looper-row">
-                        <div class="looper-row-label">Synth / Voice Tracks</div>
                         <div class="looper-tracks-row">
-                            <div class="track-col"><div class="inst-label" id="inst-label-0"></div><button class="track-btn active" data-track="0" data-type="voice">V1</button><button class="mute-btn" data-track="0">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-1"></div><button class="track-btn" data-track="1" data-type="voice">V2</button><button class="mute-btn" data-track="1">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-2"></div><button class="track-btn" data-track="2" data-type="voice">V3</button><button class="mute-btn" data-track="2">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-3"></div><button class="track-btn" data-track="3" data-type="voice">V4</button><button class="mute-btn" data-track="3">Mute</button></div>
-                        </div>
-                    </div>
-                    <div class="looper-row">
-                        <div class="looper-row-label">Drum / Beat Tracks</div>
-                        <div class="looper-tracks-row">
-                            <div class="track-col"><button class="track-btn active" data-track="4" data-type="drum">D1</button><button class="mute-btn" data-track="4">Mute</button></div>
-                            <div class="track-col"><button class="track-btn" data-track="5" data-type="drum">D2</button><button class="mute-btn" data-track="5">Mute</button></div>
-                            <div class="track-col"><button class="track-btn" data-track="6" data-type="drum">D3</button><button class="mute-btn" data-track="6">Mute</button></div>
-                            <div class="track-col"><button class="track-btn" data-track="7" data-type="drum">D4</button><button class="mute-btn" data-track="7">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-0">EMPTY</div><button class="track-btn active" data-track="0" data-domain="looper">L1</button><button class="mute-btn" data-track="0">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-1">EMPTY</div><button class="track-btn" data-track="1" data-domain="looper">L2</button><button class="mute-btn" data-track="1">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-2">EMPTY</div><button class="track-btn" data-track="2" data-domain="looper">L3</button><button class="mute-btn" data-track="2">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-3">EMPTY</div><button class="track-btn" data-track="3" data-domain="looper">L4</button><button class="mute-btn" data-track="3">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-4">EMPTY</div><button class="track-btn" data-track="4" data-domain="looper">L5</button><button class="mute-btn" data-track="4">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-5">EMPTY</div><button class="track-btn" data-track="5" data-domain="looper">L6</button><button class="mute-btn" data-track="5">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-6">EMPTY</div><button class="track-btn" data-track="6" data-domain="looper">L7</button><button class="mute-btn" data-track="6">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-7">EMPTY</div><button class="track-btn" data-track="7" data-domain="looper">L8</button><button class="mute-btn" data-track="7">Mute</button></div>
                         </div>
                     </div>
                 </div>
+                <div class="looper-progress-bar" style="margin-top: 0px; margin-bottom: 0; height: 5px;"><div id="looper-progress-fill"></div></div>
+                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0; margin-top: 4px;">
+                    <button id="btnLooperRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">⏺</button>
+                    <div style="grid-column: span 1; pointer-events: none; visibility: hidden;"></div>
+                    <button id="btnLooperPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">▶</button>
+                    <div style="grid-column: span 1; pointer-events: none; visibility: hidden;"></div>
+                    <select id="looperLength" class="looper-btn" style="grid-column: span 2; text-align: center; appearance: none; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
+                        <option value="1">1 Bar</option>
+                        <option value="2">2 Bars</option>
+                        <option value="4" selected>4 Bars</option>
+                        <option value="8">8 Bars</option>
+                    </select>
+                </div>
+            </div>
 
-                <div class="looper-progress-bar" style="margin-top: 8px;"><div id="looper-progress-fill"></div></div>
-                <div class="looper-controls" style="margin-top: 8px;">
-                    <div class="looper-actions">
-                        <button id="btnLooperRec" class="looper-btn">⏺ Record</button>
-                        <button id="btnLooperPlay" class="looper-btn">▶ Play</button>
-                        <button id="btnLooperClear" class="looper-btn">🗑 Clear V1</button>
-                        <select id="looperLength" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold;">
-                            <option value="1">1 Bar</option>
-                            <option value="2">2 Bars</option>
-                            <option value="4" selected>4 Bars</option>
-                            <option value="8">8 Bars</option>
-                        </select>
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); display: flex; justify-content: space-between;">
+                    <span>Linear Arranger (Timeline)</span>
+                    <span id="arranger-status-text">STOPPED 0:00</span>
+                </div>
+                <div class="looper-grid">
+                    <div class="looper-row">
+                        <div class="looper-tracks-row">
+                            <div class="track-col"><div class="inst-label" id="inst-label-8">EMPTY</div><button class="track-btn" data-track="8" data-domain="arranger">A1</button><button class="mute-btn" data-track="8">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-9">EMPTY</div><button class="track-btn" data-track="9" data-domain="arranger">A2</button><button class="mute-btn" data-track="9">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-10">EMPTY</div><button class="track-btn" data-track="10" data-domain="arranger">A3</button><button class="mute-btn" data-track="10">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-11">EMPTY</div><button class="track-btn" data-track="11" data-domain="arranger">A4</button><button class="mute-btn" data-track="11">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-12">EMPTY</div><button class="track-btn" data-track="12" data-domain="arranger">A5</button><button class="mute-btn" data-track="12">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-13">EMPTY</div><button class="track-btn" data-track="13" data-domain="arranger">A6</button><button class="mute-btn" data-track="13">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-14">EMPTY</div><button class="track-btn" data-track="14" data-domain="arranger">A7</button><button class="mute-btn" data-track="14">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-15">EMPTY</div><button class="track-btn" data-track="15" data-domain="arranger">A8</button><button class="mute-btn" data-track="15">Mute</button></div>
+                        </div>
                     </div>
-                    <div class="looper-actions" style="margin-top: 5px;">
-                        <button id="btnLooperQuantize" class="looper-btn" style="flex: 1;">Input Snap: OFF</button>
-                        <select id="looperQuantizeRes" class="looper-btn" style="flex: 1; text-align: center; appearance: none; font-weight: bold;">
-                            <option value="8">Grid: 1/8 Notes</option>
-                            <option value="16" selected>Grid: 1/16 Notes</option>
-                            <option value="32">Grid: 1/32 Notes</option>
-                        </select>
+                </div>
+                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0; margin-top: 4px;">
+                    <button id="btnArrangerRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">⏺</button>
+                    <button id="btn-arranger-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">⏪</button>
+                    <button id="btnArrangerPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">▶</button>
+                    <button id="btn-arranger-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">⏩</button>
+                    <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
+                        <span id="arranger-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">0:00</span>
+                        <input type="range" id="arranger-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; accent-color: #2196f3; cursor: pointer;">
                     </div>
                 </div>
             </div>
 
-            <!-- Import Audio Well -->
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Import Audio Track</div>
-                <div class="control-row" style="grid-template-columns: 1fr;">
+                <div class="control-row" style="grid-template-columns: repeat(3, 1fr); gap: 4px; border: none; padding: 0;">
+                    <button id="btnGlobalClear" class="looper-btn" style="border-color:var(--text-main); color:var(--text-main);">🗑 Clear L1</button>
+                    <button id="btnLooperQuantize" class="looper-btn" style="border-color:var(--text-main); color:var(--text-main);">Input Snap: OFF</button>
+                    <select id="looperQuantizeRes" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
+                        <option value="8">Grid: 1/8</option>
+                        <option value="16" selected>Grid: 1/16</option>
+                        <option value="32">Grid: 1/32</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Import Backing Track</div>
+                <div class="control-row" style="grid-template-columns: 1fr; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group"><input type="file" id="import-audio-file" accept="audio/*" style="font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px; box-sizing: border-box; background: var(--bg-color); color: var(--text-main);"></div>
                 </div>
-                <div class="control-row" style="grid-template-columns: 1.5fr 1fr; border: none; padding: 0; margin-top: 4px;">
-                    <div style="display:flex; gap: 4px; align-items: center;">
-                        <button id="btn-import-rw" class="looper-btn" style="width: 32px; padding:0;" title="Rewind 5s">⏪</button>
-                        <button id="btn-import-play" class="looper-btn" style="width: 32px; padding:0;" title="Play/Pause">▶</button>
-                        <button id="btn-import-ff" class="looper-btn" style="width: 32px; padding:0;" title="Fast Forward 5s">⏩</button>
-                        <input type="range" id="import-seeker" min="0" max="100" value="0" style="flex: 1; height: 22px; margin: 0;">
-                    </div>
-                    <div style="display:flex; align-items: center; justify-content: flex-end; gap: 8px;">
-                        <label style="font-size: 0.65rem; font-weight:bold; color: var(--text-muted); display:flex; align-items:center; gap: 2px; margin:0;">Vol: <input type="range" id="import-vol" min="0" max="1" step="0.01" value="0.5" style="width: 45px; height: 16px; margin:0;"></label>
-                        <label style="font-size: 0.65rem; font-weight:bold; color: var(--text-muted); display:flex; align-items:center; gap: 2px; cursor:pointer; margin:0;"><input type="checkbox" id="import-mix-master" checked style="margin: 0; width: 14px; height: 14px;"> Master Mix</label>
+                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0;">
+                    <button id="btn-import-mix-master" class="looper-btn active-btn" style="grid-column: span 1; padding:0; font-size: 0.6rem; border-color:var(--main-node);" title="Master Mix">MIX: ON</button>
+                    <button id="btn-import-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">⏪</button>
+                    <button id="btn-import-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">▶</button>
+                    <button id="btn-import-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">⏩</button>
+                    <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
+                        <span id="import-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">0:00 / 0:00</span>
+                        <input type="range" id="import-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
                     </div>
                 </div>
                 <audio id="imported-audio-element" style="display:none;"></audio>
             </div>
 
-            <!-- Master Recording Well -->
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Output Recording</div>
-                <div class="control-row" style="grid-template-columns: repeat(4, 1fr);">
-                    <div class="control-group">
-                        <label>Format</label>
-                        <select id="export-format" class="ui-select">
-                            <option value="audio/webm;codecs=opus">WebM</option>
-                            <option value="audio/mp4">MP4</option>
-                            <option value="audio/mpeg">MP3</option>
-                            <option value="audio/wav">WAV</option>
-                        </select>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Output & Bouncing</div>
+                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+                    <select id="export-format" class="looper-btn" style="grid-column: span 2; text-align: center; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
+                        <option value="audio/webm;codecs=opus">WebM</option>
+                        <option value="audio/mp4">MP4</option>
+                        <option value="audio/mpeg">MP3</option>
+                        <option value="audio/wav">WAV</option>
+                    </select>
+                    <select id="export-bitrate" class="looper-btn" style="grid-column: span 1; text-align: center; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
+                        <option value="32000">32k</option>
+                        <option value="64000">64k</option>
+                        <option value="128000">128k</option>
+                        <option value="256000" selected>256k</option>
+                        <option value="320000">320k</option>
+                    </select>
+                    <div style="grid-column: span 3; display: flex; gap: 4px;">
+                        <button id="btn-master-save" disabled class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: var(--text-muted); color: var(--text-main);" title="Save Master Mix">💾 MIX</button>
+                        <button id="btn-export-stems" class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: #ff9800; color: #ff9800;" title="Export Project ZIP (.dawproject)">📦 OUT</button>
+                        <button id="btn-import-stems" class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: #2196f3; color: #2196f3;" title="Recall Project ZIP (.dawproject)">📥 IN</button>
+                        <input type="file" id="import-zip-input" accept=".zip,.dawproject" style="display:none;">
                     </div>
-                    <div class="control-group">
-                        <label>Bitrate</label>
-                        <select id="export-bitrate" class="ui-select">
-                            <option value="32000">32k</option>
-                            <option value="64000">64k</option>
-                            <option value="128000">128k</option>
-                            <option value="256000" selected>256k</option>
-                            <option value="320000">320k</option>
-                        </select>
-                    </div>
-                    <div class="control-group"><label>Capture</label><button id="btn-master-rec" style="background:#c2185b; color:white; border:none;">🔴 START REC</button></div>
-                    <div class="control-group"><label>Export</label><button id="btn-master-save" disabled>💾 SAVE AS...</button></div>
                 </div>
-
-                <div class="control-row" style="grid-template-columns: 1.5fr 1fr; border: none; padding: 0; margin-top: 4px;">
-                    <div style="display:flex; gap: 4px; align-items: center;">
-                        <button id="btn-rec-rw" class="looper-btn" style="width: 32px; padding:0;" disabled title="Rewind 5s">⏪</button>
-                        <button id="btn-rec-play" class="looper-btn" style="width: 32px; padding:0;" disabled title="Play/Pause">▶</button>
-                        <button id="btn-rec-ff" class="looper-btn" style="width: 32px; padding:0;" disabled title="Fast Forward 5s">⏩</button>
-                        <input type="range" id="master-seeker" min="0" max="100" value="0" disabled style="flex: 1; height: 22px; margin: 0;">
-                    </div>
-                    <div style="display:flex; align-items: center; justify-content: flex-end;">
-                        <button id="lbl-rec-time" disabled style="background:transparent; border:none; color:var(--text-main); font-size: 0.75rem; font-weight: bold; cursor:default; padding: 0; margin: 0;">00:00 / 00:00</button>
+                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0;">
+                    <button id="btn-master-rec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record Master">⏺</button>
+                    <button id="btn-rec-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Rewind 5s">⏪</button>
+                    <button id="btn-rec-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" disabled title="Play/Pause">▶</button>
+                    <button id="btn-rec-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Fast Forward 5s">⏩</button>
+                    <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
+                        <span id="lbl-rec-time" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">00:00 / 00:00</span>
+                        <input type="range" id="master-seeker" min="0" max="100" value="0" disabled style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
                     </div>
                 </div>
                 <audio id="masterAudioPlayer" style="display: none;"></audio>
@@ -2561,22 +2593,34 @@
                 </div>
             </div>
 
-            <!-- Section B: 8-Track Looper Detailed Mixer -->
+            <!-- Section B: 16-Channel Mixer Grid -->
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">
                     <span>Looper & Aux Sends</span>
                 </div>
                 <div class="mixer-grid-8">
-                    <!-- V1 to V4 -->
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0" title="aux-send ECHO V1"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0" title="aux-send REVERB V1"><input type="range" class="aux-send pan-slider" data-track="0" min="-1" max="1" step="0.01" value="0" title="Pan V1 (L/R)"><label>V1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0" title="aux-send ECHO V2"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0" title="aux-send REVERB V2"><input type="range" class="aux-send pan-slider" data-track="1" min="-1" max="1" step="0.01" value="0" title="Pan V2 (L/R)"><label>V2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0" title="aux-send ECHO V3"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0" title="aux-send REVERB V3"><input type="range" class="aux-send pan-slider" data-track="2" min="-1" max="1" step="0.01" value="0" title="Pan V3 (L/R)"><label>V3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0" title="aux-send ECHO V4"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0" title="aux-send REVERB V4"><input type="range" class="aux-send pan-slider" data-track="3" min="-1" max="1" step="0.01" value="0" title="Pan V4 (L/R)"><label>V4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
-                    <!-- D1 to D4 -->
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0" title="aux-send ECHO D1"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0" title="aux-send REVERB D1"><input type="range" class="aux-send pan-slider" data-track="4" min="-1" max="1" step="0.01" value="0" title="Pan D1 (L/R)"><label>D1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0" title="aux-send ECHO D2"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0" title="aux-send REVERB D2"><input type="range" class="aux-send pan-slider" data-track="5" min="-1" max="1" step="0.01" value="0" title="Pan D2 (L/R)"><label>D2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0" title="aux-send ECHO D3"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0" title="aux-send REVERB D3"><input type="range" class="aux-send pan-slider" data-track="6" min="-1" max="1" step="0.01" value="0" title="Pan D3 (L/R)"><label>D3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0" title="aux-send ECHO D4"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0" title="aux-send REVERB D4"><input type="range" class="aux-send pan-slider" data-track="7" min="-1" max="1" step="0.01" value="0" title="Pan D4 (L/R)"><label>D4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="0" min="-1" max="1" step="0.01" value="0"><label>L1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="1" min="-1" max="1" step="0.01" value="0"><label>L2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="2" min="-1" max="1" step="0.01" value="0"><label>L3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="3" min="-1" max="1" step="0.01" value="0"><label>L4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="4" min="-1" max="1" step="0.01" value="0"><label>L5</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="5" min="-1" max="1" step="0.01" value="0"><label>L6</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="6" min="-1" max="1" step="0.01" value="0"><label>L7</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="7" min="-1" max="1" step="0.01" value="0"><label>L8</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
+                </div>
+
+                <div class="section-title" style="margin: 8px 0 6px 0; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">
+                    <span>Arranger Tracks (A1-A8)</span>
+                </div>
+                <div class="mixer-grid-8">
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="8" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="8" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="8" min="-1" max="1" step="0.01" value="0"><label>A1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="8" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="9" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="9" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="9" min="-1" max="1" step="0.01" value="0"><label>A2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="9" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="10" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="10" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="10" min="-1" max="1" step="0.01" value="0"><label>A3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="10" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="11" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="11" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="11" min="-1" max="1" step="0.01" value="0"><label>A4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="11" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="12" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="12" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="12" min="-1" max="1" step="0.01" value="0"><label>A5</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="12" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="13" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="13" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="13" min="-1" max="1" step="0.01" value="0"><label>A6</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="13" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="14" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="14" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="14" min="-1" max="1" step="0.01" value="0"><label>A7</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="14" min="0" max="1" step="0.01" value="1.0"></div>
+                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="15" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="15" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="15" min="-1" max="1" step="0.01" value="0"><label>A8</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="15" min="0" max="1" step="0.01" value="1.0"></div>
                 </div>
             </div>
 
@@ -2784,6 +2828,9 @@
         document.body.classList.toggle('dark-theme', isDarkMode);
 
         const DX = 140; const DY = DX * Math.sqrt(3) / 2;
+        const gridBuffer = 2;
+        const GRID_W = 1600;
+        const GRID_H = 1200;
 
         let showExtensions = true, showChordDegrees = false;
         let currentIdentifiedRootPC = null;
@@ -2799,7 +2846,12 @@
         let add69Held = false, addMaj7Held = false, addFlat5Held = false, addSharp5Held = false, addSus4Held = false, addSus2Held = false;
 
         let snapToScale = false, currentTuning = 'equal';
-        let isEnvActive = false, isPianoActive = true, isCofActive = false, isLooperActive = false;
+
+        let isEnvActive = false, isPianoActive = true, isCofActive = false, isInfoActive = false, isSettingsActive = false;
+        let isSynthActive = false, isPadsActive = false, isDrumsActive = false, isMixerActive = false, isStudioActive = false;
+
+        let activeOverlay = 'settings';        
+        let lastSafeOffsetX = 0, lastSafeOffsetY = 0;
 
         function showToast(msg) {
             let toast = document.getElementById('toast-container');
@@ -2931,12 +2983,6 @@
             updateHighlights();
         }
 
-        let activeOverlay = 'settings';
-        let isInfoActive = false;
-        let isSettingsActive = false, isSynthActive = false, isPadsActive = false, isDrumsActive = false, isMixerActive = false;
-
-        let lastSafeOffsetX = 0, lastSafeOffsetY = 0;
-
         function updateOverlayCSSVars() {
             const isPortrait = window.innerHeight > window.innerWidth;
 
@@ -2944,8 +2990,8 @@
             let L = 0, T = 0, R = 0, B = 0;
 
             // Grab the active panels
-            const activeLeft = document.querySelector('.overlay.primary.active:not(#looper-overlay)');
-            const looperEl = document.getElementById('looper-overlay');
+            const activeLeft = document.querySelector('.overlay.primary.active:not(#studio-overlay)');
+            const studioEl = document.getElementById('studio-overlay');
             const pianoEl = document.getElementById('piano-overlay');
             const isUiAsleep = document.body.classList.contains('ui-hidden');
 
@@ -2956,22 +3002,22 @@
                 if (isPortrait) T = activeLeft.offsetHeight;
                 else L = activeLeft.offsetWidth;
             }
-            if (isLooperActive && looperEl) {
-                if (isPortrait) T = Math.max(T, looperEl.offsetHeight);
-                else R = looperEl.offsetWidth + 10;
+            if (isStudioActive && studioEl) {
+                if (isPortrait) T = Math.max(T, studioEl.offsetHeight);
+                else R = studioEl.offsetWidth + 10;
             }
 
             // 2. VISUAL DIMENSIONS for Canvas Controls (Respects Auto-Hide)
             if (activeLeft) {
-                const autoHides = ['settings-overlay', 'synth-overlay', 'mixer-overlay'].includes(activeLeft.id);
+                const autoHides = ['settings-overlay', 'synth-overlay', 'mixer-overlay', 'studio-overlay'].includes(activeLeft.id);
                 if (!(isUiAsleep && autoHides)) {
                     if (isPortrait) topH = activeLeft.offsetHeight;
                     else leftW = activeLeft.offsetWidth;
                 }
             }
-            if (isLooperActive && looperEl) {
-                if (isPortrait) topH = Math.max(topH, looperEl.offsetHeight);
-                else rightW = looperEl.offsetWidth + 10;
+            if (isStudioActive && studioEl) {
+                if (isPortrait) topH = Math.max(topH, studioEl.offsetHeight);
+                else rightW = studioEl.offsetWidth + 10;
             }
 
             document.documentElement.style.setProperty('--active-overlay-height', `${topH}px`);
@@ -3124,7 +3170,6 @@
             wakeNav();
             closeFabMenu();
 
-            // Independent Overlays (Info & Piano)
             if (type === 'info') { isInfoActive = !isInfoActive; document.getElementById('info-overlay')?.classList.toggle('active', isInfoActive); document.getElementById('btnInfo')?.classList.toggle('toggled', isInfoActive); return; }
             if (type === 'piano') {
                 isPianoActive = !isPianoActive;
@@ -3138,37 +3183,31 @@
 
             const isPortrait = window.innerHeight > window.innerWidth;
 
-            // Define Panel Groups
             const leftPanels = ['settings', 'synth', 'pads', 'drums', 'mixer'];
-            const rightPanels = ['looper'];
+            const rightPanels = ['studio']; // <--- Updated!
             const allPanels = [...leftPanels, ...rightPanels];
 
-            // Helper to close a specific panel
             const closePanel = (p) => {
                 if (p === 'settings') { isSettingsActive = false; document.getElementById('settings-overlay')?.classList.remove('active'); document.getElementById('btnToggleSettings')?.classList.remove('toggled'); }
                 if (p === 'synth') { isSynthActive = false; document.getElementById('synth-overlay')?.classList.remove('active'); document.getElementById('btnToggleSynth')?.classList.remove('toggled'); }
                 if (p === 'pads') { isPadsActive = false; document.getElementById('pads-overlay')?.classList.remove('active'); document.getElementById('btnTogglePads')?.classList.remove('toggled'); }
                 if (p === 'drums') { isDrumsActive = false; document.getElementById('drums-overlay')?.classList.remove('active'); document.getElementById('btnToggleDrums')?.classList.remove('toggled'); }
                 if (p === 'mixer') { isMixerActive = false; document.getElementById('mixer-overlay')?.classList.remove('active'); document.getElementById('btnToggleMixer')?.classList.remove('toggled'); }
-                if (p === 'looper') { isLooperActive = false; document.getElementById('looper-overlay')?.classList.remove('active'); document.getElementById('btnToggleLooper')?.classList.remove('toggled'); }
+                if (p === 'studio') { isStudioActive = false; document.getElementById('studio-overlay')?.classList.remove('active'); document.getElementById('btnToggleStudio')?.classList.remove('toggled'); } // <--- Updated!
             };
 
-            // Check if we are opening or closing the requested panel
             let isOpening = false;
             if (type === 'settings' && !isSettingsActive) isOpening = true;
             if (type === 'synth' && !isSynthActive) isOpening = true;
             if (type === 'pads' && !isPadsActive) isOpening = true;
             if (type === 'drums' && !isDrumsActive) isOpening = true;
             if (type === 'mixer' && !isMixerActive) isOpening = true;
-            if (type === 'looper' && !isLooperActive) isOpening = true;
+            if (type === 'studio' && !isStudioActive) isOpening = true; // <--- Updated!
 
-            // Apply Exclusivity Rules
             if (isOpening) {
                 if (isPortrait) {
-                    // Mobile Strict Single-Panel: Close EVERYTHING else
                     allPanels.forEach(p => { if (p !== type) closePanel(p); });
                 } else {
-                    // Landscape Dual-Panel: Close only panels sharing the same screen edge
                     if (leftPanels.includes(type)) {
                         leftPanels.forEach(p => { if (p !== type) closePanel(p); });
                     } else if (rightPanels.includes(type)) {
@@ -3177,13 +3216,12 @@
                 }
             }
 
-            // Toggle the requested panel
             if (type === 'settings') { isSettingsActive = !isSettingsActive; document.getElementById('settings-overlay')?.classList.toggle('active', isSettingsActive); document.getElementById('btnToggleSettings')?.classList.toggle('toggled', isSettingsActive); }
             if (type === 'synth') { isSynthActive = !isSynthActive; document.getElementById('synth-overlay')?.classList.toggle('active', isSynthActive); document.getElementById('btnToggleSynth')?.classList.toggle('toggled', isSynthActive); if (isSynthActive) drawEnvelope(); }
             if (type === 'pads') { isPadsActive = !isPadsActive; document.getElementById('pads-overlay')?.classList.toggle('active', isPadsActive); document.getElementById('btnTogglePads')?.classList.toggle('toggled', isPadsActive); }
             if (type === 'drums') { isDrumsActive = !isDrumsActive; document.getElementById('drums-overlay')?.classList.toggle('active', isDrumsActive); document.getElementById('btnToggleDrums')?.classList.toggle('toggled', isDrumsActive); }
             if (type === 'mixer') { isMixerActive = !isMixerActive; document.getElementById('mixer-overlay')?.classList.toggle('active', isMixerActive); document.getElementById('btnToggleMixer')?.classList.toggle('toggled', isMixerActive); }
-            if (type === 'looper') { isLooperActive = !isLooperActive; document.getElementById('looper-overlay')?.classList.toggle('active', isLooperActive); document.getElementById('btnToggleLooper')?.classList.toggle('toggled', isLooperActive); }
+            if (type === 'studio') { isStudioActive = !isStudioActive; document.getElementById('studio-overlay')?.classList.toggle('active', isStudioActive); document.getElementById('btnToggleStudio')?.classList.toggle('toggled', isStudioActive); } // <--- Updated!
 
             updateOverlayCSSVars();
         }
@@ -3243,7 +3281,7 @@
         document.getElementById('btnToggleSynth')?.addEventListener('click', () => toggleOverlay('synth'));
         document.getElementById('btnTogglePads')?.addEventListener('click', () => toggleOverlay('pads'));
         document.getElementById('btnToggleDrums')?.addEventListener('click', () => toggleOverlay('drums'));
-        document.getElementById('btnToggleLooper')?.addEventListener('click', () => toggleOverlay('looper'));
+        document.getElementById('btnToggleStudio')?.addEventListener('click', () => toggleOverlay('studio'));
         document.getElementById('btnTogglePiano')?.addEventListener('click', () => toggleOverlay('piano'));
         document.getElementById('btnToggleCOF')?.addEventListener('click', toggleCof);
         document.getElementById('btnToggleMixer')?.addEventListener('click', () => toggleOverlay('mixer'));
@@ -3252,7 +3290,7 @@
         document.getElementById('btnCloseSynth')?.addEventListener('click', () => toggleOverlay('synth'));
         document.getElementById('btnClosePads')?.addEventListener('click', () => toggleOverlay('pads'));
         document.getElementById('btnCloseDrums')?.addEventListener('click', () => toggleOverlay('drums'));
-        document.getElementById('btnCloseLooper')?.addEventListener('click', () => toggleOverlay('looper'));
+        document.getElementById('btnCloseStudio')?.addEventListener('click', () => toggleOverlay('studio'));
         document.getElementById('btnCloseCOF')?.addEventListener('click', toggleCof);
         document.getElementById('btnCloseInfo')?.addEventListener('click', () => toggleOverlay('info'));
         document.getElementById('btnInfo')?.addEventListener('click', () => toggleOverlay('info'));
@@ -3376,21 +3414,24 @@
         document.getElementById('looperMasterVol')?.addEventListener('input', e => { if (looperMasterGain) looperMasterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valLooperMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('masterVol')?.addEventListener('input', e => { if (masterGain) masterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
 
-        // Bi-directional sync for Audio Importer Volume
-        const syncImportVol = (val) => {
-            if (importedAudioMasterGainNode) importedAudioMasterGainNode.gain.value = val;
-            const mixI = document.getElementById('mixerImportVol'), imp = document.getElementById('import-vol');
+        document.getElementById('mixerImportVol')?.addEventListener('input', e => {
+            if (importedAudioMasterGainNode) importedAudioMasterGainNode.gain.value = parseFloat(e.target.value);
             const mixReadout = document.getElementById('valMixerImportVol');
-            if (mixI && mixI.value != val) { mixI.value = val; if (mixReadout) mixReadout.textContent = val.toFixed(2); }
-            if (imp && imp.value != val) imp.value = val;
-        };
-        document.getElementById('mixerImportVol')?.addEventListener('input', e => syncImportVol(parseFloat(e.target.value)));
-        document.getElementById('import-vol')?.addEventListener('input', e => syncImportVol(parseFloat(e.target.value)));
-
-        document.getElementById('import-mix-master')?.addEventListener('change', (e) => {
-            if (!importedAudioMasterGainNode || !masterEqIn) return;
-            e.target.checked ? importedAudioMasterGainNode.connect(masterEqIn) : importedAudioMasterGainNode.disconnect(masterEqIn);
+            if (mixReadout) mixReadout.textContent = parseFloat(e.target.value).toFixed(2);
         });
+
+        let isMasterMixOn = true;
+        document.getElementById('btn-import-mix-master')?.addEventListener('click', (e) => {
+            isMasterMixOn = !isMasterMixOn;
+            e.target.textContent = isMasterMixOn ? 'MIX: ON' : 'MIX: OFF';
+            e.target.classList.toggle('active-btn', isMasterMixOn);
+            updateImportedAudioMasterMix();
+        });
+
+        const fmtTime = (t) => {
+            if (isNaN(t) || !isFinite(t)) return "0:00";
+            return `${Math.floor(t / 60).toString()}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
+        };
 
         const updateEqReadout = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = `${val > 0 ? '+' : ''}${val}dB`; };
         document.getElementById('eqLow')?.addEventListener('input', e => { if (eqLow) eqLow.gain.value = parseFloat(e.target.value); updateEqReadout('valEqLow', e.target.value); });
@@ -3440,7 +3481,7 @@
             looper.isPlaying = false;
             looper.isRecording = false;
             looper.isArmed = false;
-            updateLooperUI();
+            updateStudioUI();
 
             // 3. Clear runaway Delay/Echo loops
             if (feedbackGain && audioCtx) {
@@ -4057,14 +4098,13 @@
         let convolver, reverbGain;
         let sharedNoiseBuffer = null;
         let masterSynthPanner;
-        let looperPanners = [];
         let currentAutoPan = 0;
         let safetyClipper = null;
         let analyzer;
         let synthGain, drumGain, looperMasterGain, eqLow, eqMid, eqHigh, masterEqIn, importedAudioMasterGainNode;
-        let looperGainNodes = [];
-        let looperEchoSends = [];
-        let looperReverbSends = [];
+        let linearMasterGain;
+        let looperGainNodes = [], looperPanners = [], looperEchoSends = [], looperReverbSends = [];
+        let linearGainNodes = [], linearPanners = [], linearEchoSends = [], linearReverbSends = [];
 
         // Pre-allocate memory once to prevent Garbage Collection stutter
         const SAFETY_CURVE_SIZE = 44100;
@@ -4756,6 +4796,10 @@
             if (importedAudioEl.duration && !isSeeking) {
                 seeker.value = (importedAudioEl.currentTime / importedAudioEl.duration) * 100;
             }
+            const timeDisp = document.getElementById('import-time-display');
+            if (timeDisp) {
+                timeDisp.textContent = `${fmtTime(importedAudioEl.currentTime)} / ${fmtTime(importedAudioEl.duration)}`;
+            }
         });
 
         importedAudioEl?.addEventListener('ended', () => {
@@ -4789,7 +4833,7 @@
                 importedAudioGainNode = audioCtx.createGain();
                 importedAudioMasterGainNode = audioCtx.createGain();
 
-                importedAudioGainNode.gain.value = parseFloat(volControl.value);
+                importedAudioGainNode.gain.value = 1.0;
 
                 importedAudioSourceNode.connect(importedAudioGainNode);
                 importedAudioGainNode.connect(audioCtx.destination);
@@ -4807,7 +4851,7 @@
             try { importedAudioGainNode.disconnect(importedAudioMasterGainNode); } catch (e) { }
             try { importedAudioMasterGainNode.disconnect(); } catch (e) { }
 
-            if (mixMasterControl.checked) {
+            if (isMasterMixOn) {
                 importedAudioGainNode.connect(importedAudioMasterGainNode);
                 importedAudioMasterGainNode.connect(window.mediaStreamDest);
             }
@@ -5032,6 +5076,32 @@
                 let rSend = audioCtx.createGain();
                 rSend.gain.value = parseFloat(document.querySelector(`.reverb-send[data-track="${i}"]`)?.value || 0);
                 g.connect(rSend); looperReverbSends.push(rSend);
+            }
+
+            // Arranger Per-Track Faders & Aux Sends
+            linearMasterGain = audioCtx.createGain();
+            linearMasterGain.gain.value = 1.0;
+            linearMasterGain.connect(masterEqIn);
+
+            for (let i = 0; i < 8; i++) {
+                let g = audioCtx.createGain();
+                g.gain.value = parseFloat(document.querySelector(`.track-vol[data-track="${i + 8}"]`)?.value || 1.0);
+                linearGainNodes.push(g);
+
+                let p = audioCtx.createStereoPanner();
+                p.pan.value = parseFloat(document.querySelector(`.pan-slider[data-track="${i + 8}"]`)?.value || 0.0);
+                linearPanners.push(p);
+
+                g.connect(p);
+                p.connect(linearMasterGain);
+
+                let eSend = audioCtx.createGain();
+                eSend.gain.value = parseFloat(document.querySelector(`.echo-send[data-track="${i + 8}"]`)?.value || 0);
+                g.connect(eSend); linearEchoSends.push(eSend);
+
+                let rSend = audioCtx.createGain();
+                rSend.gain.value = parseFloat(document.querySelector(`.reverb-send[data-track="${i + 8}"]`)?.value || 0);
+                g.connect(rSend); linearReverbSends.push(rSend);
             }
 
             // === 4. SYNTH FX CHAIN ===
@@ -5517,8 +5587,10 @@
                 activeUserNotes++;
                 if (uiHideDelay > 0) hideNav();
             }
-            if (looper.isArmed && !element.isLooper) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = audioCtx.currentTime; looper.recordingType = 'voice'; updateLooperUI(); }
-            else if (looper.isRecording && !element.isLooper && looper.recordingType !== 'both') { if (looper.recordingType === 'drum') { looper.recordingType = 'both'; updateLooperUI(); } }
+
+            // Trigger Armed Engines on First Note!
+            if (looper.isArmed && !element.isLooper) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = audioCtx.currentTime; updateStudioUI(); }
+            if (arranger.isArmed && !element.isLooper) { arranger.isArmed = false; arranger.isRecording = true; arranger.isPlaying = true; arranger.startTime = audioCtx.currentTime; updateStudioUI(); }
 
             let finalFreqs = [...freqs];
             if (originalStArray) {
@@ -5529,7 +5601,11 @@
                 if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
             }
 
-            let looperEvt = null; if (looper.isRecording && !element.isLooper) { looperEvt = recordLooperEvent(element, finalFreqs, 'play', originalStArray); }
+            // The Fix: Properly pass the array to the new Signature!
+            let looperEvt = null;
+            if ((looper.isRecording || arranger.isRecording) && !element.isLooper) {
+                looperEvt = recordStudioEvent(finalFreqs, 'play', originalStArray);
+            }
 
             // NEW: Forward the synthState to the node data and the voice spawner
             if (isArpOn() && finalFreqs.length > 1) {
@@ -5604,7 +5680,7 @@
                 }
             }
 
-            if (looper.isRecording && !element.isLooper) {
+            if ((looper.isRecording || arranger.isRecording) && !element.isLooper) {
                 if (nodeData && nodeData.looperEvt) nodeData.looperEvt.duration = Math.max(0.1, audioCtx.currentTime - nodeData.startTime);
             }
 
@@ -5618,88 +5694,256 @@
             updateHighlights();
         }
 
-        // --- 8-Track Looper System ---
-        const looper = { isRecording: false, isPlaying: false, isArmed: false, activeVoiceTrack: 0, activeDrumTrack: 4, activeTrackToClear: 0, tracks: [[], [], [], [], [], [], [], []], muted: [false, false, false, false, false, false, false, false], startTime: 0, recordingType: null };
+        // ==========================================
+        // 7. MULTITRACK STUDIO ENGINE (Agnostic Tracks)
+        // ==========================================
+
+        const studio = {
+            activeLooperTrack: 0,
+            activeArrangerTrack: 8,
+            lastSelectedDomain: 'looper',
+            trackTypes: new Array(16).fill(null),
+            trackSynthStates: new Array(16).fill(null),
+            trackAudioBuffers: new Array(16).fill(null) // Stores the unzipped Stems
+        };
+
+        const looper = {
+            isRecording: false, isPlaying: false, isArmed: false,
+            startTime: 0, recordingType: null,
+            tracks: Array.from({ length: 8 }, () => []),
+            muted: Array(8).fill(false),
+            trackDurations: Array(8).fill(0),
+            lastPhases: Array(8).fill(0)
+        };
+
+        const arranger = {
+            isRecording: false, isPlaying: false, isArmed: false,
+            startTime: 0, pauseTime: 0, duration: 0,
+            tracks: Array.from({ length: 8 }, () => []),
+            muted: Array(8).fill(false)
+        };
+
         let looperQuantize = false;
         let looperQuantizeRes = 16;
 
-        function updateLooperUI() {
-            const btnRec = document.getElementById('btnLooperRec'); const btnPlay = document.getElementById('btnLooperPlay'); const statusTxt = document.getElementById('looper-status-text');
-            if (looper.isArmed) { if (btnRec) { btnRec.classList.add('armed'); btnRec.classList.remove('recording'); btnRec.innerHTML = '⏱ Wait...'; } if (statusTxt) statusTxt.textContent = 'ARMED'; }
-            else if (looper.isRecording) { if (btnRec) { btnRec.classList.add('recording'); btnRec.classList.remove('armed'); btnRec.innerHTML = '⏺ Rec/Dub'; } if (statusTxt) statusTxt.textContent = 'RECORDING'; }
-            else { if (btnRec) { btnRec.classList.remove('recording', 'armed'); btnRec.innerHTML = '⏺ Record'; } if (statusTxt) statusTxt.textContent = looper.isPlaying ? 'PLAYING' : 'STOPPED'; }
-            if (btnPlay) btnPlay.classList.toggle('playing', looper.isPlaying);
+        function captureCurrentSynthState() {
+            return {
+                osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
+                subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
+                brightness: currentBrightness, filterEnv: currentFilterEnv,
+                attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
+                oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType,
+                instrumentPreset: document.getElementById('instrumentPreset')?.value || 'piano'
+            };
+        }
 
-            document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('recording-track', 'armed-track'));
+        function applySynthStateToUI(s) {
+            if (!s) return;
+            const presetEl = document.getElementById('instrumentPreset');
+            if (presetEl) presetEl.value = s.instrumentPreset;
+            const filterEl = document.getElementById('filterType');
+            if (filterEl) { filterEl.value = s.filterType; currentFilterType = s.filterType; }
 
-            if (looper.isArmed) {
-                document.querySelector(`.track-btn[data-track="${looper.activeVoiceTrack}"]`)?.classList.add('armed-track');
-                document.querySelector(`.track-btn[data-track="${looper.activeDrumTrack}"]`)?.classList.add('armed-track');
-            } else if (looper.isRecording) {
-                if (looper.recordingType === 'voice' || looper.recordingType === 'both') {
-                    document.querySelector(`.track-btn[data-track="${looper.activeVoiceTrack}"]`)?.classList.add('recording-track');
-                }
-                if (looper.recordingType === 'drum' || looper.recordingType === 'both') {
-                    document.querySelector(`.track-btn[data-track="${looper.activeDrumTrack}"]`)?.classList.add('recording-track');
-                }
+            currentOsc1 = s.osc1; currentOsc2 = s.osc2; currentOsc2Mult = s.osc2Mult;
+
+            const map = {
+                detune: s.detune, subOsc: s.subOsc, noise: s.noise, resonance: s.resonance,
+                brightness: s.brightness, filterEnv: s.filterEnv, attack: s.attack, decay: s.decay,
+                sustain: s.sustain, release: s.release, oscMix: s.oscMix, glide: s.glide
+            };
+            for (const [id, val] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); }
             }
+            drawEnvelope();
+        }
+
+        // Boot-up: Populate all 16 memory slots with the default synth
+        for (let i = 0; i < 16; i++) studio.trackSynthStates[i] = captureCurrentSynthState();
+
+        function updateStudioUI() {
+            // Looper UI Updates
+            const btnLRec = document.getElementById('btnLooperRec');
+            const btnLPlay = document.getElementById('btnLooperPlay');
+            const lStatus = document.getElementById('looper-status-text');
+
+            if (looper.isArmed) { if (btnLRec) { btnLRec.classList.add('armed'); btnLRec.classList.remove('recording'); btnLRec.innerHTML = '⏱'; } if (lStatus) lStatus.textContent = 'ARMED'; }
+            else if (looper.isRecording) { if (btnLRec) { btnLRec.classList.add('recording'); btnLRec.classList.remove('armed'); btnLRec.innerHTML = '⏺'; } if (lStatus) lStatus.textContent = 'RECORDING'; }
+            else { if (btnLRec) { btnLRec.classList.remove('recording', 'armed'); btnLRec.innerHTML = '⏺'; } if (lStatus) lStatus.textContent = looper.isPlaying ? 'PLAYING' : 'STOPPED'; }
+            if (btnLPlay) btnLPlay.classList.toggle('playing', looper.isPlaying);
+
+            // Arranger UI Updates
+            const btnARec = document.getElementById('btnArrangerRec');
+            const btnAPlay = document.getElementById('btnArrangerPlay');
+            const aStatus = document.getElementById('arranger-status-text');
+
+            if (arranger.isArmed) { if (btnARec) { btnARec.classList.add('armed'); btnARec.classList.remove('recording'); btnARec.innerHTML = '⏱'; } if (aStatus) aStatus.textContent = 'ARMED'; }
+            else if (arranger.isRecording) { if (btnARec) { btnARec.classList.add('recording'); btnARec.classList.remove('armed'); btnARec.innerHTML = '⏺'; } if (aStatus) aStatus.textContent = 'RECORDING'; }
+            else { if (btnARec) { btnARec.classList.remove('recording', 'armed'); btnARec.innerHTML = '⏺'; } if (aStatus) aStatus.textContent = arranger.isPlaying ? 'PLAYING' : 'STOPPED'; }
+            if (btnAPlay) btnAPlay.classList.toggle('playing', arranger.isPlaying);
+
+            // Track Button Flashing
+            document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('recording-track', 'armed-track'));
+            if (looper.isArmed) document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('armed-track');
+            else if (looper.isRecording) document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('recording-track');
+            if (arranger.isArmed) document.querySelector(`.track-btn[data-track="${studio.activeArrangerTrack}"]`)?.classList.add('armed-track');
+            else if (arranger.isRecording) document.querySelector(`.track-btn[data-track="${studio.activeArrangerTrack}"]`)?.classList.add('recording-track');
         }
 
         document.querySelectorAll('.track-btn').forEach(btn => {
             btn.addEventListener('click', e => {
                 const track = parseInt(e.target.dataset.track);
-                const type = e.target.dataset.type;
-                looper.activeTrackToClear = track;
+                const domain = e.target.dataset.domain;
 
-                const clearBtn = document.getElementById('btnLooperClear');
-                if (clearBtn) clearBtn.innerHTML = `🗑 Clear ${e.target.textContent}`;
+                studio.lastSelectedDomain = domain;
+                const clearBtn = document.getElementById('btnGlobalClear');
+                const labelPrefix = domain === 'looper' ? 'L' : 'A';
+                const localTrackNum = domain === 'looper' ? track + 1 : track - 7;
+                if (clearBtn) clearBtn.innerHTML = `🗑 Clear ${labelPrefix}${localTrackNum}`;
 
-                if (type === 'voice') {
-                    looper.activeVoiceTrack = track;
-                    document.querySelectorAll('.track-btn[data-type="voice"]').forEach(b => b.classList.remove('active'));
+                if (domain === 'looper') {
+                    studio.trackSynthStates[studio.activeLooperTrack] = captureCurrentSynthState();
+                    studio.activeLooperTrack = track;
+                    document.querySelectorAll('.track-btn[data-domain="looper"]').forEach(b => b.classList.remove('active'));
                 } else {
-                    looper.activeDrumTrack = track;
-                    document.querySelectorAll('.track-btn[data-type="drum"]').forEach(b => b.classList.remove('active'));
+                    studio.trackSynthStates[studio.activeArrangerTrack] = captureCurrentSynthState();
+                    studio.activeArrangerTrack = track;
+                    document.querySelectorAll('.track-btn[data-domain="arranger"]').forEach(b => b.classList.remove('active'));
                 }
+
                 e.target.classList.add('active');
+
+                if (studio.trackTypes[track] !== 'drum' && studio.trackSynthStates[track]) {
+                    applySynthStateToUI(studio.trackSynthStates[track]);
+                }
             });
         });
 
         document.querySelectorAll('.mute-btn').forEach(btn => {
             btn.addEventListener('click', e => {
                 const track = parseInt(e.target.dataset.track);
-                looper.muted[track] = !looper.muted[track];
-                e.target.classList.toggle('muted', looper.muted[track]);
+                const isLooper = track < 8;
+                const domainObj = isLooper ? looper : arranger;
+                const localIdx = isLooper ? track : track - 8;
+
+                domainObj.muted[localIdx] = !domainObj.muted[localIdx];
+                e.target.classList.toggle('muted', domainObj.muted[localIdx]);
             });
         });
 
-        document.getElementById('btnLooperRec')?.addEventListener('click', e => { if (!looper.isPlaying && !looper.isArmed) { looper.isArmed = true; looper.recordingType = null; } else if (looper.isArmed) { looper.isArmed = false; } else { looper.isRecording = !looper.isRecording; if (looper.isRecording) looper.recordingType = 'both'; } updateLooperUI(); });
+        // --- Transport Controls ---
+        document.getElementById('btnLooperRec')?.addEventListener('click', () => {
+            if (!looper.isPlaying && !looper.isArmed) { looper.isArmed = true; }
+            else if (looper.isArmed) { looper.isArmed = false; }
+            else { looper.isRecording = !looper.isRecording; }
+            updateStudioUI();
+        });
 
-        document.getElementById('btnLooperPlay')?.addEventListener('click', e => {
+        document.getElementById('btnLooperPlay')?.addEventListener('click', () => {
             if (looper.isPlaying) {
-                looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false; looper.recordingType = null;
+                looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false;
+                looper.lastPhases.fill(0); // <--- Reset all playheads!
                 const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%';
-                // MASTER MODE: Send MIDI Stop
                 if (midiSyncMode === 'master' && midiOut) midiOut.send([252]);
             } else {
                 looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0;
-                // MASTER MODE: Send MIDI Start and lock phase
-                if (midiSyncMode === 'master' && midiOut) {
-                    midiOut.send([250]);
-                    nextMidiPulseTime = audioCtx.currentTime;
-                }
+                if (midiSyncMode === 'master' && midiOut) { midiOut.send([250]); nextMidiPulseTime = audioCtx.currentTime; }
             }
-            updateLooperUI();
+            updateStudioUI();
         });
 
-        document.getElementById('btnLooperClear')?.addEventListener('click', () => {
-            looper.tracks[looper.activeTrackToClear] = [];
-            const trackBtn = document.querySelector(`.track-btn[data-track="${looper.activeTrackToClear}"]`);
-            if (trackBtn) trackBtn.classList.remove('has-data');
+        let isArrangerSeeking = false;
 
-            // Clear the instrument label if it's a voice track
-            const labelEl = document.getElementById(`inst-label-${looper.activeTrackToClear}`);
-            if (labelEl) labelEl.textContent = '';
+        document.getElementById('btnArrangerRec')?.addEventListener('click', () => {
+            if (!arranger.isPlaying && !arranger.isArmed && !arranger.isRecording) {
+                arranger.isArmed = true;
+            } else if (arranger.isArmed) {
+                arranger.isArmed = false;
+            } else {
+                arranger.isRecording = !arranger.isRecording;
+            }
+            updateStudioUI();
+        });
+
+        document.getElementById('btnArrangerPlay')?.addEventListener('click', () => {
+            if (arranger.isPlaying) {
+                arranger.isPlaying = false; arranger.isRecording = false; arranger.isArmed = false;
+                arranger.pauseTime = audioCtx.currentTime - arranger.startTime;
+            } else {
+                arranger.isPlaying = true;
+                arranger.startTime = audioCtx ? audioCtx.currentTime - arranger.pauseTime : 0;
+                lastArrangerPhase = arranger.pauseTime - 0.01; // Fixes Silent Playback
+            }
+            updateStudioUI();
+        });
+
+        const updateArrangerTime = (shiftSecs) => {
+            arranger.pauseTime = Math.max(0, arranger.pauseTime + shiftSecs);
+            if (arranger.isPlaying) arranger.startTime -= shiftSecs;
+            lastArrangerPhase = arranger.pauseTime - 0.01;
+
+            // Instantly kill currently playing notes so they don't hang during rewind
+            activeNodes.forEach((nodeData, elementKey) => { if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true); });
+        };
+        document.getElementById('btn-arranger-rw')?.addEventListener('click', () => updateArrangerTime(-5));
+        document.getElementById('btn-arranger-ff')?.addEventListener('click', () => updateArrangerTime(5));
+
+        // Arranger Scrubber Logic
+        const arrSeeker = document.getElementById('arranger-seeker');
+        arrSeeker?.addEventListener('mousedown', () => isArrangerSeeking = true);
+        arrSeeker?.addEventListener('touchstart', () => isArrangerSeeking = true, { passive: true });
+        arrSeeker?.addEventListener('input', (e) => {
+            if (arranger.duration > 0) {
+                const newTime = (parseFloat(e.target.value) / 100) * arranger.duration;
+                const timeDisp = document.getElementById('arranger-time-display');
+                if (timeDisp) { const m = Math.floor(newTime / 60); const s = Math.floor(newTime % 60).toString().padStart(2, '0'); timeDisp.textContent = `${m}:${s}`; }
+            }
+        });
+        const finishArrangerSeek = () => {
+            if (!isArrangerSeeking) return;
+            isArrangerSeeking = false;
+            if (arranger.duration > 0) {
+                const newTime = (parseFloat(arrSeeker.value) / 100) * arranger.duration;
+                if (arranger.isPlaying) arranger.startTime = audioCtx.currentTime - newTime; else arranger.pauseTime = newTime;
+                lastArrangerPhase = newTime - 0.01;
+                activeNodes.forEach((nodeData, elementKey) => { if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true); });
+            }
+        };
+        arrSeeker?.addEventListener('mouseup', finishArrangerSeek);
+        arrSeeker?.addEventListener('touchend', finishArrangerSeek);
+
+        document.getElementById('btnGlobalClear')?.addEventListener('click', () => {
+            const domain = studio.lastSelectedDomain;
+            const track = domain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            const domainObj = domain === 'looper' ? looper : arranger;
+            const localIdx = domain === 'looper' ? track : track - 8;
+
+            domainObj.tracks[localIdx] = [];
+            studio.trackAudioBuffers[track] = null; // Free up RAM
+            if (domain === 'looper') {
+                looper.trackDurations[localIdx] = 0;
+                looper.lastPhases[localIdx] = 0;
+            }
+            document.querySelector(`.track-btn[data-track="${track}"]`)?.classList.remove('type-voice', 'type-drum');
+            studio.trackTypes[track] = null;
+            const el = document.getElementById(`inst-label-${track}`);
+            if (el) el.textContent = 'EMPTY';
+
+            // Re-calculate the max duration if we clear an arranger track
+            if (domain === 'arranger') {
+                let maxDur = 0;
+                arranger.tracks.forEach(t => t.forEach(evt => {
+                    if (evt.timeOffset + (evt.duration || 0.5) > maxDur) maxDur = evt.timeOffset + (evt.duration || 0.5);
+                }));
+                arranger.duration = maxDur;
+
+                // Reset clock if we just cleared the whole song
+                if (maxDur === 0) arranger.pauseTime = 0;
+
+                // Force an instant slider update
+                const seeker = document.getElementById('arranger-seeker');
+                if (seeker) seeker.value = 0;
+            }
         });
 
         document.getElementById('btnLooperQuantize')?.addEventListener('click', e => {
@@ -5707,118 +5951,265 @@
             e.target.textContent = `Input Snap: ${looperQuantize ? 'ON' : 'OFF'}`;
             e.target.classList.toggle('active-btn', looperQuantize);
         });
+        document.getElementById('looperQuantizeRes')?.addEventListener('change', e => looperQuantizeRes = parseInt(e.target.value));
 
-        document.getElementById('looperQuantizeRes')?.addEventListener('change', e => {
-            looperQuantizeRes = parseInt(e.target.value);
-        });
-
-        function recordLooperEvent(element, freqs, type, originalStArray, drumType = null, velocity = 1, exactTime = null) {
+        function recordStudioEvent(freqs, type, originalStArray, drumType = null, velocity = 1, exactTime = null) {
             if (!audioCtx) return null;
-            const lenEl = document.getElementById('looperLength');
-            let bars = lenEl ? parseInt(lenEl.value) : 4;
-            let loopSec = bars * 4 * (60 / currentArpBPM);
             let timeToUse = exactTime !== null ? exactTime : audioCtx.currentTime;
+            let evtCreated = null;
 
-            let offset = (timeToUse - looper.startTime) % loopSec;
-            if (offset < 0) offset += loopSec;
+            const writeEvent = (targetTrack, offsetTime, domainObj, isLooperDomain) => {
+                let localIdx = isLooperDomain ? targetTrack : targetTrack - 8;
 
-            // Quantization Engine
-            // If Input Snap is ON, mathematically round the timestamp to the nearest grid step
-            if (looperQuantize) {
-                const beatDuration = 60 / currentArpBPM; // Length of 1 quarter note in seconds
-                // Calculate the grid line distance (e.g., 1/16 res = 4 grid points per quarter note)
-                const stepDuration = beatDuration * (4 / looperQuantizeRes);
+                // Smart Routing: Prevent Drum Machine from stealing the UI track if user is playing Piano
+                if (studio.trackTypes[targetTrack] !== null && studio.trackTypes[targetTrack] !== type) {
+                    const startIdx = isLooperDomain ? 0 : 8;
+                    let found = false;
+                    for (let i = startIdx; i < startIdx + 8; i++) { if (studio.trackTypes[i] === type) { targetTrack = i; found = true; break; } }
+                    if (!found) { for (let i = startIdx; i < startIdx + 8; i++) { if (studio.trackTypes[i] === null) { targetTrack = i; found = true; break; } } }
+                    if (!found) return null; // No tracks left
 
-                offset = Math.round(offset / stepDuration) * stepDuration;
+                    localIdx = isLooperDomain ? targetTrack : targetTrack - 8;
 
-                // Edge case: If it snaps exactly to the end of the loop, wrap it to the very beginning!
-                if (offset >= loopSec) offset = 0;
-            }
+                    // Only update UI focus if a human triggered it (exactTime is null for live play)
+                    if (exactTime === null) {
+                        if (isLooperDomain) studio.activeLooperTrack = targetTrack; else studio.activeArrangerTrack = targetTrack;
+                        document.querySelectorAll(`.track-btn[data-domain="${isLooperDomain ? 'looper' : 'arranger'}"]`).forEach(b => b.classList.remove('active'));
+                        document.querySelector(`.track-btn[data-track="${targetTrack}"]`)?.classList.add('active');
+                    }
+                }
 
-            let targetTrack = (type === 'drum') ? looper.activeDrumTrack : looper.activeVoiceTrack;
+                if (studio.trackTypes[targetTrack] === null) {
+                    studio.trackTypes[targetTrack] = type;
+                    const btn = document.querySelector(`.track-btn[data-track="${targetTrack}"]`);
+                    if (btn) btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
 
-            if (type === 'drum') {
-                const isDuplicate = looper.tracks[targetTrack].some(evt =>
-                    evt.type === 'drum' && evt.drumType === drumType && Math.abs(evt.timeOffset - offset) < 0.05
-                );
-                if (isDuplicate) return null;
-            }
-
-            // Snapshot the current synth state for this specific event
-            let synthState = null;
-            if (type === 'play') {
-                synthState = {
-                    osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
-                    subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
-                    brightness: currentBrightness, filterEnv: currentFilterEnv,
-                    attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
-                    oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType
-                };
-
-                // Write the instrument name to the track's label
-                const instSelect = document.getElementById('instrumentPreset');
-                const instName = instSelect ? instSelect.options[instSelect.selectedIndex].text : '';
-                const labelEl = document.getElementById(`inst-label-${targetTrack}`);
-                if (labelEl) labelEl.textContent = instName;
-
-                // Auto-Inherit Aux Sends! (Only on the very first note of the track)
-                if (looper.tracks[targetTrack].length === 0) {
                     const eSlider = document.querySelector(`.echo-send[data-track="${targetTrack}"]`);
                     const rSlider = document.querySelector(`.reverb-send[data-track="${targetTrack}"]`);
+                    const eNodes = isLooperDomain ? looperEchoSends : linearEchoSends;
+                    const rNodes = isLooperDomain ? looperReverbSends : linearReverbSends;
+                    if (eSlider && eNodes[localIdx]) { eSlider.value = currentEcho; eNodes[localIdx].gain.value = currentEcho; }
+                    if (rSlider && rNodes[localIdx]) { rSlider.value = currentReverb; rNodes[localIdx].gain.value = currentReverb; }
+                }
 
-                    if (eSlider && typeof looperEchoSends !== 'undefined' && looperEchoSends[targetTrack]) {
-                        eSlider.value = currentEcho;
-                        looperEchoSends[targetTrack].gain.value = currentEcho;
-                    }
-                    if (rSlider && typeof looperReverbSends !== 'undefined' && looperReverbSends[targetTrack]) {
-                        rSlider.value = currentReverb;
-                        looperReverbSends[targetTrack].gain.value = currentReverb;
-                    }
+                if (type === 'drum') {
+                    const isDup = domainObj.tracks[localIdx].some(e => e.drumType === drumType && Math.abs(e.timeOffset - offsetTime) < 0.05);
+                    if (isDup) return null;
+                }
+
+                let synthState = null;
+                const labelEl = document.getElementById(`inst-label-${targetTrack}`);
+                if (type !== 'drum') {
+                    synthState = captureCurrentSynthState();
+                    const instSelect = document.getElementById('instrumentPreset');
+                    if (labelEl && instSelect) labelEl.textContent = instSelect.options[instSelect.selectedIndex].text;
+                } else if (labelEl) {
+                    labelEl.textContent = 'DRUMS';
+                }
+
+                const evt = { id: Math.random(), freqs, timeOffset: offsetTime, type, stArray: originalStArray, drumType, velocity, duration: 0.5, synthState };
+                domainObj.tracks[localIdx].push(evt);
+
+                if (studio.trackTypes[targetTrack] === 'drum') document.querySelector(`.track-btn[data-track="${targetTrack}"]`)?.classList.add('type-drum');
+                else document.querySelector(`.track-btn[data-track="${targetTrack}"]`)?.classList.add('type-voice');
+
+                return evt;
+            };
+
+            if (looper.isRecording) {
+                const lenEl = document.getElementById('looperLength');
+                const loopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
+                let offset = (timeToUse - looper.startTime) % loopSec;
+                if (offset < 0) offset += loopSec;
+                if (looperQuantize) {
+                    const stepDuration = (60 / currentArpBPM) * (4 / looperQuantizeRes);
+                    offset = Math.round(offset / stepDuration) * stepDuration;
+                    if (offset >= loopSec) offset = 0;
+                }
+
+                evtCreated = writeEvent(studio.activeLooperTrack, offset, looper, true);
+
+                // Stamp the track with this specific loop duration!
+                if (evtCreated) {
+                    looper.trackDurations[studio.activeLooperTrack] = loopSec;
                 }
             }
 
-            const evt = { id: Math.random(), freqs: freqs, timeOffset: offset, type: type, stArray: originalStArray, drumType: drumType, velocity: velocity, duration: 0.5, synthState: synthState };
-            looper.tracks[targetTrack].push(evt);
+            if (arranger.isRecording) {
+                let offset = timeToUse - arranger.startTime;
+                if (looperQuantize) {
+                    const stepDuration = (60 / currentArpBPM) * (4 / looperQuantizeRes);
+                    offset = Math.round(offset / stepDuration) * stepDuration;
+                }
+                const aEvt = writeEvent(studio.activeArrangerTrack, offset, arranger, false);
 
-            const btn = document.querySelector(`.track-btn[data-track="${targetTrack}"]`);
-            if (btn) btn.classList.add('has-data');
+                if (aEvt && (offset + (aEvt.duration || 0.5)) > arranger.duration) {
+                    arranger.duration = offset + (aEvt.duration || 0.5);
+                }
 
-            return evt;
+                if (!evtCreated) evtCreated = aEvt;
+            }
+            return evtCreated;
         }
 
-        let lastLoopPhase = 0;
+        // --- Dual Playback Engine ---
+        let lastArrangerPhase = 0;
 
-        function processLooperPlayback() {
-            if (!looper.isPlaying || !audioCtx) return;
-            const lenEl = document.getElementById('looperLength');
-            let bars = lenEl ? parseInt(lenEl.value) : 4;
-            let loopSec = bars * 4 * (60 / currentArpBPM);
-            let phase = (audioCtx.currentTime - looper.startTime) % loopSec;
-            if (phase < lastLoopPhase) lastLoopPhase = -0.1;
+        function processStudioPlayback() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
 
-            const pBar = document.getElementById('looper-progress-fill');
-            if (pBar) pBar.style.width = `${(phase / loopSec) * 100}%`;
+            // 1. Process Looper (Independent Multi-Length Polymetric Engine)
+            if (looper.isPlaying) {
+                const nowOffset = now - looper.startTime;
 
-            looper.tracks.forEach((track, idx) => {
-                if (looper.muted[idx]) return;
-                track.forEach(evt => {
-                    if (evt.timeOffset > lastLoopPhase && evt.timeOffset <= phase) {
-                        if (evt.type === 'play') {
-                            let dummy = { _st: evt.stArray || [], isLooper: true };
-                            // Pass the historical synthState AND the specific Looper Track destination
-                            playFrequencies(dummy, evt.freqs, evt.stArray, evt.synthState, typeof looperGainNodes !== 'undefined' ? looperGainNodes[idx] : null);
-                            setTimeout(() => stopFrequencies(dummy), (evt.duration || 0.5) * 1000);
+                // Calculate the default fallback loopSec for the progress bar
+                const lenEl = document.getElementById('looperLength');
+                const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
+
+                // The visual progress bar tracks the currently selected UI track!
+                const activeTrackLoopSec = looper.trackDurations[studio.activeLooperTrack] || globalLoopSec;
+                let activePhase = nowOffset % activeTrackLoopSec;
+                if (activePhase < 0) activePhase += activeTrackLoopSec;
+
+                const pBar = document.getElementById('looper-progress-fill');
+                if (pBar) pBar.style.width = `${(activePhase / activeTrackLoopSec) * 100}%`;
+
+                // Loop through all 8 tracks independently
+                looper.tracks.forEach((track, idx) => {
+                    if (looper.muted[idx] || track.length === 0) return;
+
+                    const trackLoopSec = looper.trackDurations[idx] || globalLoopSec;
+                    let phase = nowOffset % trackLoopSec;
+                    if (phase < 0) phase += trackLoopSec;
+
+                    // If this specific track's phase wrapped around to 0, reset its tracker!
+                    if (phase < looper.lastPhases[idx]) looper.lastPhases[idx] = -0.1;
+
+                    track.forEach(evt => {
+                        if (evt.timeOffset > looper.lastPhases[idx] && evt.timeOffset <= phase) {
+                            if (evt.type === 'play') {
+                                let dummy = { _st: evt.stArray || [], isLooper: true };
+                                playFrequencies(dummy, evt.freqs, evt.stArray, studio.trackSynthStates[idx], looperGainNodes[idx]);
+                                setTimeout(() => stopFrequencies(dummy), (evt.duration || 0.5) * 1000);
+                            }
+                            else if (evt.type === 'drum') {
+                                let exactTime = now + (evt.timeOffset - phase);
+                                playDrum(evt.drumType, Math.max(now, exactTime), evt.velocity, looperGainNodes[idx]);
+                                highlightDrumBtn(evt.drumType, exactTime);
+                            }
+                            else if (evt.type === 'stem') {
+                                const buffer = studio.trackAudioBuffers[idx]; // <--- Looper uses idx
+                                if (buffer) {
+                                    const source = audioCtx.createBufferSource();
+                                    source.buffer = buffer;
+
+                                    const gain = audioCtx.createGain();
+                                    gain.gain.value = 1.0;
+
+                                    source.connect(gain);
+                                    if (looperPanners[idx]) gain.connect(looperPanners[idx]); // <--- Looper panners
+
+                                    let exactTime = now + (evt.timeOffset - phase);
+                                    let bufferOffset = 0;
+                                    if (exactTime < now) { bufferOffset = now - exactTime; exactTime = now; }
+
+                                    source.start(exactTime, bufferOffset);
+
+                                    const dummyElement = { _st: [], isLooper: true };
+                                    const dummyFilter = audioCtx.createBiquadFilter();
+                                    activeNodes.set(dummyElement, {
+                                        type: 'stem',
+                                        voices: [{ sampleSource: source, gainNode: gain, filter: dummyFilter, isChord: false }]
+                                    });
+
+                                    setTimeout(() => {
+                                        if (activeNodes.has(dummyElement)) stopFrequencies(dummyElement, true);
+                                    }, (buffer.duration - bufferOffset) * 1000);
+                                }
+                            }
                         }
-                        else if (evt.type === 'drum') {
-                            let exactTime = audioCtx.currentTime + (evt.timeOffset - phase);
-                            if (exactTime < audioCtx.currentTime) exactTime = audioCtx.currentTime;
-                            playDrum(evt.drumType, exactTime, evt.velocity, typeof looperGainNodes !== 'undefined' ? looperGainNodes[idx] : null);
-                            highlightDrumBtn(evt.drumType, exactTime);
-                        }
-                    }
+                    });
+
+                    // Advance this specific track's playhead
+                    looper.lastPhases[idx] = phase;
                 });
-            });
-            lastLoopPhase = phase;
+            }
+
+            // 2. Process Arranger
+            if (arranger.isPlaying || arranger.isRecording) {
+                let phase = now - arranger.startTime;
+
+                // DAW AUTO-STOP LOGIC: If we pass the end of the recorded song, stop playing and rewind!
+                if (!arranger.isRecording && arranger.duration > 0 && phase >= arranger.duration) {
+                    arranger.isPlaying = false;
+                    arranger.pauseTime = 0;
+                    phase = 0;
+                    updateStudioUI();
+                }
+
+                // Update Seeker UI (Only if the user isn't currently dragging it!)
+                const seeker = document.getElementById('arranger-seeker');
+                const timeDisp = document.getElementById('arranger-time-display');
+                if (seeker && arranger.duration > 0 && typeof isArrangerSeeking !== 'undefined' && !isArrangerSeeking) {
+                    seeker.value = Math.min(100, (phase / arranger.duration) * 100);
+                }
+                if (timeDisp && (typeof isArrangerSeeking === 'undefined' || !isArrangerSeeking)) {
+                    const m = Math.floor(phase / 60); const s = Math.floor(phase % 60).toString().padStart(2, '0');
+                    timeDisp.textContent = `${m}:${s}`;
+                }
+
+                if (arranger.isPlaying && phase > lastArrangerPhase) {
+                    arranger.tracks.forEach((track, localIdx) => {
+                        if (arranger.muted[localIdx]) return;
+                        track.forEach(evt => {
+                            if (evt.timeOffset > lastArrangerPhase && evt.timeOffset <= phase) {
+                                if (evt.type === 'play') {
+                                    let dummy = { _st: evt.stArray || [], isLooper: true };
+                                    playFrequencies(dummy, evt.freqs, evt.stArray, studio.trackSynthStates[localIdx + 8], linearGainNodes[localIdx]);
+                                    setTimeout(() => stopFrequencies(dummy), (evt.duration || 0.5) * 1000);
+                                }
+                                else if (evt.type === 'drum') {
+                                    let exactTime = now + (evt.timeOffset - phase);
+                                    playDrum(evt.drumType, Math.max(now, exactTime), evt.velocity, linearGainNodes[localIdx]);
+                                    highlightDrumBtn(evt.drumType, exactTime);
+                                }
+                                else if (evt.type === 'stem') {
+                                    const buffer = studio.trackAudioBuffers[localIdx + 8]; // <--- Arranger offsets by 8
+                                    if (buffer) {
+                                        const source = audioCtx.createBufferSource();
+                                        source.buffer = buffer;
+
+                                        const gain = audioCtx.createGain();
+                                        gain.gain.value = 1.0;
+
+                                        source.connect(gain);
+                                        if (linearPanners[localIdx]) gain.connect(linearPanners[localIdx]); // <--- Arranger panners
+
+                                        let exactTime = now + (evt.timeOffset - phase);
+                                        let bufferOffset = 0;
+                                        if (exactTime < now) { bufferOffset = now - exactTime; exactTime = now; }
+
+                                        source.start(exactTime, bufferOffset);
+
+                                        const dummyElement = { _st: [], isLooper: true };
+                                        const dummyFilter = audioCtx.createBiquadFilter();
+                                        activeNodes.set(dummyElement, {
+                                            type: 'stem',
+                                            voices: [{ sampleSource: source, gainNode: gain, filter: dummyFilter, isChord: false }]
+                                        });
+
+                                        setTimeout(() => {
+                                            if (activeNodes.has(dummyElement)) stopFrequencies(dummyElement, true);
+                                        }, (buffer.duration - bufferOffset) * 1000);
+                                    }
+                                }
+                            }
+                        });
+                    });
+                }
+                lastArrangerPhase = phase;
+            }
         }
 
         // --- MASTER OUTPUT RECORDING ---
@@ -5921,8 +6312,7 @@
                 }
 
                 btnMasterRec.disabled = false;
-                btnMasterRec.textContent = '🔴 START REC';
-                btnMasterRec.style.background = '#c2185b';
+                btnMasterRec.textContent = '⏺';
                 btnMasterRec.classList.remove('recording');
                 return;
             }
@@ -5966,8 +6356,7 @@
                 mediaRecorder.start();
             }
 
-            btnMasterRec.textContent = '⏹ STOP REC';
-            btnMasterRec.style.background = '#4CAF50';
+            btnMasterRec.textContent = '⏹';
             btnMasterRec.classList.add('recording');
 
             // Start the Live Stopwatch!
@@ -6064,6 +6453,218 @@
             setTimeout(() => document.body.removeChild(a), 100);
         });
 
+        // --- DAWPROJECT XML GENERATOR ---
+        function generateProjectXML(activeTracks, bpm) {
+            let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+            xml += `<project xmlns="http://bitwig.com/dawproject/1.0" version="1.0">\n`;
+            xml += `  <application name="Tonnetz Pro" version="1.0"/>\n`;
+            xml += `  <transport tempo="${bpm}"/>\n`;
+            xml += `  <structure>\n`;
+            xml += `    <track>\n`; // Master Track
+
+            activeTracks.forEach((t, i) => {
+                const isLooper = i < 8;
+                const localIdx = isLooper ? i : i - 8;
+                const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
+                const instName = document.getElementById(`inst-label-${i}`)?.textContent || 'Track';
+                const cleanName = instName.replace(/[^a-zA-Z0-9]/g, '_');
+                const typeLabel = studio.trackTypes[i] === 'drum' ? 'Drums' : 'Synth';
+                const fileName = `Track_${(i + 1).toString().padStart(2, '0')}_${prefix}_${typeLabel}_${cleanName}.wav`;
+
+                xml += `      <track name="${prefix} - ${instName}">\n`;
+                xml += `        <audio>\n`;
+                xml += `          <clip>\n`;
+                xml += `            <audio-file path="Audio/${fileName}"/>\n`;
+                xml += `          </clip>\n`;
+                xml += `        </audio>\n`;
+                xml += `      </track>\n`;
+            });
+
+            xml += `    </track>\n`;
+            xml += `  </structure>\n`;
+            xml += `</project>`;
+            return xml;
+        }
+
+        // --- PARALLEL 16-TRACK STEM BOUNCER (JSZIP) ---
+        document.getElementById('btn-export-stems')?.addEventListener('click', async () => {
+            if (typeof JSZip === 'undefined') {
+                showToast("JSZip library is loading. Please try again in a moment.");
+                return;
+            }
+
+            // 1. Check if there is actually any music recorded in either engine
+            const hasLooperData = looper.tracks.some(t => t.length > 0);
+            const hasArrangerData = arranger.tracks.some(t => t.length > 0);
+
+            if (!hasLooperData && !hasArrangerData) {
+                showToast("No track data to export! Record something first.");
+                return;
+            }
+
+            initAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            await workletPromise; // Ensure our WAV recorder background thread is loaded
+
+            const btnStems = document.getElementById('btn-export-stems');
+            btnStems.disabled = true;
+            btnStems.innerHTML = "⏳ BOUNCING...";
+
+            // 2. Calculate the exact required duration for the export
+            const lenEl = document.getElementById('looperLength');
+            const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
+
+            // Find the longest looping track
+            const maxLoopSec = Math.max(...looper.trackDurations.map(d => d || 0));
+
+            // The final export length is the Arranger length OR the longest loop, plus 1 second for reverb/echo tails
+            let exportSec = Math.max(arranger.duration, maxLoopSec);
+            if (exportSec === 0) exportSec = globalLoopSec;
+            exportSec += 1.0;
+
+            showToast(`Bouncing 16 Stems silently... (${Math.round(exportSec)}s)`);
+
+            let stemBuffers = Array.from({ length: 16 }, () => [[], []]);
+            let stemWorklets = [];
+
+            // 3. Create a silent destination so the Web Audio graph processes, but the user hears nothing!
+            const dummySilencer = audioCtx.createGain();
+            dummySilencer.gain.value = 0;
+            dummySilencer.connect(audioCtx.destination);
+
+            // Temporarily mute the actual master speakers
+            const previousMasterVol = masterGain.gain.value;
+            masterGain.gain.value = 0;
+
+            // 4. Wire up 16 independent microphones to the 16 tracks
+            for (let i = 0; i < 16; i++) {
+                const isLooper = i < 8;
+                const localIdx = isLooper ? i : i - 8;
+                const domainObj = isLooper ? looper : arranger;
+
+                if (domainObj.tracks[localIdx].length === 0 || domainObj.muted[localIdx]) {
+                    stemWorklets.push(null); // Skip empty or muted tracks
+                    continue;
+                }
+
+                let worklet = new AudioWorkletNode(audioCtx, 'recorder-processor');
+                const panner = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
+
+                // Tap the audio PRE-MASTER (Dry stems with their track volume/pan applied, but no global EQ/Limiter)
+                if (panner) panner.connect(worklet);
+
+                worklet.connect(dummySilencer); // Pull audio through the graph
+
+                worklet.port.onmessage = (e) => {
+                    stemBuffers[i][0].push(e.data.left);
+                    stemBuffers[i][1].push(e.data.right);
+                };
+                stemWorklets.push(worklet);
+            }
+
+            // 5. Reset both engines to exactly 0, and hit play!
+            looper.isPlaying = false;
+            arranger.isPlaying = false;
+
+            setTimeout(() => {
+                const now = audioCtx.currentTime;
+
+                if (hasLooperData) {
+                    looper.isPlaying = true;
+                    looper.startTime = now;
+                    looper.lastPhases.fill(0);
+                    lastLoopPhase = -0.1;
+                }
+
+                if (hasArrangerData) {
+                    arranger.isPlaying = true;
+                    arranger.startTime = now;
+                    arranger.pauseTime = 0;
+                    lastArrangerPhase = -0.1;
+                }
+
+                updateStudioUI();
+
+                // 6. Wait for the exact duration of the song to finish processing
+                setTimeout(async () => {
+                    looper.isPlaying = false;
+                    arranger.isPlaying = false;
+                    masterGain.gain.value = previousMasterVol; // Unmute master speakers
+                    updateStudioUI();
+
+                    showToast("Packaging .dawproject... Please wait.");
+                    const zip = new JSZip();
+
+                    // Create the mandatory DAWproject folder structure
+                    const audioFolder = zip.folder("Audio");
+                    zip.folder("MIDI"); // Empty for now, ready for future MIDI implementation
+                    zip.folder("Plugins"); // Empty, but required for the spec
+
+                    let exportedCount = 0;
+                    let activeTrackIndices = [];
+
+                    // 1. Build the WAV files and put them in the /Audio folder
+                    for (let i = 0; i < 16; i++) {
+                        if (stemWorklets[i]) {
+                            activeTrackIndices.push(i);
+                            const isLooper = i < 8;
+                            const localIdx = isLooper ? i : i - 8;
+                            const panner = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
+
+                            if (panner) panner.disconnect(stemWorklets[i]);
+                            stemWorklets[i].disconnect();
+
+                            const wavBlob = exportWAV(stemBuffers[i], audioCtx.sampleRate);
+
+                            // Format: Track_01_L1_Synth_Acoustic_Piano.wav
+                            const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
+                            const instName = document.getElementById(`inst-label-${i}`)?.textContent || 'Track';
+                            const cleanName = instName.replace(/[^a-zA-Z0-9]/g, '_');
+                            const typeLabel = studio.trackTypes[i] === 'drum' ? 'Drums' : 'Synth';
+                            const padNum = (i + 1).toString().padStart(2, '0');
+
+                            const fileName = `Track_${padNum}_${prefix}_${typeLabel}_${cleanName}.wav`;
+
+                            audioFolder.file(fileName, wavBlob);
+                            exportedCount++;
+                        }
+                    }
+
+                    // 2. Generate the XML Manifest
+                    const xmlContent = generateProjectXML(activeTrackIndices, currentArpBPM);
+                    zip.file("project.xml", xmlContent);
+
+                    // 3. Hybrid Session Importer (Embedded State)
+                    const sessionData = {
+                        bpm: currentArpBPM,
+                        studioState: studio,
+                        looperState: looper,
+                        arrangerState: arranger,
+                        exportDuration: exportSec
+                    };
+                    zip.file("tonnetz_session.json", JSON.stringify(sessionData, null, 2));
+
+                    // 4. Trigger the Download as a .dawproject!
+                    if (exportedCount > 0) {
+                        const content = await zip.generateAsync({ type: "blob" });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(content);
+                        a.download = `TonnetzPro_Session_${currentArpBPM}BPM.dawproject`;
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                        showToast(`Successfully exported Project with ${exportedCount} tracks!`);
+                    } else {
+                        showToast("Failed to export project.");
+                    }
+
+                    btnStems.disabled = false;
+                    btnStems.innerHTML = "📦 OUT";
+                    setTimeout(() => { dummySilencer.disconnect(); }, 1000);
+
+                }, exportSec * 1000);
+            }, 100); // 100ms buffer to ensure graph is fully zeroed out before starting
+        });
+
         // --- Custom WAV Exporter to guarantee lossless native WAV export ---
         function exportWAV(buffers, sampleRate) {
             const numChannels = 2;
@@ -6107,6 +6708,87 @@
                 view.setUint8(offset + i, string.charCodeAt(i));
             }
         }
+
+        // --- PHASE 5: STEM PROJECT RECALL (JSZIP UNPACKER) ---
+        document.getElementById('btn-import-stems')?.addEventListener('click', () => {
+            if (typeof JSZip === 'undefined') { showToast("JSZip library is loading..."); return; }
+            document.getElementById('import-zip-input').click();
+        });
+
+        document.getElementById('import-zip-input')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showToast("Unzipping and decoding stems... Please wait.");
+            initAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+                let restoredCount = 0;
+
+                // 1. Nuke the current session to make room for the new one
+                looper.tracks.forEach((t, i) => { looper.tracks[i] = []; looper.trackDurations[i] = 0; });
+                arranger.tracks.forEach((t, i) => arranger.tracks[i] = []);
+                arranger.duration = 0;
+                studio.trackAudioBuffers.fill(null);
+                studio.trackTypes.fill(null);
+                document.querySelectorAll('.track-btn').forEach(btn => btn.classList.remove('type-voice', 'type-drum', 'has-data'));
+
+                // 2. Iterate through every file in the ZIP
+                for (const filename of Object.keys(zip.files)) {
+                    if (filename.endsWith('.wav')) {
+                        // We parse our exact format: Track_01_L1_Synth_Acoustic_Piano.wav
+                        const parts = filename.split('_');
+                        if (parts.length >= 4) {
+                            const prefix = parts[2]; // 'L1' or 'A1'
+                            const isLooperDomain = prefix.startsWith('L');
+                            const localIdx = parseInt(prefix.substring(1)) - 1;
+                            const trackIdx = isLooperDomain ? localIdx : localIdx + 8;
+
+                            // Extract audio data and decode it back into a playable Web Audio Buffer
+                            const fileData = await zip.files[filename].async("arraybuffer");
+                            const audioBuffer = await audioCtx.decodeAudioData(fileData);
+
+                            studio.trackAudioBuffers[trackIdx] = audioBuffer;
+
+                            // Rebuild the timeline event!
+                            const evt = { id: Math.random(), timeOffset: 0, type: 'stem', duration: audioBuffer.duration };
+
+                            if (isLooperDomain) {
+                                looper.tracks[localIdx].push(evt);
+                                looper.trackDurations[localIdx] = audioBuffer.duration;
+                            } else {
+                                arranger.tracks[localIdx].push(evt);
+                                if (audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
+                            }
+
+                            // Restore UI Labels and Colors
+                            const typeLabel = parts[3].toLowerCase();
+                            studio.trackTypes[trackIdx] = typeLabel === 'drums' ? 'drum' : 'voice';
+
+                            const btn = document.querySelector(`.track-btn[data-track="${trackIdx}"]`);
+                            if (btn) btn.classList.add(typeLabel === 'drums' ? 'type-drum' : 'type-voice');
+
+                            const instName = parts.slice(4).join(' ').replace('.wav', '');
+                            const labelEl = document.getElementById(`inst-label-${trackIdx}`);
+                            if (labelEl) labelEl.textContent = instName;
+
+                            restoredCount++;
+                        }
+                    }
+                }
+
+                // Clear the input so the same file can be re-uploaded if needed
+                e.target.value = '';
+                updateStudioUI();
+                showToast(`Project Recall Complete! Restored ${restoredCount} tracks.`);
+
+            } catch (err) {
+                console.error(err);
+                showToast("Error parsing ZIP file.");
+            }
+        });
 
         // --- Piano Keyboard Generation ---
         function initPiano() {
@@ -6353,8 +7035,8 @@
             playDrum(type, playTime, velocity);
             highlightDrumBtn(type, playTime);
 
-            if (looper.isRecording) {
-                recordLooperEvent(null, null, 'drum', null, type, velocity, playTime);
+            if (looper.isRecording || arranger.isRecording) {
+                recordStudioEvent(null, 'drum', null, type, velocity, playTime);
             }
         }
 
@@ -6375,8 +7057,8 @@
                 const playTime = nextMetroTime + swingDelay;
                 const s = metroStep % 16;
 
-                if (looper.isArmed) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = playTime; looper.recordingType = 'drum'; updateLooperUI(); }
-                else if (looper.isRecording && looper.recordingType !== 'both') { if (looper.recordingType === 'voice') { looper.recordingType = 'both'; updateLooperUI(); } }
+                if (looper.isArmed) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = playTime; looper.recordingType = 'drum'; updateStudioUI(); }
+                else if (looper.isRecording && looper.recordingType !== 'both') { if (looper.recordingType === 'voice') { looper.recordingType = 'both'; updateStudioUI(); } }
 
                 if (metroMode === 'click') {
                     if (s % 4 === 0) triggerSequencerDrum('click', playTime, s === 0 ? 1 : 0.5);
@@ -6459,18 +7141,21 @@
         function triggerManualDrum(type, velocity = 1) {
             initAudio();
             playDrum(type, audioCtx.currentTime, velocity);
+
             if (looper.isArmed) {
-                looper.isArmed = false;
-                looper.isRecording = true;
-                looper.isPlaying = true;
-                looper.startTime = audioCtx.currentTime;
-                looper.recordingType = 'drum';
-                updateLooperUI();
+                looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true;
+                looper.startTime = audioCtx.currentTime; updateStudioUI();
             } else if (looper.isRecording && looper.recordingType !== 'both') {
                 if (looper.recordingType === 'voice') { looper.recordingType = 'both'; updateLooperUI(); }
             }
-            if (looper.isRecording) {
-                recordLooperEvent(null, null, 'drum', null, type, velocity, audioCtx.currentTime);
+
+            if (arranger.isArmed) {
+                arranger.isArmed = false; arranger.isRecording = true; arranger.isPlaying = true;
+                arranger.startTime = audioCtx.currentTime; updateStudioUI();
+            }
+
+            if (looper.isRecording || arranger.isRecording) {
+                recordStudioEvent(null, 'drum', null, type, velocity, audioCtx.currentTime);
             }
 
             const btn = document.querySelector(`.manual-drum-btn[data-drum="${type}"]`);
@@ -6490,7 +7175,7 @@
         setInterval(() => {
             scheduleArps();
             scheduleMetronome();
-            processLooperPlayback();
+            processStudioPlayback();
 
             // --- MIDI MASTER CLOCK SENDER ---
             if (midiSyncMode === 'master' && midiOut && audioCtx) {
@@ -6767,9 +7452,6 @@
             el._stopAction = (f = false) => { stopFrequencies(el, f); };
         }
 
-        const gridBuffer = 2;
-        const GRID_W = 1600;
-        const GRID_H = 1200;
         const jMin = Math.floor((-GRID_H / 2) / DY) - gridBuffer;
         const jMax = Math.ceil((GRID_H / 2) / DY) + gridBuffer;
 
@@ -6903,6 +7585,189 @@
             }
         }
 
+        // --- HYBRID SESSION IMPORTER ---
+        document.getElementById('btn-import-stems')?.addEventListener('click', () => {
+            if (typeof JSZip === 'undefined') { showToast("JSZip is loading..."); return; }
+            document.getElementById('import-zip-input').click();
+        });
+
+        document.getElementById('import-zip-input')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showToast("Reading project file... Please wait.");
+            initAudio();
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+
+                // 1. Clean the Slate
+                looper.tracks.forEach((t, i) => { looper.tracks[i] = []; looper.trackDurations[i] = 0; looper.lastPhases[i] = 0; });
+                arranger.tracks.forEach((t, i) => arranger.tracks[i] = []);
+                arranger.duration = 0;
+                arranger.pauseTime = 0;
+                studio.trackAudioBuffers = new Array(16).fill(null);
+                studio.trackTypes.fill(null);
+                document.querySelectorAll('.track-btn').forEach(btn => btn.classList.remove('type-voice', 'type-drum', 'active'));
+
+                // 2. Look for the Hybrid Session JSON
+                const sessionFile = zip.file("tonnetz_session.json");
+
+                if (sessionFile) {
+                    showToast("Native Session found! Restoring non-destructive MIDI...");
+                    const sessionText = await sessionFile.async("string");
+                    const state = JSON.parse(sessionText);
+
+                    // Restore BPM
+                    currentArpBPM = state.bpm;
+                    const bpmSlider = document.getElementById('arpBpm');
+                    if (bpmSlider) { bpmSlider.value = state.bpm; bpmSlider.dispatchEvent(new Event('input')); }
+
+                    // Restore Engine States
+                    Object.assign(looper, state.looperState);
+                    Object.assign(arranger, state.arrangerState);
+                    Object.assign(studio, state.studioState);
+                    arranger.duration = state.exportDuration || arranger.duration;
+
+                    // Re-apply UI for all 16 tracks
+                    for (let i = 0; i < 16; i++) {
+                        const type = studio.trackTypes[i];
+                        if (type !== null) {
+                            const btn = document.querySelector(`.track-btn[data-track="${i}"]`);
+                            if (btn) btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
+
+                            const labelEl = document.getElementById(`inst-label-${i}`);
+                            if (labelEl && studio.trackSynthStates[i]) {
+                                labelEl.textContent = type === 'drum' ? 'DRUMS' : (studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
+                            }
+                        }
+
+                        // Restore Mute buttons
+                        const isLooper = i < 8;
+                        const localIdx = isLooper ? i : i - 8;
+                        const domainObj = isLooper ? looper : arranger;
+                        const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
+                        if (muteBtn) muteBtn.classList.toggle('muted', domainObj.muted[localIdx]);
+                    }
+
+                    // Load active track UI
+                    applySynthStateToUI(studio.trackSynthStates[studio.activeLooperTrack]);
+                    document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('active');
+
+                    updateStudioUI();
+                    showToast("Session Restored Successfully!");
+
+                } else {
+                    showToast("Foreign DAWproject detected. Scanning for metadata...");
+
+                    // --- UPGRADED: LIGHTWEIGHT XML SKIMMER ---
+                    let trackMetadata = {}; // Maps "Audio/filename.wav" to { name, color }
+
+                    const xmlFile = zip.file("project.xml");
+                    if (xmlFile) {
+                        try {
+                            const xmlText = await xmlFile.async("string");
+                            const parser = new DOMParser();
+                            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+
+                            // 1. Skim for the Tempo
+                            const transportNode = xmlDoc.querySelector("transport");
+                            if (transportNode && transportNode.getAttribute("tempo")) {
+                                const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
+                                if (!isNaN(importedBpm) && importedBpm >= 40 && importedBpm <= 240) {
+                                    currentArpBPM = Math.round(importedBpm);
+                                    const bpmSlider = document.getElementById('arpBpm');
+                                    if (bpmSlider) {
+                                        bpmSlider.value = currentArpBPM;
+                                        bpmSlider.dispatchEvent(new Event('input'));
+                                    }
+                                }
+                            }
+
+                            // 2. Skim for Track Names and Colors
+                            const trackNodes = xmlDoc.querySelectorAll("track");
+                            trackNodes.forEach(track => {
+                                // Find the audio file path associated with this track
+                                const audioFileNode = track.querySelector("audio-file");
+                                if (audioFileNode) {
+                                    let path = audioFileNode.getAttribute("path");
+                                    if (path) {
+                                        // Normalize path (some DAWs prepend './')
+                                        if (path.startsWith("./")) path = path.substring(2);
+
+                                        trackMetadata[path] = {
+                                            name: track.getAttribute("name"),
+                                            color: track.getAttribute("color") // Usually a hex code like #ff00ff
+                                        };
+                                    }
+                                }
+                            });
+                        } catch (xmlErr) {
+                            console.warn("Could not parse project.xml for metadata", xmlErr);
+                        }
+                    }
+
+                    // 3. FALLBACK: Extract Audio files directly to the Arranger Timeline
+                    let restoredCount = 0;
+
+                    for (const filename of Object.keys(zip.files)) {
+                        if (filename.includes('Audio/') && filename.endsWith('.wav')) {
+                            if (restoredCount >= 8) break; // We only have 8 linear tracks available!
+
+                            const fileData = await zip.files[filename].async("arraybuffer");
+                            const audioBuffer = await audioCtx.decodeAudioData(fileData);
+
+                            const trackIdx = restoredCount + 8; // Start at A1 (Index 8)
+                            studio.trackAudioBuffers[trackIdx] = audioBuffer;
+
+                            // Create a special 'stem' event
+                            const evt = { id: Math.random(), timeOffset: 0, type: 'stem', duration: audioBuffer.duration };
+                            arranger.tracks[restoredCount].push(evt);
+
+                            if (audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
+
+                            studio.trackTypes[trackIdx] = 'voice';
+                            const btn = document.querySelector(`.track-btn[data-track="${trackIdx}"]`);
+                            const labelEl = document.getElementById(`inst-label-${trackIdx}`);
+
+                            // 4. APPLY THE EXTRACTED METADATA
+                            const meta = trackMetadata[filename];
+
+                            if (meta && meta.name) {
+                                // Use the exact track name from the DAW!
+                                if (labelEl) labelEl.textContent = meta.name.substring(0, 12).toUpperCase();
+                            } else {
+                                // Fallback: Use the cleaned-up filename
+                                let nameMatch = filename.split('/').pop().replace('.wav', '').replace(/^Track_\d+_/i, '');
+                                if (labelEl) labelEl.textContent = nameMatch.substring(0, 12).toUpperCase();
+                            }
+
+                            if (btn) {
+                                btn.classList.add('type-voice');
+                                // If the DAW provided a track color, physically paint the UI button!
+                                if (meta && meta.color) {
+                                    btn.style.borderBottom = `3px solid ${meta.color}`;
+                                } else {
+                                    btn.style.borderBottom = ''; // Default CSS
+                                }
+                            }
+
+                            restoredCount++;
+                        }
+                    }
+                    updateStudioUI();
+                    showToast(`Imported foreign project at ${currentArpBPM} BPM!`);
+                }
+
+                e.target.value = ''; // Reset input for future imports
+
+            } catch (err) {
+                console.error(err);
+                showToast("Error parsing Project file.");
+            }
+        });
+
         // --- TAURI NATIVE OS INTEGRATION ---
         if (window.__TAURI__) {
             console.log("Native Tauri Environment Detected!");
@@ -6946,7 +7811,8 @@
         document.getElementById('themeColorSelect')?.dispatchEvent(new Event('change'));
 
         // --- PWA SERVICE WORKER REGISTRATION ---
-        if ('serviceWorker' in navigator) {
+        // Only attempt to register if hosted securely or on localhost (prevents file:/// crashes)
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').then(registration => {
                     console.log('Tonnetz Pro is ready for offline use! Scope:', registration.scope);
