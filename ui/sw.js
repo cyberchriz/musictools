@@ -2,6 +2,8 @@ const CACHE_NAME = 'tonnetz-pro-v1';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
+    './app.js',
+    './jszip.min.js',
     './manifest.json'
     // Note: If external CSS or external sample WAV files are added later, their URLs should be added here!
 ];
