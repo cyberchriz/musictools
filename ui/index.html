@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tonnetz Pro</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="jszip.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9c27b0">
@@ -2822,6 +2822,22 @@
     </div>
 
     <script>
+
+        // --- NATIVE WRAPPER CRASH CATCHER ---
+        window.addEventListener('error', (e) => {
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = "position:fixed; top:0; left:0; width:100vw; background:#d32f2f; color:white; z-index:9999; padding:15px; font-family:monospace; font-size:12px; box-sizing:border-box;";
+            errDiv.innerHTML = `<strong>APP ERROR</strong><br>${e.message}<br>Line: ${e.lineno} <button onclick="this.parentElement.remove()" style="float:right; color:black;">Close</button>`;
+            document.body.appendChild(errDiv);
+        });
+
+        window.addEventListener('unhandledrejection', (e) => {
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = "position:fixed; top:0; left:0; width:100vw; background:#f57c00; color:white; z-index:9999; padding:15px; font-family:monospace; font-size:12px; box-sizing:border-box;";
+            errDiv.innerHTML = `<strong>PROMISE ERROR</strong><br>${e.reason} <button onclick="this.parentElement.remove()" style="float:right; color:black;">Close</button>`;
+            document.body.appendChild(errDiv);
+        });
+
         // =====================================================================
         // 1. HARDWARE PROFILER & PERFORMANCE TIERS
         // =====================================================================
@@ -7403,8 +7419,20 @@
                 return;
             }
             if (navigator.requestMIDIAccess) {
-                navigator.requestMIDIAccess().then(onMIDISuccess, () => { if (btn) { btn.textContent = "MIDI: Access Denied"; btn.classList.remove('active-btn'); } });
-            } else { if (btn) { btn.textContent = "Web MIDI not supported"; btn.classList.remove('active-btn'); } }
+                try {
+                    navigator.requestMIDIAccess()
+                        .then(onMIDISuccess)
+                        .catch(err => {
+                            console.warn("MIDI Promise Rejected:", err);
+                            if (btn) { btn.textContent = "MIDI: Access Denied"; btn.classList.remove('active-btn'); }
+                        });
+                } catch (err) {
+                    console.error("MIDI Sync Crash Blocked:", err);
+                    if (btn) { btn.textContent = "MIDI: OS Blocked"; btn.classList.remove('active-btn'); }
+                }
+            } else {
+                if (btn) { btn.textContent = "Web MIDI not supported"; btn.classList.remove('active-btn'); }
+            }
         });
 
         function onMIDISuccess(midi) {
@@ -8067,15 +8095,18 @@
 
         function initSampleDB() {
             return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, 1);
-                request.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'name' });
-                    }
-                };
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+                if (!window.indexedDB) return reject("IndexedDB not supported");
+                try {
+                    const request = indexedDB.open(DB_NAME, 1);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+                    };
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                } catch (err) {
+                    reject("IndexedDB Security Block: " + err);
+                }
             });
         }
 

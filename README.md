@@ -66,6 +66,15 @@ npm install
 npx tauri dev
 ```
 ---
+
+# Third-Party Acknowledgements
+
+Tonnetz Pro utilizes the following open-source library, which is distributed under its respective license:
+
+* **[JSZip](https://github.com/Stuk/jszip)** (Dual-licensed under MIT / GPLv3)
+  Used under the **MIT License**.
+  Copyright (c) 2009-2016 Stuart Knightley, David Duponchel, Franz Buchinger, António Afonso.
+---
 # License
 
 Copyright (c) 2026 Christian Suer (GitHub: cyberchriz). All rights reserved.
