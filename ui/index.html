@@ -382,6 +382,43 @@
             transform: translateZ(0);
         }
 
+        /* --- Panel Auto-Hide Toggle Button (Extreme Contrast Update) --- */
+        .auto-hide-toggle {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            color: var(--text-muted);
+            border-radius: 6px;
+            width: 26px; /* Slightly larger to fit the bold border */
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 8px;
+            transition: all 0.2s ease;
+            opacity: 0.6;
+            filter: grayscale(100%); /* Physically drains color from the OS emoji when off! */
+        }
+
+            .auto-hide-toggle:hover {
+                border-color: var(--text-muted);
+                opacity: 0.9;
+            }
+
+            .auto-hide-toggle.active {
+                background: var(--bg-color); /* Guaranteed neutral background for the emoji */
+                border: 2px solid var(--main-node); /* Bold theme-colored outline */
+                color: var(--main-node);
+                opacity: 1;
+                filter: none; /* Restores the icon's natural color */
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 10px var(--theme-glow);
+            }
+
+        .dark-theme .auto-hide-toggle.active {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px var(--theme-glow);
+        }
+
         /* --- DOCKED PANEL ARCHITECTURE --- */
         .overlay.primary, #studio-overlay {
             position: absolute;
@@ -1243,9 +1280,7 @@
 
         /* --- AUTO-HIDE ENGINE --- */
         body.ui-hidden #canvas-controls,
-        body.ui-hidden #settings-overlay,
-        body.ui-hidden #synth-overlay,
-        body.ui-hidden #mixer-overlay {
+        body.ui-hidden .overlay.auto-hides {
             opacity: 0 !important;
             pointer-events: none !important;
         }
@@ -1998,6 +2033,21 @@
             shape-rendering: optimizeSpeed;
             text-rendering: optimizeSpeed;
         }
+
+        /* Ensure FAB is visible on mobile (both portrait and landscape) */
+        @media (max-width: 850px) {
+            .fab-menu-btn {
+                display: flex;
+            }
+
+            /* When a docked panel is open in landscape, shift the ENTIRE control container left */
+            @media (orientation: landscape) {
+                .canvas-controls.fab-shifted {
+                    /* Dynamically dodges the exact responsive width of the panel + 20px padding */
+                    right: clamp(340px, calc(30vw + 20px), 570px) !important;
+                }
+            }
+        }
     </style>
 </head>
 <body>
@@ -2033,15 +2083,19 @@
     </div>
 
     <!-- OVERLAY 1.1: General Settings -->
-    <div id="settings-overlay" class="overlay primary">
+    <div id="settings-overlay" class="overlay primary auto-hides">
         <div class="controls-section">
             <div class="section-title">
-                General Settings <button id="btnCloseSettings" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                <span>General Settings</span>
+                <div style="display:flex; align-items:center;">
+                    <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
+                    <button id="btnCloseSettings" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                </div>
             </div>
-            
+
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Theory & Engine Configuration</div>
-                
+
                 <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group">
                         <label>Key Center</label>
@@ -2160,9 +2214,15 @@
     </div>
 
     <!-- OVERLAY 1.2: Synthesizer Engine -->
-    <div id="synth-overlay" class="overlay primary">
+    <div id="synth-overlay" class="overlay primary auto-hides">
         <div class="controls-section">
-            <div class="section-title">Synthesizer Engine <button id="btnCloseSynth" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button></div>
+            <div class="section-title">
+                <span>Synthesizer Engine</span>
+                <div style="display:flex; align-items:center;">
+                    <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
+                    <button id="btnCloseSynth" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                </div>
+            </div>
             <div class="control-row">
                 <div class="control-group" style="grid-column: span 2;">
                     <label style="color: var(--main-node);">Instrument</label>
@@ -2306,6 +2366,7 @@
                     <span style="font-size: 0.8rem; font-weight:bold; color: var(--text-muted);">PERFORMANCE PADS</span>
                     <div style="display:flex; align-items:center; gap: 8px;">
                         <input type="range" id="padHeightSlider" min="30" max="150" value="40" title="Adjust Pad Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
+                        <button class="auto-hide-toggle" title="Auto-Hide Disabled">⏱</button>
                         <button id="btnClosePads" class="close-btn-sm" title="Close">✕</button>
                     </div>
                 </div>
@@ -2354,7 +2415,11 @@
     <div id="drums-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
-                Drum Machine & Presets <button id="btnCloseDrums" class="close-btn-sm" title="Close">✕</button>
+                <span>Drum Machine & Presets</span>
+                <div style="display:flex; align-items:center;">
+                    <button class="auto-hide-toggle" title="Auto-Hide Disabled">⏱</button>
+                    <button id="btnCloseDrums" class="close-btn-sm" title="Close">✕</button>
+                </div>
             </div>
             <div class="drum-preset-wrapper">
                 <div class="drum-preset-grid">
@@ -2415,8 +2480,11 @@
     <div id="studio-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
-                Multitrack Studio
-                <button id="btnCloseStudio" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                <span>Multitrack Studio</span>
+                <div style="display:flex; align-items:center;">
+                    <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
+                    <button id="btnCloseStudio" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+                </div>
             </div>
 
             <div class="control-well">
@@ -2562,6 +2630,7 @@
                 <span>Mixer & Equalizer</span>
                 <div style="display:flex; align-items:center; gap: 8px;">
                     <input type="range" id="mixerHeightSlider" min="50" max="250" value="100" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
+                    <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
                     <button id="btnCloseMixer" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
                 </div>
             </div>
@@ -2652,8 +2721,9 @@
                     </div>
                 </div>
 
-                <div class="control-row" style="grid-template-columns: 1fr 1fr; border: none; padding-top: 6px; padding-bottom: 4px;">
+                <div class="control-row" style="grid-template-columns: 1fr 1fr 1fr; border: none; padding-top: 6px; padding-bottom: 4px;">
                     <div class="control-group"><label id="lblBusComp">Bus Comp: 40%</label><input type="range" id="busComp" min="0" max="100" step="1" value="40"></div>
+                    <div class="control-group"><label id="lblDeclick">De-Click: 10ms</label><input type="range" id="declick" min="0" max="50" step="1" value="10" title="Micro-fade to prevent pops"></div>
                     <div class="control-group">
                         <label>Master Limiter</label>
                         <select id="limiterMode" class="ui-select">
@@ -2675,67 +2745,79 @@
                 <h2 style="margin:0; border:none; padding:0;">Tonnetz Pro: Manual</h2>
                 <button id="btnCloseInfo" class="close-btn-sm" title="Close">✕</button>
             </div>
-            <p>Welcome to Tonnetz Pro. This workstation uses Euler's Tonnetz (German for "tone network"), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
+            <p>Welcome to Tonnetz Pro! What began as an isomorphic chord explorer is now a fully-featured, offline-capable, in-browser DAW (Digital Audio Workstation) with professional stem exporting.</p>
 
             <h3>🔺 1. Geometric Navigation & Chords</h3>
+            <p>This workstation uses Euler's Tonnetz (German for "tone network"), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
             <ul>
                 <li><strong>Horizontal Axis:</strong> Moving left to right moves in perfect fifths (C -> G -> D).</li>
                 <li><strong>Diagonal Axes:</strong> Moving along diagonals steps in major and minor thirds.</li>
                 <li><strong>Triangles = Triads:</strong> Click any upward-facing triangle to play a Major chord. Click any downward-facing triangle to play a Minor chord.</li>
-                <li>Move (=pan) the Tonnetz grid by clicking and dragging on empty space (desktop), or use the on-screen <strong>D-Pad</strong> buttons. Zoom with your scroll wheel (desktop) or the <strong>+</strong> / <strong>-</strong> buttons.</li>
+                <li>Move (=pan) the grid by clicking and dragging on empty space (desktop), or use the on-screen <strong>D-Pad</strong>. Zoom with your scroll wheel or the <strong>+</strong> / <strong>-</strong> buttons.</li>
             </ul>
 
             <h3>🎛️ 2. Performance Pads & Arpeggiator</h3>
-            <p>You don't need to stretch your mouse across the grid to play complex jazz chords. Use the Performance Pads to instantly modify any note or triad you click. The pads are mapped directly to the left side of your physical keyboard for intuitive muscle memory:</p>
+            <p>You don't need to stretch your mouse across the grid to play complex jazz chords. Use the Performance Pads (mapped to the left side of your physical keyboard) to instantly modify any note or triad you click:</p>
             <ul>
-                <li><strong>Extensions & Alterations:</strong> Use the letter rows (<code>Q-T</code>, <code>A-G</code>, <code>Z-B</code>) to instantly inject lush Jazz tensions. You can alter 5ths (♭5, ♯5), suspend 3rds (sus2, sus4), or stack deep extensions (Maj7, 9, 11, 13, ♭9, ♯9, ♯11, ♭13). When <i>Show Ext. Highlights</i> is ON, the safe 7th and 9th extensions light up with a green border.</li>
-                <li><strong>Octave Jumps:</strong> Hold the number keys <code>1</code> or <code>2</code> to drop or raise your playing by a full octave instantly.</li>
-                <li><strong>Arpeggiator:</strong> Hold <code>3</code> (Up), <code>4</code> (Down), or <code>5</code> (Random) to automatically step through the notes of the shapes you press. Control the speed and rhythm via the <strong>Arp/Metron BPM</strong> slider. You can also apply a <strong>Swing Effect</strong> or toggle continuous looping.</li>
-                <li><strong>Foot Pedals (Thumbs):</strong> Hold the <code>Spacebar</code> to Sustain notes, or the <code>Left Alt</code> key to Dampen them (smoothly muffling actively sustaining voices like an 'una corda' piano pedal).</li>
+                <li><strong>Extensions & Alterations:</strong> Use the letter rows (<code>Q-T</code>, <code>A-G</code>, <code>Z-B</code>) to instantly inject lush Jazz tensions. You can alter 5ths (♭5, ♯5), suspend 3rds (sus2, sus4), or stack deep extensions (Maj7, 9, 11, 13, ♭9, ♯9, ♯11, ♭13). When <i>Show Ext. Highlights</i> is ON, safe 7th and 9th extensions light up with a green border.</li>
+                <li><strong>Octave Jumps:</strong> Hold <code>1</code> or <code>2</code> to drop or raise your playing by a full octave instantly.</li>
+                <li><strong>Arpeggiator:</strong> Hold <code>3</code> (Up), <code>4</code> (Down), or <code>5</code> (Random) to automatically step through the notes of the shapes you press. Control the speed and rhythm via the Arp/Metronome BPM slider.</li>
+                <li><strong>Foot Pedals:</strong> Hold the <code>Spacebar</code> to Sustain notes, or the <code>Left Alt</code> key to Dampen them (smoothly muffling actively sustaining voices like an 'una corda' piano pedal).</li>
             </ul>
 
-            <h3>🔁 3. Live 8-Track Looper & Audio Processing</h3>
-            <p>The built-in looper separates your recordings into 4 Voice tracks (Synth/Piano) and 4 Drum tracks:</p>
+            <h3>📈 3. Synthesizer & Persistent Samples</h3>
+            <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from beautifully calibrated acoustic and retro analog presets.</p>
             <ul>
-                <li>Select a Voice track (V1-V4) AND a Drum track (D1-D4). They are handled independently and can be muted at any time.</li>
-                <li>Press <strong>⏺ Record</strong>. The looper enters an "Armed" state (flashing orange). The moment you play a note on the Tonnetz or trigger a drum, the loop clock starts and records exactly to the respective active track.</li>
-                <li><strong>Preset Sync:</strong> If a Drum Machine preset is playing, hitting Record instantly syncs to the next downbeat and perfectly records the preset's sequence into your active Drum track.</li>
-                <li><strong>Master Recording:</strong> Use the "Master Output Recording" section to bounce your entire jam session (synths, loops, and drums) to a downloadable WebM, MP4, MP3, or uncompressed WAV file.</li>
-                <li><strong>Audio Import:</strong> Import any backing track or audio sample via the file picker, adjust its volume, route it to the master mix, and play along with it.</li>
+                <li><strong>Custom User Samples:</strong> Select "custom sample" from the instrument preset drop-down, then click "Load SAMPLE" to use your own <code>.wav</code> files as oscillator sources. Your uploaded files are now permanently saved to the browser's <strong>IndexedDB database</strong> and will survive page reloads!</li>
+                <li><strong>ADSR Envelope:</strong> Visually sculpt your Attack, Decay, Sustain, and Release times to create anything from sharp rhythmic plucks to slowly swelling cinematic pads.</li>
+                <li><strong>De-Click Engine:</strong> Found in the Mixer panel, this applies a micro-fade (0-50ms) to the start and end of notes, preventing hardware speaker pops (especially useful on mobile or during fast arpeggios).</li>
+                <li><strong>Modulations:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch), <strong>Tremolo</strong> (Volume), and <strong>Sweep</strong> (Auto-Wah filter). Add sub-oscillators, noise generators, and stereo effects like Chorus, Echo, and Reverb.</li>
             </ul>
 
             <h3>🥁 4. Drum Machine & Metronome</h3>
             <ul>
                 <li>Select from 16 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova.</li>
-                <li><strong>Auto-Embellish:</strong> When enabled, the drum machine intelligently adds humanized ghost notes, varying hi-hat velocities, and occasional fills to keep static presets sounding alive and organic.</li>
-                <li><strong>Manual Triggers:</strong> Use the on-screen drum pads to finger-drum custom beats into the looper. You can adjust the vertical height of these buttons to fit your screen perfectly.</li>
+                <li><strong>Auto-Embellish:</strong> When enabled, the drum machine intelligently adds humanized ghost notes, varying hi-hat velocities, and occasional fills to keep static presets sounding organic.</li>
+                <li><strong>Manual Triggers:</strong> Use the on-screen drum pads to finger-drum custom beats. You can adjust the vertical height of these buttons to fit your screen perfectly.</li>
             </ul>
 
-            <h3>📈 5. Synthesizer Engine & Modulations</h3>
-            <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from 33 perfectly calibrated acoustic and retro analog presets (Piano, Lo-Fi Keys, 80s Brass, Theremin, Solo Cello, etc.).</p>
+            <h3>🎙️ 5. The Multitrack Studio</h3>
+            <p>Tonnetz Pro features a 16-track recording environment divided into two distinct engines. Access them via the <strong>STUDIO</strong> panel.</p>
             <ul>
-                <li><strong>ADSR Envelope:</strong> Visually sculpt your Attack, Decay, Sustain, and Release times to create anything from sharp rhythmic plucks to slowly swelling cinematic pads.</li>
-                <li><strong>Brightness & Resonance:</strong> Controls the built-in low-pass filter to make sounds darker or sharper. Add <strong>Filter Env</strong> to let the ADSR envelope sweep the filter cutoff automatically.</li>
-                <li><strong>Sub Osc & Noise:</strong> Blend in a deep sub-bass octave to thicken the low-end, or add white noise to emulate authentic acoustic breath or bow-scrape elements.</li>
-                <li><strong>Multi-LFO System:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch wobble), <strong>Tremolo</strong> (Volume pulsing), and <strong>Sweep</strong> (Auto-Wah filter movement).</li>
-                <li><strong>Effects:</strong> Add analog warmth with Distortion (which dynamically optimizes oversampling on mobile), width with Chorus, or vast spaces with Echo and Reverb.</li>
+                <li><strong>The Looper (L1-L8):</strong> 8 tracks dedicated to cyclical loop recording. Perfect for building drum beats and repetitive chord progressions.</li>
+                <li><strong>The Arranger (A1-A8):</strong> 8 linear tracks that stretch across a timeline. Perfect for recording evolving melodies over your loops, or catching imported audio stems.</li>
+                <li><strong>Recording:</strong> Select a track, choose Synth or Drums, hit the red Record button, and play! The engine is agnostic and will adapt to whatever instrument you are currently playing.</li>
+                <li><strong>Master Recording:</strong> Use the bottom of the Studio panel to bounce your entire jam session (synths, loops, and drums) to a downloadable WebM, MP4, MP3, or uncompressed WAV file.</li>
             </ul>
 
-            <h3>⚙️ 6. Advanced Music Theory & Setup</h3>
+            <h3>📦 6. Project Export & Import (.dawproject)</h3>
+            <p>Tonnetz Pro is fully cross-compatible with professional DAWs like Bitwig Studio, Studio One, and Cubase via the open-source <code>.dawproject</code> format.</p>
             <ul>
-                <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive minimap of the Circle of Fifths to guide your harmonic progressions. It actively highlights your current chord structures in an octave-immune format.</li>
-                <li><strong>Snap to Scale:</strong> Locks the entire grid so that any note you press is forcefully snapped to the nearest valid note in your chosen Key and Scale/Mode (e.g., Dorian, Lydian Dominant, Hungarian Minor).</li>
-                <li><strong>Node Labels:</strong> Switch between Absolute notes (C, D, E), Scale Degrees (1, 2, 3), Roman Numerals (I, II, III), or Solfege (Do, Re, Mi).</li>
-                <li><strong>Transposition:</strong> Easily transpose the grid to accommodate transposing physical instruments (Bb Tenor Sax, Eb Alto Sax, F Horn) if you are using Tonnetz Pro as an accompaniment tool.</li>
-                <li><strong>Tuning Systems:</strong> Switch from standard Equal Temperament to <strong>Just Intonation</strong> or <strong>Pythagorean Tuning</strong> to hear chords with mathematically perfect, beatless tuning ratios.</li>
-                <li><strong>Settings Presets:</strong> Found the perfect synth tone, scale, and layout? Use the Save/Load Preset buttons in the General Settings to export your entire app state to a JSON file.</li>
+                <li><strong>📦 OUT (Export):</strong> Clicking this will package your 16 tracks into a single <code>.dawproject</code> file. It automatically generates high-quality <strong>WAV Stems</strong>, raw binary <strong>MIDI files</strong> of your performances, and invisibly embeds your exact Tonnetz UI session state.</li>
+                <li>
+                    <strong>📥 IN (Import):</strong> Upload any ZIP or DAWproject file here.
+                    <br><em>Native Recall:</em> Uploading a file exported from Tonnetz Pro will instantly restore your entire non-destructive session (synthesizer parameters, MIDI notes, and UI).
+                    <br><em>Foreign Import:</em> Uploading a DAWproject made in a program like Bitwig will extract the track names, colors, and BPM, and safely drop the first 8 audio stems directly onto your linear Arranger tracks for playback!
+                </li>
             </ul>
 
-            <h3>🔌 7. MIDI Connectivity</h3>
+            <h3>⚙️ 7. Advanced Theory & UI Setup</h3>
+            <ul>
+                <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive minimap of the Circle of Fifths to guide your harmonic progressions.</li>
+                <li><strong>Snap to Scale:</strong> Locks the grid so that any note you press is forcefully snapped to the nearest valid note in your chosen Key and Mode (e.g., Dorian, Lydian Dominant).</li>
+                <li><strong>Tuning Systems:</strong> Switch from Equal Temperament to <strong>Just Intonation</strong> or <strong>Pythagorean Tuning</strong> to hear chords with mathematically perfect, beatless tuning ratios.</li>
+                <li><strong>Panel Auto-Hide (⏱):</strong> Every side panel has a small ⏱ toggle button in the top right corner. When activated (Blue), the panel will automatically vanish the moment you touch the Tonnetz grid to give you room to play, and instantly reappear when you release.</li>
+            </ul>
+
+            <h3>🔌 8. MIDI Connectivity</h3>
             <ul>
                 <li><strong>MIDI IN:</strong> Connect any USB MIDI keyboard to play the Tonnetz Pro synthesizer using physical keys. The app responds dynamically to pitch, velocity, and sustain pedal events.</li>
-                <li><strong>MIDI OUT:</strong> Use Tonnetz Pro as an interactive geometric MIDI controller! The chords, arpeggios, and complex extensions you click on the Tonnetz will be sent out to your external hardware synthesizers or your favorite DAW. Toggle between "Browser + MIDI" or "MIDI Only" to save CPU when controlling external gear.</li>
+                <li><strong>MIDI OUT:</strong> Use Tonnetz Pro as an interactive geometric MIDI controller! The chords, arpeggios, and extensions you click on the Tonnetz will be sent out to your external hardware synthesizers or your favorite DAW. Toggle between "Browser + MIDI" or "MIDI Only" to save CPU when controlling external gear.</li>
             </ul>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="btn-sm active-btn" onclick="document.getElementById('btnInfo').click()" style="width: 150px; height: 35px; border-radius: 8px; font-size: 1rem;">Got it!</button>
+            </div>
         </div>
     </div>
 
@@ -2881,6 +2963,8 @@
         function isOctDownOn() { return octDownHeld || (octLocked && octMode === 'down'); }
 
         let currentKeyCenter = 0, currentScale = 'all', currentLabelType = 'absolute';
+
+        let currentDeclick = 0.010; // Default to 10 milliseconds
 
         function getExtendedStArray(stArray) {
             let res = [...stArray];
@@ -3031,6 +3115,14 @@
                 lastSafeOffsetX = newSafeOffsetX;
                 lastSafeOffsetY = newSafeOffsetY;
                 applyTransform(); // Force the grid to shift into the new Safe Area
+            }
+
+            // 4. FAB SHIFTING LOGIC
+            const controlsContainer = document.getElementById('canvas-controls');
+            if (controlsContainer) {
+                // If any side panel is open, shift the FAB over!
+                const shouldShift = !!activeLeft || !!(isStudioActive && studioEl);
+                controlsContainer.classList.toggle('fab-shifted', shouldShift);
             }
         }
 
@@ -3254,6 +3346,19 @@
             if (!wasHidden) updateOverlayCSSVars();
         }
 
+        // --- AUTO-HIDE TOGGLE LISTENERS ---
+        document.querySelectorAll('.auto-hide-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const overlay = e.target.closest('.overlay');
+                if (overlay) {
+                    // Toggle the auto-hides class on the parent panel
+                    const isAuto = overlay.classList.toggle('auto-hides');
+                    e.target.classList.toggle('active', isAuto);
+                    e.target.title = isAuto ? "Auto-Hide Enabled" : "Auto-Hide Disabled";
+                }
+            });
+        });
+
         // --- FAB MENU LOGIC ---
         function closeFabMenu() {
             const cc = document.getElementById('canvas-controls');
@@ -3317,6 +3422,9 @@
                 looperTrackVols: Array.from(document.querySelectorAll('.track-vol')).map(el => el.value),
                 looperEchoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => el.value),
                 looperReverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => el.value),
+                looperTrackPans: Array.from(document.querySelectorAll('.pan-slider')).map(el => el.value),
+                trackMutes: Array.from(document.querySelectorAll('.mute-btn')).map(el => el.classList.contains('muted')),
+                autoHidePanels: Array.from(document.querySelectorAll('.overlay')).filter(el => el.classList.contains('auto-hides')).map(el => el.id),
                 busComp: document.getElementById('busComp').value,
                 mixerHeightSlider: document.getElementById('mixerHeightSlider').value,
                 limiterMode: document.getElementById('limiterMode').value,
@@ -3324,7 +3432,7 @@
                 glideMode: currentGlideMode,
                 midiSyncMode: midiSyncMode,
                 looperQuantize: looperQuantize, looperQuantizeRes: looperQuantizeRes,
-                looperTrackPans: Array.from(document.querySelectorAll('.pan-slider')).map(el => el.value)
+                declick: document.getElementById('declick').value
             };
             const blob = new Blob([JSON.stringify(s, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'TonnetzPro_Settings.json'; a.click(); URL.revokeObjectURL(url); showToast("Settings saved to file.");
@@ -3340,10 +3448,19 @@
                         const s = JSON.parse(ev.target.result);
                         const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
 
-                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'themeColorSelect', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones', 'bgEffectMode', 'bgIntensity', 'autoPan', 'lfoShape', 'lfoSync', 'glideMode', 'looperQuantizeRes', 'midiSyncMode'].forEach(k => av(k, s[k]));
+                        // REMOVED Custom Buttons from this array! Only true standard inputs remain here.
+                        ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'themeColorSelect', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones', 'bgEffectMode', 'bgIntensity', 'declick'].forEach(k => av(k, s[k]));
 
                         av('padHeightSlider', s.padHeight);
                         av('drumHeightSlider', s.drumHeight);
+
+                        // --- FIX: EXPLICIT BUTTON STATE RESTORATION ---
+                        if (s.lfoShape !== undefined) { currentLfoShape = s.lfoShape; const b = document.getElementById('btnLfoShape'); if (b) b.textContent = `Shape: ${currentLfoShape.toUpperCase()}`; }
+                        if (s.lfoSync !== undefined) { currentLfoSync = s.lfoSync; const b = document.getElementById('btnLfoSync'); if (b) b.textContent = `Rate: ${currentLfoSync === 'hz' ? 'Hz' : 'BEAT'}`; }
+                        if (s.glideMode !== undefined) { currentGlideMode = s.glideMode; const b = document.getElementById('btnGlideMode'); if (b) b.textContent = `Glide: ${currentGlideMode.toUpperCase()}`; }
+                        if (s.autoPan !== undefined) { currentAutoPan = s.autoPan; const b = document.getElementById('btnAutoPan'); if (b) { b.textContent = `Auto-Pan: ${currentAutoPan === 'off' ? 'OFF' : currentAutoPan.toUpperCase()}`; b.classList.toggle('active-btn', currentAutoPan !== 'off'); } }
+                        if (s.midiSyncMode !== undefined) { midiSyncMode = s.midiSyncMode; const b = document.getElementById('btnMidiSync'); if (b) { b.textContent = `Sync: ${midiSyncMode.toUpperCase()}`; b.classList.toggle('active-btn', midiSyncMode === 'external'); } }
+                        if (s.looperQuantizeRes !== undefined) { looperQuantizeRes = s.looperQuantizeRes; const b = document.getElementById('btnQuantizeRes'); const lbls = { 0.25: '1/16', 0.5: '1/8', 1: '1/4' }; if (b) b.textContent = `Res: ${lbls[looperQuantizeRes] || '1/16'}`; }
 
                         // restore LFO Retrigger button
                         if (s.lfoRetrigger !== undefined && lfoRetrigger !== s.lfoRetrigger) {
@@ -3365,9 +3482,6 @@
                             }
                         }
 
-                        // update midi sync mode slider state
-                        document.getElementById('midiSyncMode')?.dispatchEvent(new Event('change'));
-
                         // Restore the drum preset
                         const presetToLoad = s.drumPreset || 'none';
                         updateDrumUI(presetToLoad);
@@ -3377,25 +3491,33 @@
                         if (s.showChordDegrees !== undefined && showChordDegrees !== s.showChordDegrees) { showChordDegrees = s.showChordDegrees; document.getElementById('btnChordDegrees').textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; document.getElementById('btnChordDegrees').classList.toggle('active-btn', showChordDegrees); updatePianoVisuals(); }
                         if (s.isDarkMode !== undefined && isDarkMode !== s.isDarkMode) { isDarkMode = s.isDarkMode; document.body.classList.toggle('dark-theme', isDarkMode); document.getElementById('btnTheme').textContent = `Dark Mode: ${isDarkMode ? 'ON' : 'OFF'}`; document.getElementById('btnTheme').classList.toggle('active-btn', isDarkMode); }
 
-                        // RESTORE 8-TRACK VOLUMES, ECHO & REVERB SENDS
-                        if (s.looperTrackVols) {
-                            document.querySelectorAll('.track-vol').forEach((el, idx) => {
-                                if (s.looperTrackVols[idx] !== undefined) { el.value = s.looperTrackVols[idx]; el.dispatchEvent(new Event('input')); }
+                        // --- RESTORE 16-TRACK MIXER SETTINGS ---
+                        if (s.looperTrackVols) { document.querySelectorAll('.track-vol').forEach((el, idx) => { if (s.looperTrackVols[idx] !== undefined) { el.value = s.looperTrackVols[idx]; el.dispatchEvent(new Event('input')); } }); }
+                        if (s.looperTrackPans) { document.querySelectorAll('.pan-slider').forEach((el, idx) => { if (s.looperTrackPans[idx] !== undefined) { el.value = s.looperTrackPans[idx]; el.dispatchEvent(new Event('input')); } }); }
+                        if (s.looperEchoSends) { document.querySelectorAll('.echo-send').forEach((el, idx) => { if (s.looperEchoSends[idx] !== undefined) { el.value = s.looperEchoSends[idx]; el.dispatchEvent(new Event('input')); } }); }
+                        if (s.looperReverbSends) { document.querySelectorAll('.reverb-send').forEach((el, idx) => { if (s.looperReverbSends[idx] !== undefined) { el.value = s.looperReverbSends[idx]; el.dispatchEvent(new Event('input')); } }); }
+
+                        // Restore Mute States safely via click events to ensure audio engine updates
+                        if (s.trackMutes) {
+                            document.querySelectorAll('.mute-btn').forEach((el, idx) => {
+                                if (s.trackMutes[idx]) {
+                                    if (!el.classList.contains('muted')) el.click();
+                                } else {
+                                    if (el.classList.contains('muted')) el.click();
+                                }
                             });
                         }
-                        if (s.looperTrackPans) {
-                            document.querySelectorAll('.pan-slider').forEach((el, idx) => {
-                                if (s.looperTrackPans[idx] !== undefined) { el.value = s.looperTrackPans[idx]; el.dispatchEvent(new Event('input')); }
-                            });
-                        }
-                        if (s.looperEchoSends) {
-                            document.querySelectorAll('.echo-send').forEach((el, idx) => {
-                                if (s.looperEchoSends[idx] !== undefined) { el.value = s.looperEchoSends[idx]; el.dispatchEvent(new Event('input')); }
-                            });
-                        }
-                        if (s.looperReverbSends) {
-                            document.querySelectorAll('.reverb-send').forEach((el, idx) => {
-                                if (s.looperReverbSends[idx] !== undefined) { el.value = s.looperReverbSends[idx]; el.dispatchEvent(new Event('input')); }
+
+                        // --- RESTORE AUTO-HIDE PANEL PREFERENCES ---
+                        if (s.autoHidePanels) {
+                            document.querySelectorAll('.overlay').forEach(el => {
+                                const shouldHide = s.autoHidePanels.includes(el.id);
+                                el.classList.toggle('auto-hides', shouldHide);
+                                const btn = el.querySelector('.auto-hide-toggle');
+                                if (btn) {
+                                    btn.classList.toggle('active', shouldHide);
+                                    btn.title = shouldHide ? "Auto-Hide Enabled" : "Auto-Hide Disabled";
+                                }
                             });
                         }
 
@@ -3409,6 +3531,10 @@
         document.getElementById('mixerHeightSlider')?.addEventListener('input', (e) => { document.documentElement.style.setProperty('--mixer-fader-height', `${e.target.value}px`); updateOverlayCSSVars(); });
         document.getElementById('limiterMode')?.addEventListener('change', e => { updateSafetyCurve(e.target.value); });
         document.getElementById('busComp')?.addEventListener('input', e => { const val = parseFloat(e.target.value); updateLabel('busComp', val, 'Bus Comp', '%'); if (compressor) { compressor.threshold.value = isMobileDevice ? -15.0 : -4.0 - (val / 100 * 16); compressor.ratio.value = 1 + (val / 100 * 11); } });
+        document.getElementById('declick')?.addEventListener('input', e => {
+            currentDeclick = parseInt(e.target.value) / 1000; // Convert ms to seconds!
+            updateLabel('declick', e.target.value, 'De-Click', 'ms');
+        });
         document.getElementById('synthVol')?.addEventListener('input', e => { if (synthGain) synthGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valSynthVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('drumVol')?.addEventListener('input', e => { if (drumGain) drumGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valDrumVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
         document.getElementById('looperMasterVol')?.addEventListener('input', e => { if (looperMasterGain) looperMasterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valLooperMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
@@ -4348,11 +4474,26 @@
             document.getElementById('customSampleInput').click();
         });
 
-        document.getElementById('customSampleInput')?.addEventListener('change', (e) => {
+        document.getElementById('customSampleInput')?.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
+
+            showToast("Saving custom sample to database...");
+
+            // 1. Save to permanent IndexedDB
+            await saveSampleToDB(file);
+
+            // 2. Load it instantly into RAM for immediate playing
             const url = URL.createObjectURL(file);
-            loadSampleToBuffer('sample_custom', url);
+            await loadSampleToBuffer('sample_custom', url);
+
+            // 3. Update the dropdown UI so the user sees it selected
+            const presetEl = document.getElementById('instrumentPreset');
+            if (presetEl) {
+                presetEl.value = `sample_db:${file.name}`;
+            }
+
+            showToast(`${file.name} saved and loaded!`);
         });
 
         // Intercept the Instrument Dropdown to handle Samplers
@@ -4388,9 +4529,21 @@
                 if (br) { br.value = 8; br.dispatchEvent(new Event('input')); }
 
                 if (isFolderSample) {
-                    // Extract the clean file path and fetch it!
                     const filePath = val.replace('sample_folder:', '');
                     loadSampleToBuffer('sample_folder', filePath);
+                } else if (val.startsWith('sample_db:')) {
+                    // --- NEW: FETCH FROM INDEXED-DB ---
+                    const filename = val.replace('sample_db:', '');
+                    loadSampleFromDB(filename).then(arrayBuffer => {
+                        if (arrayBuffer) {
+                            // Convert the raw binary array back into a Blob URL for the audio engine
+                            const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
+                            const url = URL.createObjectURL(blob);
+                            loadSampleToBuffer('sample_db', url);
+                        } else {
+                            showToast("Sample not found in database!");
+                        }
+                    });
                 } else if (val !== 'sample_custom') {
                     loadSampleToBuffer(val, null);
                 }
@@ -5529,8 +5682,11 @@
                 const peak = dampenHeld ? 0.015 : (baseVolume * accentMult * velMult);
                 const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * s.sustain);
 
-                gainNode.gain.linearRampToValueAtTime(peak, startTime + s.attack);
-                gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + s.attack + s.decay);
+                // --- DE-CLICK INJECTION ---
+                const safeAttack = Math.max(currentDeclick, s.attack);
+
+                gainNode.gain.linearRampToValueAtTime(peak, startTime + safeAttack);
+                gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + safeAttack + s.decay);
             }
 
             // Safely check if nodes exist before starting them!
@@ -5631,9 +5787,11 @@
                     gainNode.gain.cancelScheduledValues(now);
 
                     const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
-                    const relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
+                    let relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
 
-                    // Physically destroy the nodes to free Mobile CPU!
+                    // --- DE-CLICK INJECTION ---
+                    relTime = Math.max(currentDeclick, relTime);
+
                     const cleanup = () => {
                         try {
                             if (osc1) osc1.stop();
@@ -5655,8 +5813,9 @@
                     };
 
                     if (skipFade || isFastSwipe) {
-                        gainNode.gain.setTargetAtTime(0.001, now, 0.015);
-                        setTimeout(cleanup, 30);
+                        const fastFade = Math.max(currentDeclick, 0.015);
+                        gainNode.gain.setTargetAtTime(0.001, now, fastFade);
+                        setTimeout(cleanup, fastFade * 2000);
                     } else {
                         gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.001), now);
                         gainNode.gain.exponentialRampToValueAtTime(0.001, now + relTime);
@@ -6114,6 +6273,10 @@
                                     let bufferOffset = 0;
                                     if (exactTime < now) { bufferOffset = now - exactTime; exactTime = now; }
 
+                                    // DE-CLICK INJECTION
+                                    gain.gain.setValueAtTime(0, Math.max(0, exactTime));
+                                    gain.gain.linearRampToValueAtTime(1.0, Math.max(0, exactTime) + currentDeclick);
+
                                     source.start(exactTime, bufferOffset);
 
                                     const dummyElement = { _st: [], isLooper: true };
@@ -6189,6 +6352,10 @@
                                         let exactTime = now + (evt.timeOffset - phase);
                                         let bufferOffset = 0;
                                         if (exactTime < now) { bufferOffset = now - exactTime; exactTime = now; }
+
+                                        // DE-CLICK INJECTION
+                                        gain.gain.setValueAtTime(0, Math.max(0, exactTime));
+                                        gain.gain.linearRampToValueAtTime(1.0, Math.max(0, exactTime) + currentDeclick);
 
                                         source.start(exactTime, bufferOffset);
 
@@ -6597,18 +6764,19 @@
 
                     // Create the mandatory DAWproject folder structure
                     const audioFolder = zip.folder("Audio");
-                    zip.folder("MIDI"); // Empty for now, ready for future MIDI implementation
+                    const midiFolder = zip.folder("MIDI"); // <--- Now active!
                     zip.folder("Plugins"); // Empty, but required for the spec
 
                     let exportedCount = 0;
                     let activeTrackIndices = [];
 
-                    // 1. Build the WAV files and put them in the /Audio folder
+                    // 1. Build the WAV and MIDI files!
                     for (let i = 0; i < 16; i++) {
                         if (stemWorklets[i]) {
                             activeTrackIndices.push(i);
                             const isLooper = i < 8;
                             const localIdx = isLooper ? i : i - 8;
+                            const domainObj = isLooper ? looper : arranger;
                             const panner = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
 
                             if (panner) panner.disconnect(stemWorklets[i]);
@@ -6616,16 +6784,26 @@
 
                             const wavBlob = exportWAV(stemBuffers[i], audioCtx.sampleRate);
 
-                            // Format: Track_01_L1_Synth_Acoustic_Piano.wav
+                            // Format Names
                             const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
                             const instName = document.getElementById(`inst-label-${i}`)?.textContent || 'Track';
                             const cleanName = instName.replace(/[^a-zA-Z0-9]/g, '_');
                             const typeLabel = studio.trackTypes[i] === 'drum' ? 'Drums' : 'Synth';
                             const padNum = (i + 1).toString().padStart(2, '0');
 
-                            const fileName = `Track_${padNum}_${prefix}_${typeLabel}_${cleanName}.wav`;
+                            const baseFileName = `Track_${padNum}_${prefix}_${typeLabel}_${cleanName}`;
 
-                            audioFolder.file(fileName, wavBlob);
+                            // Save Audio
+                            audioFolder.file(`${baseFileName}.wav`, wavBlob);
+
+                            // --- NEW: Encode and Save MIDI! ---
+                            const trackEvents = domainObj.tracks[localIdx];
+                            if (trackEvents && trackEvents.length > 0) {
+                                const isDrum = studio.trackTypes[i] === 'drum';
+                                const midiBinary = createMIDIFile(trackEvents, currentArpBPM, isDrum);
+                                midiFolder.file(`${baseFileName}.mid`, midiBinary);
+                            }
+
                             exportedCount++;
                         }
                     }
@@ -7809,6 +7987,174 @@
 
         // Force Theme sync on startup to guarantee colors match the dropdown!
         document.getElementById('themeColorSelect')?.dispatchEvent(new Event('change'));
+
+        // --- VANILLA JS BINARY MIDI ENCODER ---
+        function writeVarInt(value) {
+            let buffer = [value & 0x7F];
+            while ((value >>= 7)) buffer.push((value & 0x7F) | 0x80);
+            return buffer.reverse();
+        }
+
+        function createMIDIFile(events, bpm, isDrumTrack) {
+            const PPQ = 480; // Pulses (ticks) Per Quarter Note
+            const ticksPerSecond = (bpm * PPQ) / 60;
+
+            // 1. Flatten all notes into a single timeline of "Note On" and "Note Off" actions
+            let midiActions = [];
+
+            events.forEach(evt => {
+                const startTick = Math.round(evt.timeOffset * ticksPerSecond);
+                const durationTicks = Math.round((evt.duration || 0.5) * ticksPerSecond);
+
+                if (evt.type === 'play' && evt.stArray) {
+                    evt.stArray.forEach(st => {
+                        const note = Math.min(127, Math.max(0, 60 + st)); // Base note C4 (60) + Tonnetz semitone offset
+                        midiActions.push({ tick: startTick, type: 0x90, note: note, vel: Math.round(evt.velocity * 127) || 100 });
+                        midiActions.push({ tick: startTick + durationTicks, type: 0x80, note: note, vel: 0 });
+                    });
+                } else if (evt.type === 'drum' && evt.drumType) {
+                    // Map generic drum names to General MIDI Drum Map (Channel 10)
+                    const drumMap = { 'kick': 36, 'snare': 38, 'hihat': 42, 'clap': 39, 'cymbal': 49, 'tom': 45 };
+                    const note = drumMap[evt.drumType.toLowerCase()] || 36;
+                    midiActions.push({ tick: startTick, type: 0x90, note: note, vel: Math.round(evt.velocity * 127) || 100 });
+                    midiActions.push({ tick: startTick + durationTicks, type: 0x80, note: note, vel: 0 });
+                }
+            });
+
+            // Sort actions strictly by time
+            midiActions.sort((a, b) => a.tick - b.tick);
+
+            // 2. Convert Absolute Ticks to Delta Ticks (Time since last event)
+            let trackData = [];
+            let lastTick = 0;
+
+            // Channel 9 (0-indexed) is the General MIDI standard for Drums
+            const channel = isDrumTrack ? 0x09 : 0x00;
+
+            midiActions.forEach(action => {
+                const delta = action.tick - lastTick;
+                trackData.push(...writeVarInt(delta));
+                trackData.push(action.type | channel, action.note, action.vel);
+                lastTick = action.tick;
+            });
+
+            // End of Track Meta Event
+            trackData.push(0x00, 0xFF, 0x2F, 0x00);
+
+            // 3. Construct the Binary File Headers
+            const headerChunk = [
+                0x4D, 0x54, 0x68, 0x64, // MThd
+                0x00, 0x00, 0x00, 0x06, // Chunk length (6 bytes)
+                0x00, 0x00,             // Format 0 (Single Track)
+                0x00, 0x01,             // 1 Track
+                (PPQ >> 8) & 0xFF, PPQ & 0xFF // Division (Ticks per Quarter Note)
+            ];
+
+            const trackHeader = [
+                0x4D, 0x54, 0x72, 0x6B, // MTrk
+                (trackData.length >> 24) & 0xFF, (trackData.length >> 16) & 0xFF,
+                (trackData.length >> 8) & 0xFF, trackData.length & 0xFF
+            ];
+
+            return new Uint8Array([...headerChunk, ...trackHeader, ...trackData]);
+        }
+
+        // ==========================================
+        // INDEXED-DB SAMPLE MANAGER
+        // ==========================================
+        const DB_NAME = 'TonnetzProDB';
+        const STORE_NAME = 'custom_samples';
+
+        function initSampleDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'name' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function saveSampleToDB(file) {
+            try {
+                const db = await initSampleDB();
+                const arrayBuffer = await file.arrayBuffer();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+
+                // Save the raw binary data with the filename
+                store.put({ name: file.name, data: arrayBuffer });
+
+                return new Promise((resolve) => {
+                    tx.oncomplete = () => {
+                        refreshSavedSamplesUI();
+                        resolve();
+                    };
+                });
+            } catch (err) {
+                console.error("DB Save Error:", err);
+            }
+        }
+
+        async function loadSampleFromDB(name) {
+            try {
+                const db = await initSampleDB();
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.get(name);
+
+                return new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result ? request.result.data : null);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (err) {
+                console.error("DB Load Error:", err);
+                return null;
+            }
+        }
+
+        async function refreshSavedSamplesUI() {
+            try {
+                const db = await initSampleDB();
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAllKeys();
+
+                request.onsuccess = () => {
+                    const keys = request.result;
+                    const group = document.getElementById('folderSamplesGroup');
+                    if (!group) return;
+
+                    // Clear existing DB entries
+                    group.innerHTML = '';
+
+                    if (keys.length > 0) {
+                        group.label = "--- SAVED SAMPLES ---";
+                        keys.forEach(key => {
+                            const opt = document.createElement('option');
+                            // We use a special prefix so the Synth engine knows to fetch it from the DB
+                            opt.value = `sample_db:${key}`;
+                            opt.textContent = `💾 ${key.replace('.wav', '')}`;
+                            group.appendChild(opt);
+                        });
+                    } else {
+                        group.label = "--- SAVED SAMPLES ---";
+                        group.innerHTML = '<option disabled>No saved samples</option>';
+                    }
+                };
+            } catch (err) {
+                console.error("DB UI Refresh Error:", err);
+            }
+        }
+
+        // Initialize the UI on boot
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshSavedSamplesUI();
+        });
 
         // --- PWA SERVICE WORKER REGISTRATION ---
         // Only attempt to register if hosted securely or on localhost (prevents file:/// crashes)
