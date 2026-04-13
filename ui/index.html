@@ -1,7 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="./jszip.min.js"></script>
+    <script>
+        window.onerror = function (msg, url, line) {
+            const boot = document.getElementById('boot-status');
+            if (boot) {
+                boot.style.backgroundColor = "#d32f2f";
+                boot.style.color = "white";
+                boot.innerHTML = `❌ FATAL JS CRASH:<br>${msg}<br>Line: ${line}`;
+            }
+        };
+        window.addEventListener('unhandledrejection', function (e) {
+            const boot = document.getElementById('boot-status');
+            if (boot) {
+                boot.style.backgroundColor = "#f57c00";
+                boot.style.color = "black";
+                boot.innerHTML = `⚠️ PROMISE ERROR:<br>${e.reason}`;
+            }
+        });
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tonnetz Pro</title>
@@ -2826,8 +2844,8 @@
         </div>
     </div>
 
-    <!-- Include the main JavaScript file -->
-    <script src="./app.js"></script>
+    <script src="./jszip.min.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: jszip.min.js failed to load!</div>'"></script>
 
+    <script src="./app.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: app.js failed to load!<br>Tauri blocked it (CSP) or the file is missing.</div>'"></script>
 </body>
 </html>
