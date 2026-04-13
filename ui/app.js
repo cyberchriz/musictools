@@ -18,22 +18,6 @@ window.addEventListener('unhandledrejection', (e) => {
     document.body.appendChild(errDiv);
 });
 
-// --- SAFE JSZIP LOADER ---
-// Dynamically loads JSZip in the background. Never blocks the Tonnetz UI rendering!
-const loadJSZip = () => {
-    const script = document.createElement('script');
-    script.src = 'jszip.min.js';
-    script.onload = () => console.log("Local JSZip loaded successfully.");
-    script.onerror = () => {
-        console.warn("Local JSZip missing. Falling back to CDN...");
-        const fallback = document.createElement('script');
-        fallback.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-        document.head.appendChild(fallback);
-    };
-    document.head.appendChild(script);
-};
-loadJSZip();
-
 // =====================================================================
 // 1. HARDWARE PROFILER & PERFORMANCE TIERS
 // =====================================================================
@@ -2384,9 +2368,9 @@ function initAudio() {
 
     // Compile and load the AudioWorklet in the background exactly once
     if (!workletPromise) {
-        const blob = new Blob([recorderWorkletCode], { type: 'application/javascript' });
-        const url = URL.createObjectURL(blob);
-        workletPromise = audioCtx.audioWorklet.addModule(url);
+        // Encode as a Data URI to bypass Chrome's Service Worker Blob-interception bug
+        const dataUrl = "data:application/javascript;charset=utf-8," + encodeURIComponent(recorderWorkletCode);
+        workletPromise = audioCtx.audioWorklet.addModule(dataUrl);
     }
 
     requestAnimationFrame(renderVisuals); // starts the graphics loop with a valid timestamp
@@ -5394,3 +5378,5 @@ if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || wi
         });
     });
 }
+
+document.getElementById('boot-status')?.remove();

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="./jszip.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tonnetz Pro</title>
@@ -1686,8 +1687,8 @@
             }
 
         input[type=range].v-slider {
-            -webkit-appearance: slider-vertical;
-            appearance: slider-vertical;
+            writing-mode: vertical-lr;
+            direction: rtl;
             width: 24px;
             height: var(--mixer-fader-height);
             cursor: pointer;
@@ -2050,6 +2051,10 @@
     </style>
 </head>
 <body>
+
+    <div id="boot-status" style="position: absolute; top: 10px; left: 10px; z-index: 99999; font-family: monospace; font-weight: bold; color: #ff9800;">
+        ⏳ Booting Application...
+    </div>
 
     <div class="svg-wrapper" id="tonnetz-wrapper">
         <div id="svg-container"></div>
@@ -2821,7 +2826,7 @@
     </div>
 
     <!-- Include the main JavaScript file -->
-    <script src="app.js"></script>
+    <script src="./app.js"></script>
 
 </body>
 </html>
