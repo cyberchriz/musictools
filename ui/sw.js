@@ -4,7 +4,8 @@ const ASSETS_TO_CACHE = [
     './index.html',
     './app.js',
     './jszip.min.js',
-    './manifest.json'
+    './manifest.json',
+    './icon-192.png'
     // Note: If external CSS or external sample WAV files are added later, their URLs should be added here!
 ];
 
