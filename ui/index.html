@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tonnetz Pro</title>
-    <script src="jszip.min.js"></script>
     <link rel="manifest" href="manifest.json">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9c27b0">
@@ -2837,6 +2836,22 @@
             errDiv.innerHTML = `<strong>PROMISE ERROR</strong><br>${e.reason} <button onclick="this.parentElement.remove()" style="float:right; color:black;">Close</button>`;
             document.body.appendChild(errDiv);
         });
+
+        // --- SAFE JSZIP LOADER ---
+        // Dynamically loads JSZip in the background. Never blocks the Tonnetz UI rendering!
+        const loadJSZip = () => {
+            const script = document.createElement('script');
+            script.src = 'jszip.min.js';
+            script.onload = () => console.log("Local JSZip loaded successfully.");
+            script.onerror = () => {
+                console.warn("Local JSZip missing. Falling back to CDN...");
+                const fallback = document.createElement('script');
+                fallback.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+                document.head.appendChild(fallback);
+            };
+            document.head.appendChild(script);
+        };
+        loadJSZip();
 
         // =====================================================================
         // 1. HARDWARE PROFILER & PERFORMANCE TIERS
