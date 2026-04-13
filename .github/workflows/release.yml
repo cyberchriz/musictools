@@ -42,12 +42,34 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
       
+      - name: Sync Version to Tauri
+        run: |
+          # 1. Strip the 'v' prefix if the user typed it (e.g., v1.0.5 -> 1.0.5)
+          RAW_VERSION=$(echo "${{ github.event.inputs.version }}" | sed 's/^v//')
+          echo "Injecting version $RAW_VERSION into build files..."
+          
+          # 2. Safely update tauri.conf.json using Node.js
+          node -e "
+            const fs = require('fs');
+            const path = 'src-tauri/tauri.conf.json';
+            if (fs.existsSync(path)) {
+              const conf = JSON.parse(fs.readFileSync(path));
+              conf.version = '$RAW_VERSION';
+              fs.writeFileSync(path, JSON.stringify(conf, null, 2));
+              console.log('Successfully updated tauri.conf.json!');
+            } else {
+              console.warn('tauri.conf.json not found at ' + path);
+            }
+          "
+          
+          # 3. Update package.json (Optional, but keeps things perfectly synced)
+          npm version $RAW_VERSION --no-git-tag-version || true
+
       - name: Build Desktop Apps
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          buildRunnerCommand: "npx tauri"
           tagName: ${{ github.event.inputs.version }}
           releaseName: 'Tonnetz Pro ${{ github.event.inputs.version }}'
           releaseBody: 'Automated build from GitHub Actions.'
@@ -81,6 +103,29 @@ jobs:
 
       - name: Install Frontend Dependencies
         run: npm install
+
+      - name: Sync Version to Tauri
+        run: |
+          # 1. Strip the 'v' prefix if the user typed it (e.g., v1.0.5 -> 1.0.5)
+          RAW_VERSION=$(echo "${{ github.event.inputs.version }}" | sed 's/^v//')
+          echo "Injecting version $RAW_VERSION into build files..."
+          
+          # 2. Safely update tauri.conf.json using Node.js
+          node -e "
+            const fs = require('fs');
+            const path = 'src-tauri/tauri.conf.json';
+            if (fs.existsSync(path)) {
+              const conf = JSON.parse(fs.readFileSync(path));
+              conf.version = '$RAW_VERSION';
+              fs.writeFileSync(path, JSON.stringify(conf, null, 2));
+              console.log('Successfully updated tauri.conf.json!');
+            } else {
+              console.warn('tauri.conf.json not found at ' + path);
+            }
+          "
+          
+          # 3. Update package.json (Optional, but keeps things perfectly synced)
+          npm version $RAW_VERSION --no-git-tag-version || true
 
       - name: Build Android APK
         run: |
