@@ -39,7 +39,8 @@
 
 ### Geometric Interface & Navigation
 * **Tonal Mapping:** Perfect fifths mapped to the horizontal axis; major/minor thirds mapped to diagonals.
-* **Triads & Extensions:** Upward triangles yield major triads; downward yield minor. Use the multi-touch grid, physical keyboard shortcuts, or the left-docked Performance Pads to instantly inject complex jazz extensions (sus2, sus4, ♭5, ♯5, ♭9, ♯11, 13).
+* **Triads & Extensions:** Upward triangles yield major triads; downward yield minor. Use the multi-touch grid and combine with physical keyboard shortcuts (keyboard rows QWERT / ASDFG / Y(Z)XCVB), or the left-docked Performance Pads to instantly inject complex jazz extensions (sus2, sus4, ♭5, ♯5, ♭9, ♯11, 13).
+* **Live Modifiers:** Hold Shift for Voice Leading (prioritizes minimal movement between chords), Space for 'Systain', L-Alt for 'Dampen' and 'Tab' for Legato (glide).
 * **Arpeggiator:** Supports directional and randomized sequence arpeggiation with adjustable swing, subdivisions, and continuous looping.
 * **Responsive UI:** Smart FAB (Floating Action Button) menu and per-panel Auto-Hide toggles maximize screen real estate on mobile devices by dynamically hiding controls during active play.
 
