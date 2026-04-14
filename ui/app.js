@@ -21,6 +21,15 @@
     });
 
     // =====================================================================
+    // BROWSER SAFETY NET (Catches F5, Ctrl+W, Tab Close, Refresh)
+    // =====================================================================
+    window.addEventListener('beforeunload', (e) => {
+        // Triggers the native "Leave Site? Changes may not be saved." warning
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    // =====================================================================
     // 1. HARDWARE PROFILER & PERFORMANCE TIERS
     // =====================================================================
 
@@ -1348,8 +1357,17 @@
     }, { capture: true });
 
     document.addEventListener('keydown', (e) => {
+        // --- TAB KEY REPEAT FIX ---
+        // We must prevent default on Tab immediately, even for repeating keys, 
+        // so the browser never steals focus away from the app!
+        if (e.code === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
         if (e.repeat || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
         let trigger = false; wakeNav();
+
         switch (e.code) {
             // Row 1 (Numbers)
             case 'Digit1': octDownHeld = true; octMode = 'down'; trigger = true; break;
@@ -1357,18 +1375,21 @@
             case 'Digit3': arpUpHeld = true; arpMode = 'up'; trigger = true; break;
             case 'Digit4': arpDownHeld = true; arpMode = 'down'; trigger = true; break;
             case 'Digit5': arpRandomHeld = true; arpMode = 'random'; trigger = true; break;
+
             // Row 2 (QWERTY)
             case 'KeyQ': add69Held = true; trigger = true; break;
             case 'KeyW': addMaj7Held = true; trigger = true; break;
             case 'KeyE': addFlat5Held = true; trigger = true; break;
             case 'KeyR': addSharp5Held = true; trigger = true; break;
             case 'KeyT': addSus4Held = true; trigger = true; break;
+
             // Row 3 (ASDFG)
             case 'KeyA': add6Held = true; trigger = true; break;
             case 'KeyS': add7Held = true; trigger = true; break;
             case 'KeyD': add9Held = true; trigger = true; break;
             case 'KeyF': add11Held = true; trigger = true; break;
             case 'KeyG': add13Held = true; trigger = true; break;
+
             // Row 4 (ZXCVB)
             case 'KeyZ': case 'KeyY': addSus2Held = true; trigger = true; break;
             case 'KeyX': addFlat9Held = true; trigger = true; break;
@@ -1376,18 +1397,20 @@
             case 'KeyV': addSharp11Held = true; trigger = true; break;
             case 'KeyB': addFlat13Held = true; trigger = true; break;
 
-            // Pinky Modifiers
-            case 'ShiftLeft': case 'ShiftRight': glideHeld = true; trigger = true; break;
+            // Other Modifiers
+            case 'Tab': if (document.activeElement) document.activeElement.blur(); glideHeld = true; trigger = true; break;
             case 'AltLeft': dampenHeld = true; applyDampening(true); trigger = true; break;
             case 'Space': if (!sustainHeld) { sustainHeld = true; sendMidiCC(64, 127); trigger = true; } break;
-            case 'ControlLeft': case 'ControlRight': case 'MetaLeft': case 'MetaRight': voiceLeadHeld = true; trigger = true; break;
+            case 'ShiftLeft': case 'ShiftRight': voiceLeadHeld = true; trigger = true; break;
         }
         if (trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
-    });
+    }, { capture: true });
+
 
     document.addEventListener('keyup', (e) => {
         if (e.target.tagName === 'INPUT') return;
         let trigger = false;
+
         switch (e.code) {
             case 'Digit1': octDownHeld = false; trigger = true; break;
             case 'Digit2': octUpHeld = false; trigger = true; break;
@@ -1413,13 +1436,19 @@
             case 'KeyV': addSharp11Held = false; trigger = true; break;
             case 'KeyB': addFlat13Held = false; trigger = true; break;
 
-            case 'ShiftLeft': case 'ShiftRight': glideHeld = false; trigger = true; break;
+            case 'Tab':
+                e.preventDefault();
+                e.stopPropagation();
+                glideHeld = false;
+                trigger = true;
+                break;
+
             case 'AltLeft': dampenHeld = false; applyDampening(false); trigger = true; break;
             case 'Space': sustainHeld = false; sendMidiCC(64, 0); trigger = true; checkSustainRelease(); break;
-            case 'ControlLeft': case 'ControlRight': case 'MetaLeft': case 'MetaRight': voiceLeadHeld = false; trigger = true; break;
+            case 'ShiftLeft': case 'ShiftRight': voiceLeadHeld = false; trigger = true; break;
         }
         if (trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
-    });
+    }, { capture: true });
 
 
     // ==========================================
