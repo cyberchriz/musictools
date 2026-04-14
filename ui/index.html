@@ -1260,44 +1260,6 @@
             border-color: #2a2a2a;
         }
 
-        @media (orientation: portrait) {
-            .fab-menu-btn {
-                display: flex;
-            }
-
-            .nav-grid {
-                position: absolute;
-                bottom: 70px;
-                top: auto;
-                right: 0;
-                transform-origin: bottom right;
-                transform: scale(0.8);
-                opacity: 0;
-                pointer-events: none;
-                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
-                background: var(--panel-bg);
-            }
-
-            .dark-theme .nav-grid {
-                background: var(--panel-bg);
-            }
-
-            /* The Open State */
-            .canvas-controls.menu-open .nav-grid {
-                transform: scale(1);
-                opacity: 1;
-                pointer-events: auto;
-            }
-
-            .canvas-controls.menu-open .fab-menu-btn {
-                background: #f44336; /* Reverts to flat red */
-                border-color: transparent;
-                transform: rotate(90deg);
-                animation: none; /* Stops pulsing when the menu is open */
-                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            }
-        }
-
         /* --- AUTO-HIDE ENGINE --- */
         body.ui-hidden #canvas-controls,
         body.ui-hidden .overlay.auto-hides {
@@ -2054,10 +2016,42 @@
             text-rendering: optimizeSpeed;
         }
 
-        /* Ensure FAB is visible on mobile (both portrait and landscape) */
-        @media (max-width: 850px) {
+        /* Ensure FAB and D-Pad Popup work on ALL mobile orientations */
+        @media (max-width: 1024px) {
             .fab-menu-btn {
                 display: flex;
+            }
+
+            .nav-grid {
+                position: absolute;
+                bottom: 70px;
+                top: auto;
+                right: 0;
+                transform-origin: bottom right;
+                transform: scale(0.8);
+                opacity: 0;
+                pointer-events: none;
+                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
+                background: var(--panel-bg);
+            }
+
+            .dark-theme .nav-grid {
+                background: var(--panel-bg);
+            }
+
+            /* The Open State */
+            .canvas-controls.menu-open .nav-grid {
+                transform: scale(1);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .canvas-controls.menu-open .fab-menu-btn {
+                background: #f44336;
+                border-color: transparent;
+                transform: rotate(90deg);
+                animation: none;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             }
 
             /* When a docked panel is open in landscape, shift the ENTIRE control container left */
