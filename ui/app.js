@@ -118,6 +118,8 @@
 
     let currentArpBPM = 120, currentArpRhythm = 'slow', currentArpSwing = 0, currentArpLoop = true;
     let sustainHeld = false, sustainLocked = false, dampenHeld = false;
+    let voiceLeadHeld = false;
+    let lastPlayedMidiNotes = []; // <--- Memory for the voice leading engine
     let glideHeld = false, glideLocked = false, currentGlideMode = 'always';
     let octDownHeld = false, octUpHeld = false, octLocked = false, octMode = 'up';
     let arpUpHeld = false, arpDownHeld = false, arpUpDownHeld = false, arpRandomHeld = false, arpLocked = false, arpMode = 'up';
@@ -211,6 +213,16 @@
             let targetFreqs = snapped.map(st => getFreqFromSt(st));
             if (isOctUpOn()) targetFreqs = targetFreqs.map(f => f * 2);
             if (isOctDownOn()) targetFreqs = targetFreqs.map(f => f * 0.5);
+
+            // --- VOICE LEADING INTERCEPT FOR HELD CHORDS ---
+            if (typeof voiceLeadHeld !== 'undefined' && voiceLeadHeld) {
+                targetFreqs = applyVoiceLeading(targetFreqs);
+            }
+
+            // Update the memory bank so the engine tracks this modified chord's new center of gravity!
+            if (typeof lastPlayedMidiNotes !== 'undefined') {
+                lastPlayedMidiNotes = targetFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+            }
 
             const shouldBeArp = isArpOn() && targetFreqs.length > 1;
             const wasArp = nodeData.type === 'arp';
@@ -952,6 +964,7 @@
         const tSus = document.getElementById('tapSustain'); if (tSus) tSus.classList.toggle('held', sustainHeld || sustainLocked);
         const tDampen = document.getElementById('tapDampen'); if (tDampen) tDampen.classList.toggle('held', dampenHeld);
         const tGlide = document.getElementById('tapGlide'); if (tGlide) tGlide.classList.toggle('held', glideHeld || glideLocked);
+        const tVoice = document.getElementById('tapVoiceLead'); if (tVoice) tVoice.classList.toggle('held', voiceLeadHeld);
         const tOctD = document.getElementById('tapOctDown'); if (tOctD) tOctD.classList.toggle('held', octDownHeld || (octLocked && octMode === 'down'));
         const tOctU = document.getElementById('tapOctUp'); if (tOctU) tOctU.classList.toggle('held', octUpHeld || (octLocked && octMode === 'up'));
 
@@ -1291,6 +1304,7 @@
     setupTapPad('tapSustain', () => { sustainHeld = true; sendMidiCC(64, 127); }, () => { sustainHeld = false; sendMidiCC(64, 0); checkSustainRelease(); });
     setupTapPad('tapDampen', () => { dampenHeld = true; applyDampening(true); }, () => { dampenHeld = false; applyDampening(false); });
     setupTapPad('tapGlide', () => { glideHeld = true; }, () => { glideHeld = false; });
+    setupTapPad('tapVoiceLead', () => { voiceLeadHeld = true; }, () => { voiceLeadHeld = false; });
     setupTapPad('tapOctDown', () => { octDownHeld = true; octMode = 'down'; }, () => { octDownHeld = false; });
     setupTapPad('tapOctUp', () => { octUpHeld = true; octMode = 'up'; }, () => { octUpHeld = false; });
 
@@ -1362,10 +1376,11 @@
             case 'KeyV': addSharp11Held = true; trigger = true; break;
             case 'KeyB': addFlat13Held = true; trigger = true; break;
 
-            // Thumbs
+            // Pinky Modifiers
             case 'ShiftLeft': case 'ShiftRight': glideHeld = true; trigger = true; break;
             case 'AltLeft': dampenHeld = true; applyDampening(true); trigger = true; break;
             case 'Space': if (!sustainHeld) { sustainHeld = true; sendMidiCC(64, 127); trigger = true; } break;
+            case 'ControlLeft': case 'ControlRight': case 'MetaLeft': case 'MetaRight': voiceLeadHeld = true; trigger = true; break;
         }
         if (trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
     });
@@ -1401,6 +1416,7 @@
             case 'ShiftLeft': case 'ShiftRight': glideHeld = false; trigger = true; break;
             case 'AltLeft': dampenHeld = false; applyDampening(false); trigger = true; break;
             case 'Space': sustainHeld = false; sendMidiCC(64, 0); trigger = true; checkSustainRelease(); break;
+            case 'ControlLeft': case 'ControlRight': case 'MetaLeft': case 'MetaRight': voiceLeadHeld = false; trigger = true; break;
         }
         if (trigger) { e.preventDefault(); updatePadVisuals(); retriggerHeldNodes(); }
     });
@@ -2933,6 +2949,27 @@
         });
     }
 
+    function applyVoiceLeading(targetFreqs) {
+        if (lastPlayedMidiNotes.length === 0 || targetFreqs.length === 0) return targetFreqs;
+
+        // 1. Get the Pitch Classes (0-11) of the chord we WANT to play
+        const newPitchClasses = targetFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69) % 12);
+
+        // 2. Find the "Center of Gravity" of the PREVIOUS chord
+        const prevCenter = lastPlayedMidiNotes.reduce((a, b) => a + b, 0) / lastPlayedMidiNotes.length;
+
+        // 3. For each new Pitch Class, find the exact octave that puts it closest to the previous center!
+        let voicedMidiNotes = newPitchClasses.map(pc => {
+            // Find the nearest instance of this Pitch Class to the previous chord's center
+            let octaveOffset = Math.round((prevCenter - pc) / 12);
+            return pc + (octaveOffset * 12);
+        });
+
+        // 4. Sort from lowest to highest pitch, then convert back to frequencies
+        voicedMidiNotes.sort((a, b) => a - b);
+        return voicedMidiNotes.map(midi => masterTune * Math.pow(2, (midi - 69) / 12));
+    }
+
     function playFrequencies(element, freqs, originalStArray = null, synthState = null, destination = null) {
         initAudio(); if (activeNodes.has(element)) return;
 
@@ -2951,9 +2988,18 @@
             let extendedSt = getExtendedStArray(originalStArray);
             let snapped = snapStArray(extendedSt);
             finalFreqs = snapped.map(st => getFreqFromSt(st));
+
             if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2);
             if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
+
+            // --- VOICE LEADING INTERCEPT ---
+            if (voiceLeadHeld) {
+                finalFreqs = applyVoiceLeading(finalFreqs);
+            }
         }
+
+        // --- MEMORIZE THIS CHORD FOR NEXT TIME ---
+        lastPlayedMidiNotes = finalFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
 
         // The Fix: Properly pass the array to the new Signature!
         let looperEvt = null;
