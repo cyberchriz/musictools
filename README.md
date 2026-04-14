@@ -1,5 +1,5 @@
 <div>
-  <img align="center" src="ui_screenshot.png" alt="Tonnetz Pro GUI screenshot" width="900" height="500" style="margin-left: auto; margin-right: auto; display: block;"/>
+  <img align="center" src="ui_screenshot.png" alt="Tonnetz Pro GUI screenshot" width="900" height="470" style="margin-left: auto; margin-right: auto; display: block;"/>
 </div>
 <div>
   <img align="right" src="src-tauri/icons/Square310x310Logo.png" alt="Tonnetz Pro Logo" width="180" height="180" style="margin-left: 20px; margin-bottom: 15px;"/>
