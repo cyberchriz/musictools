@@ -2440,29 +2440,51 @@
                     <button id="btnCloseDrums" class="close-btn-sm" title="Close">✕</button>
                 </div>
             </div>
-            <div class="drum-preset-wrapper">
-                <div class="drum-preset-grid">
-                    <button class="drum-preset-btn" data-preset="click">Click</button>
-                    <button class="drum-preset-btn" data-preset="basic">Basic Beat</button>
-                    <button class="drum-preset-btn" data-preset="rock">Rock</button>
-                    <button class="drum-preset-btn" data-preset="swing">Swing</button>
-                    <button class="drum-preset-btn" data-preset="house">House</button>
-                    <button class="drum-preset-btn" data-preset="techno">Techno</button>
-                    <button class="drum-preset-btn" data-preset="breakbeat">Breakbeat</button>
-                    <button class="drum-preset-btn" data-preset="dnb">Drum & Bass</button>
-                    <button class="drum-preset-btn" data-preset="reggae">Reggae</button>
-                    <button class="drum-preset-btn" data-preset="reggaeton">Reggaeton</button>
-                    <button class="drum-preset-btn" data-preset="trap">Trap</button>
-                    <button class="drum-preset-btn" data-preset="bossa">Bossa</button>
-                    <button class="drum-preset-btn" data-preset="funk">Funk</button>
-                    <button class="drum-preset-btn" data-preset="hiphop">Hip Hop</button>
-                    <button class="drum-preset-btn" data-preset="rnb">R&B</button>
-                    <button class="drum-preset-btn" data-preset="latin">Latin</button>
-                </div>
-                <button class="drum-preset-btn active-btn" data-preset="none" style="width: 35px; height: auto !important; white-space: pre-line; line-height: 1.4; font-weight: bold; flex-shrink: 0; padding: 0;">N<br>O<br>N<br>E</button>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; width: 100%;">
+
+                <button class="synth-btn drum-preset-btn" data-preset="click">CLICK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="basic">BASIC</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rock">ROCK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="garage">GARAGE</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="metal">METAL</button>
+                <button class="synth-btn drum-preset-btn" data-preset="punk">PUNK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="synthwave">SYNTH</button>
+                <button class="synth-btn drum-preset-btn" data-preset="swing">SWING</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="house">HOUSE</button>
+                <button class="synth-btn drum-preset-btn" data-preset="disco">DISCO</button>
+                <button class="synth-btn drum-preset-btn" data-preset="techno">TECHNO</button>
+                <button class="synth-btn drum-preset-btn" data-preset="breakbeat">BREAKS</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="dnb">DNB</button>
+                <button class="synth-btn drum-preset-btn" data-preset="drill">DRILL</button>
+                <button class="synth-btn drum-preset-btn" data-preset="reggae">REGGAE</button>
+                <button class="synth-btn drum-preset-btn" data-preset="reggaeton">REGGAETON</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="trap">TRAP</button>
+                <button class="synth-btn drum-preset-btn" data-preset="lofi">LO-FI</button>
+                <button class="synth-btn drum-preset-btn" data-preset="bossa">BOSSA</button>
+                <button class="synth-btn drum-preset-btn" data-preset="funk">FUNK</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="afrobeat">AFROBEAT</button>
+                <button class="synth-btn drum-preset-btn" data-preset="hiphop">HIPHOP</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rnb">R&B</button>
+                <button class="synth-btn drum-preset-btn" data-preset="latin">LATIN</button>
+
             </div>
-            <div style="margin-top: -10px; margin-bottom: 8px; display:flex; align-items:center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-                <label style="font-size:0.8rem; font-weight:bold; cursor:pointer;"><input type="checkbox" id="drum-embellish" checked style="vertical-align:middle;"> Auto-Embellish (Humanize / Variations)</label>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; align-items: center;">
+
+                <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; width: 100%; gap: 2px;">
+                    <label for="drumFillsSlider" style="font-size: 0.8em; white-space: nowrap;">Fills & Humanize: <span id="drumFillsValue">50</span>%</label>
+                    <input type="range" id="drumFillsSlider" min="0" max="100" value="50" style="width: 100%; margin: 0;">
+                </div>
+
+                <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; width: 100%; gap: 2px;">
+                    <label for="drumBpmSlider" style="font-size: 0.8em; white-space: nowrap;">BPM: <span id="drumBpmValue">120</span></label>
+                    <input type="range" id="drumBpmSlider" min="40" max="240" value="120" style="width: 100%; margin: 0;">
+                </div>
+
             </div>
             <div class="section-title" style="margin-top: 5px; display:flex; justify-content:space-between; align-items:center;">
                 <span>Manual Triggers (Recordable)</span>
@@ -2796,7 +2818,7 @@
             <h3>🥁 4. Drum Machine & Metronome</h3>
             <ul>
                 <li>Select from 16 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova.</li>
-                <li><strong>Auto-Embellish:</strong> When enabled, the drum machine intelligently adds humanized ghost notes, varying hi-hat velocities, and occasional fills to keep static presets sounding organic.</li>
+                <li><strong>Auto-Embellish:</strong> Lets the drum machine intelligently add humanized ghost notes, fills and variations to make static presets sound organic.</li>
                 <li><strong>Manual Triggers:</strong> Use the on-screen drum pads to finger-drum custom beats. You can adjust the vertical height of these buttons to fit your screen perfectly.</li>
             </ul>
 
