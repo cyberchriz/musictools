@@ -145,6 +145,7 @@
 
     let showExtensions = true, showChordDegrees = false;
     let currentIdentifiedRootPC = null;
+    let currentGravityTargets = [];
     const degreeNames = ['1', 'b2', '2', 'b3', '3', '4', '#4', '5', 'b6', '6', 'b7', '7'];
 
     let currentArpBPM = 120, currentArpRhythm = 'slow', currentArpSwing = 0, currentArpLoop = true;
@@ -776,11 +777,15 @@
         e.target.classList.toggle('active-btn', isHeatmapActive);
 
         if (!isHeatmapActive) {
-            // THE FIX: Cleanly strip the properties entirely from the DOM
             if (cachedGridNodes) {
                 for (let i = 0; i < cachedGridNodes.length; i++) {
                     cachedGridNodes[i].style.removeProperty('fill');
                     cachedGridNodes[i].style.removeProperty('opacity');
+
+                    // --- STRIP THE PULSING BEACON FROM THE CLONES ---
+                    if (cachedGridNodes[i]._highlightEl) {
+                        cachedGridNodes[i]._highlightEl.classList.remove('gravity-beacon');
+                    }
                 }
             }
             heatmapBaseNotes = [];
@@ -1709,7 +1714,6 @@
             let el = cachedGridNodes[i];
             if (!el._st || el._st.length === 0) continue;
 
-            // Evaluate the RAW grid notes to guarantee true acoustic dissonance
             let targetMidiNotes = el._st.map(st => {
                 let f = getFreqFromSt(st);
                 return Math.round(12 * Math.log2(f / masterTune) + 69);
@@ -1718,28 +1722,37 @@
             const tension = calculateDissonance(heatmapBaseNotes, targetMidiNotes);
             const curvedTension = Math.pow(tension, 0.75);
 
-            // Hue: 120 is Green, 60 is Yellow, 0 is Red
             const hue = 120 - (curvedTension * 120);
-
             const isOutOfScale = currentScale !== 'all' && el.classList.contains('dimmed-scale');
 
             if (isOutOfScale) {
-                // GHOST LAYER
+                // THE FILL FIX: Using setProperty smashes the CSS opacity wall!
                 const ghostColor = `hsl(${hue}, 50%, 25%)`;
-
-                // SMASH through CSS stylesheet !important rules
                 el.style.setProperty('fill', ghostColor, 'important');
                 el.style.setProperty('opacity', '1', 'important');
             } else {
-                // VIBRANT LAYER
                 const lightness = 45 - (Math.abs(60 - hue) * 0.1);
                 const vibrantColor = `hsl(${hue}, 85%, ${lightness}%)`;
-
                 el.style.setProperty('fill', vibrantColor, 'important');
                 el.style.setProperty('opacity', '1', 'important');
             }
 
             el.style.transition = 'fill 0.35s ease, opacity 0.35s ease';
+
+            // ==========================================
+            // --- NEW: FUNCTIONAL GRAVITY BEACON ---
+            // ==========================================
+
+            // 1. Strip the class from the CLONE layer first
+            if (el._highlightEl) el._highlightEl.classList.remove('gravity-beacon');
+
+            // 2. Check if this node is inside the array of valid targets
+            if (currentGravityTargets.length > 0) {
+                const elRootPC = ((el._st[0] % 12) + 12) % 12;
+                if (currentGravityTargets.includes(elRootPC) && el._highlightEl) {
+                    el._highlightEl.classList.add('gravity-beacon');
+                }
+            }
         }
     }
 
@@ -2872,6 +2885,7 @@
         const display = document.getElementById('chord-display');
         if (!display) return;
         currentIdentifiedRootPC = null;
+        currentGravityTargets = [];
 
         if (playingMidiNotes.size === 0) { display.style.opacity = '0'; return; }
 
@@ -2967,6 +2981,34 @@
                 chordName += `/${labelAbsoluteSharp[bassPC]}`;
             }
             display.textContent = chordName;
+
+            // ==========================================
+            // --- UPGRADED FUNCTIONAL GRAVITY ENGINE ---
+            // ==========================================
+            currentGravityTargets = []; // Reset array
+
+            const isDominant = (bestMatch.includes('7') || bestMatch.includes('9') || bestMatch.includes('13'))
+                && !bestMatch.includes('maj') && !bestMatch.includes('-') && !bestMatch.includes('dim');
+
+            const isDiminished = bestMatch.includes('dim') || bestMatch.includes('b5');
+            const isAugmented = bestMatch.includes('aug');
+            const isSus = bestMatch.includes('sus');
+
+            if (isDominant) {
+                // 1. Standard Resolution (Down a P5)
+                currentGravityTargets.push((bestRoot - 7 + 12) % 12);
+                // 2. Tritone Substitution (Down a minor 2nd)
+                currentGravityTargets.push((bestRoot - 1 + 12) % 12);
+            } else if (isAugmented) {
+                currentGravityTargets.push((bestRoot - 7 + 12) % 12);
+            } else if (isDiminished) {
+                // Diminished resolves up a minor 2nd
+                currentGravityTargets.push((bestRoot + 1) % 12);
+            } else if (isSus) {
+                // Suspended chords resolve to their own Major/Minor triads
+                currentGravityTargets.push(bestRoot);
+            }
+
         } else {
             currentIdentifiedRootPC = bassPC;
             let intervals = pitchClasses.map(pc => (pc - bassPC + 12) % 12).sort((a, b) => a - b);
@@ -5183,6 +5225,21 @@
     }
 
     const tonnetzSvg = document.createElementNS(svgNS, "svg");
+
+    // --- INJECT GRAVITY BEACON CSS ---
+    const gravityStyle = document.createElement('style');
+    gravityStyle.innerHTML = `
+    @keyframes beaconPulse {
+        0% { fill: white; fill-opacity: 0.0; }
+        50% { fill: white; fill-opacity: 0.6; }
+        100% { fill: white; fill-opacity: 0.0; }
+    }
+    .gravity-beacon {
+        animation: beaconPulse 1.4s infinite ease-in-out !important;
+        opacity: 1 !important; /* Force opacity to 1 so the fill-opacity animation reveals itself */
+    }
+    `;
+    document.head.appendChild(gravityStyle);
 
     function resizeTonnetzSvg() {
         const wrapper = document.getElementById('tonnetz-wrapper');
