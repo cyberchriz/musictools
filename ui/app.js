@@ -100,6 +100,25 @@
         if (isMobileDevice && navigator.vibrate) navigator.vibrate(10);
     }
 
+    // =====================================================================
+    // WAKE UP AUDIO ENGINE AFTER BACKGROUND THROTTLING
+    // =====================================================================
+    document.addEventListener('visibilitychange', () => {
+        // When the user clicks back to this tab...
+        if (document.visibilityState === 'visible') {
+
+            // Assuming your master AudioContext variable is named 'audioCtx' 
+            // (change this if you named it something else!)
+            if (typeof audioCtx !== 'undefined' && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    console.log("Audio Engine re-awakened from background sleep!");
+                }).catch(err => {
+                    console.warn("Could not wake Audio Engine:", err);
+                });
+            }
+        }
+    });
+
     // ==========================================
     // GLOBAL STATE, OVERLAYS & THEME LOGIC
     // ==========================================
