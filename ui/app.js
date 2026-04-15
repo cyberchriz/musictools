@@ -101,17 +101,20 @@
     }
 
     // =====================================================================
-    // WAKE UP AUDIO ENGINE AFTER BACKGROUND THROTTLING
+    // WAKE UP AUDIO ENGINE & RESYNC CLOCKS AFTER BACKGROUND THROTTLING
     // =====================================================================
     document.addEventListener('visibilitychange', () => {
-        // When the user clicks back to this tab...
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === 'visible' && typeof audioCtx !== 'undefined') {
 
-            // Assuming your master AudioContext variable is named 'audioCtx' 
-            // (change this if you named it something else!)
-            if (typeof audioCtx !== 'undefined' && audioCtx.state === 'suspended') {
+            // 1. Resync the JavaScript Sequencer Clocks!
+            // This prevents the engine from trying to play 10,000 missed background beats instantly.
+            nextMetroTime = audioCtx.currentTime + 0.1;
+            nextMidiPulseTime = audioCtx.currentTime + 0.1;
+
+            // 2. Wake up the Audio Hardware
+            if (audioCtx.state === 'suspended') {
                 audioCtx.resume().then(() => {
-                    console.log("Audio Engine re-awakened from background sleep!");
+                    console.log("Audio Engine and Sequencer Clocks re-awakened!");
                 }).catch(err => {
                     console.warn("Could not wake Audio Engine:", err);
                 });
@@ -763,6 +766,29 @@
         }; inp.click();
     });
 
+    // --- HARMONIC HEATMAP STATE ---
+    let isHeatmapActive = false;
+    let heatmapBaseNotes = [];
+
+    document.getElementById('btnToggleHeatmap')?.addEventListener('click', (e) => {
+        isHeatmapActive = !isHeatmapActive;
+        e.target.textContent = `Heatmap: ${isHeatmapActive ? 'ON' : 'OFF'}`;
+        e.target.classList.toggle('active-btn', isHeatmapActive);
+
+        if (!isHeatmapActive) {
+            // THE FIX: Cleanly strip the properties entirely from the DOM
+            if (cachedGridNodes) {
+                for (let i = 0; i < cachedGridNodes.length; i++) {
+                    cachedGridNodes[i].style.removeProperty('fill');
+                    cachedGridNodes[i].style.removeProperty('opacity');
+                }
+            }
+            heatmapBaseNotes = [];
+        } else if (heatmapBaseNotes.length > 0) {
+            updateHarmonicHeatmap();
+        }
+    });
+
     // MIXER DESK & EQ CONTROLS
     document.getElementById('mixerHeightSlider')?.addEventListener('input', (e) => { document.documentElement.style.setProperty('--mixer-fader-height', `${e.target.value}px`); updateOverlayCSSVars(); });
     document.getElementById('limiterMode')?.addEventListener('change', e => { updateSafetyCurve(e.target.value); });
@@ -935,7 +961,10 @@
     });
 
     document.getElementById('btnChordDegrees')?.addEventListener('click', (e) => {
-        showChordDegrees = !showChordDegrees; e.target.textContent = `Show Chord Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`; e.target.classList.toggle('active-btn', showChordDegrees);
+        showChordDegrees = !showChordDegrees;
+        // Use the short text here!
+        e.target.textContent = `Degrees: ${showChordDegrees ? 'ON' : 'OFF'}`;
+        e.target.classList.toggle('active-btn', showChordDegrees);
         updatePianoVisuals();
     });
 
@@ -1627,6 +1656,92 @@
         flute: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.35, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 3, echo: 0.2, reverbMix: 0.35, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, oscMix: 0.6, filterEnv: 0, filterType: 'lowpass', glide: 0.04, lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.4, overtones: 0 },
         theremin: { attack: 0.25, decay: 0.1, sustain: 1.0, release: 0.5, distortion: 0, brightness: 1.2, resonance: 1, chorus: 5, echo: 0.25, reverbMix: 0.6, osc1: 'sine', osc2: 'sine', osc2Mult: 1, oscMix: 0.5, filterEnv: 0, filterType: 'lowpass', glide: 0.2, lfoSpeed: 6.5, vibrato: 36, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.1, noise: 0, overtones: 0 }
     };
+
+    // --- DISSONANCE CALCULATOR FOR HARMONY HEATMAP ---
+    function calculateDissonance(baseMidiNotes, targetMidiNotes) {
+        if (baseMidiNotes.length === 0 || targetMidiNotes.length === 0) return 0.5;
+
+        const basePCs = baseMidiNotes.map(n => Math.round(n) % 12);
+        const targetPCs = targetMidiNotes.map(n => Math.round(n) % 12);
+
+        let tensionScore = 0;
+
+        // 1. Shared Notes (Consonance bonus)
+        let sharedNotes = 0;
+        targetPCs.forEach(pc => { if (basePCs.includes(pc)) sharedNotes++; });
+
+        if (targetPCs.length > 1 && sharedNotes === targetPCs.length && targetPCs.length === basePCs.length) return 0.0;
+        if (targetPCs.length === 1 && sharedNotes === 1) return 0.0;
+
+        tensionScore -= (sharedNotes * 0.2);
+
+        // 2. Interval Tension vs Base Root
+        const baseRoot = (currentIdentifiedRootPC !== null) ? currentIdentifiedRootPC : basePCs[0];
+
+        const intervalWeights = {
+            0: 0.0, 1: 1.0, 2: 0.5, 3: 0.2, 4: 0.1, 5: 0.2,
+            6: 1.0, 7: 0.0, 8: 0.6, 9: 0.3, 10: 0.5, 11: 0.9
+        };
+
+        let maxTension = 0;
+        let totalIntervalTension = 0;
+
+        targetPCs.forEach(pc => {
+            const interval = (pc - baseRoot + 12) % 12;
+            const w = intervalWeights[interval];
+            totalIntervalTension += w;
+            if (w > maxTension) maxTension = w;
+        });
+
+        const avgTension = totalIntervalTension / targetPCs.length;
+        tensionScore += (avgTension * 0.4) + (maxTension * 0.6);
+
+        // NOTE: Diatonic Penalty removed! Tension is now purely acoustic.
+
+        return Math.max(0.0, Math.min(1.0, tensionScore));
+    }
+
+    function updateHarmonicHeatmap() {
+        if (!isHeatmapActive || heatmapBaseNotes.length === 0) return;
+        if (!cachedGridNodes) return;
+
+        for (let i = 0; i < cachedGridNodes.length; i++) {
+            let el = cachedGridNodes[i];
+            if (!el._st || el._st.length === 0) continue;
+
+            // Evaluate the RAW grid notes to guarantee true acoustic dissonance
+            let targetMidiNotes = el._st.map(st => {
+                let f = getFreqFromSt(st);
+                return Math.round(12 * Math.log2(f / masterTune) + 69);
+            });
+
+            const tension = calculateDissonance(heatmapBaseNotes, targetMidiNotes);
+            const curvedTension = Math.pow(tension, 0.75);
+
+            // Hue: 120 is Green, 60 is Yellow, 0 is Red
+            const hue = 120 - (curvedTension * 120);
+
+            const isOutOfScale = currentScale !== 'all' && el.classList.contains('dimmed-scale');
+
+            if (isOutOfScale) {
+                // GHOST LAYER
+                const ghostColor = `hsl(${hue}, 50%, 25%)`;
+
+                // SMASH through CSS stylesheet !important rules
+                el.style.setProperty('fill', ghostColor, 'important');
+                el.style.setProperty('opacity', '1', 'important');
+            } else {
+                // VIBRANT LAYER
+                const lightness = 45 - (Math.abs(60 - hue) * 0.1);
+                const vibrantColor = `hsl(${hue}, 85%, ${lightness}%)`;
+
+                el.style.setProperty('fill', vibrantColor, 'important');
+                el.style.setProperty('opacity', '1', 'important');
+            }
+
+            el.style.transition = 'fill 0.35s ease, opacity 0.35s ease';
+        }
+    }
 
     // Uses Fourier Transforms to permanently bake overtones into a single waveform (Zero CPU cost at runtime!)
     function updateAcousticWave() {
@@ -2427,7 +2542,16 @@
 
 
     function initAudio() {
-        if (audioCtx) return;
+        // --- FORCE WAKE IN CASE OF AUDIO THROTTLING ---
+        if (audioCtx) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    console.log("Audio Engine force-awakened by physical user gesture!");
+                }).catch(err => console.warn(err));
+            }
+            return;
+        }
+
         // latencyHint: Politely demand high-priority hardware threading
         audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 
@@ -2730,6 +2854,17 @@
             }
             updateChordDisplay();
             updatePianoVisuals(); // Final sweep to render any missed extensions
+
+            // --- HARMONIC HEATMAP TRIGGER ---
+            // Evaluates the total active harmony (including inversions and looper tracks)
+            if (isHeatmapActive) {
+                const currentNotesStr = Array.from(playingMidiNotes).sort().join(',');
+                if (heatmapBaseNotes.join(',') !== currentNotesStr) {
+                    heatmapBaseNotes = Array.from(playingMidiNotes).sort();
+                    // wrap this in a tiny timeout so it doesn't block the main UI render frame
+                    setTimeout(updateHarmonicHeatmap, 0);
+                }
+            }
         });
     }
 
@@ -5010,6 +5145,11 @@
             if (currentScale === 'all' || activeScalePCs.has(pc)) el.classList.remove('dimmed-text');
             else el.classList.add('dimmed-text');
         });
+
+        // --- RE-TRIGGER HEATMAP ON SCALE CHANGE ---
+        if (typeof isHeatmapActive !== 'undefined' && isHeatmapActive) {
+            updateHarmonicHeatmap();
+        }
     }
 
     function updateLabels() {

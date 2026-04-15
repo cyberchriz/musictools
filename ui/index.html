@@ -2183,8 +2183,20 @@
                     <div class="control-group"><label id="lblBgIntensity">BG Intensity: 5%</label><input type="range" id="bgIntensity" min="0" max="1" step="0.01" value="0.05"></div>
                 </div>
                 <div class="control-row" style="border: none; padding: 0;">
-                    <div class="control-group"><label>Extensions</label><button id="btnExtensions" class="btn-sm active-btn">7th/9th Highlights: ON</button></div>
-                    <div class="control-group"><label>Analysis</label><button id="btnChordDegrees" class="btn-sm">Show Degrees: OFF</button></div>
+
+                    <div class="control-group">
+                        <label>Extensions</label>
+                        <button id="btnExtensions" class="btn-sm active-btn">7th/9th Highlights: ON</button>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Visual Overlays</label>
+                        <div style="display:flex; gap:4px;">
+                            <button id="btnChordDegrees" class="btn-sm" style="flex: 1; white-space: nowrap; padding: 0 2px;">Degrees: OFF</button>
+                            <button id="btnToggleHeatmap" class="btn-sm" style="flex: 1; white-space: nowrap; padding: 0 2px;">Heatmap: OFF</button>
+                        </div>
+                    </div>
+
                     <div class="control-group">
                         <label>App Theme Color</label>
                         <select id="themeColorSelect" class="highlight-select">
@@ -2195,13 +2207,15 @@
                             <option value="pink">Synthwave Pink</option>
                         </select>
                     </div>
+
                     <div class="control-group">
                         <label>Presets</label>
-                        <div style="display:flex; gap:4px; height: 100%;">
+                        <div style="display:flex; gap:4px;">
                             <button id="btnSavePreset" class="btn-sm" style="flex: 1;">Save</button>
                             <button id="btnLoadPreset" class="btn-sm" style="flex: 1;">Load</button>
                         </div>
                     </div>
+
                 </div>
             </div>
 
