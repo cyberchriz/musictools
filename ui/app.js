@@ -1683,9 +1683,20 @@
         // 2. Interval Tension vs Base Root
         const baseRoot = (currentIdentifiedRootPC !== null) ? currentIdentifiedRootPC : basePCs[0];
 
+        // Fined-tuned psychoacoustic weights (Modern Jazz/Neo-Soul Tuning)
         const intervalWeights = {
-            0: 0.0, 1: 1.0, 2: 0.5, 3: 0.2, 4: 0.1, 5: 0.2,
-            6: 1.0, 7: 0.0, 8: 0.6, 9: 0.3, 10: 0.5, 11: 0.9
+            0: 0.0,   // Unison / Octave (Pure Consonance)
+            1: 1.0,   // Minor 2nd / ♭9 (Maximum clash against the root - stays Red)
+            2: 0.25,  // Major 2nd / 9th (Modern staple, very safe)
+            3: 0.2,   // Minor 3rd 
+            4: 0.1,   // Major 3rd 
+            5: 0.15,  // Perfect 4th / 11th (Stable quartal color)
+            6: 0.75,  // Tritone / ♯11 / ♭5 (Spicy and tense, but not an "error")
+            7: 0.0,   // Perfect 5th 
+            8: 0.45,  // Minor 6th / ♯5 / ♭13 (Altered tension, warm orange)
+            9: 0.15,  // Major 6th / 13th (Bossa nova home base)
+            10: 0.3,  // Minor 7th (Standard jazz/blues color)
+            11: 0.4   // Major 7th (Lush jazz color)
         };
 
         let maxTension = 0;
@@ -1700,8 +1711,6 @@
 
         const avgTension = totalIntervalTension / targetPCs.length;
         tensionScore += (avgTension * 0.4) + (maxTension * 0.6);
-
-        // NOTE: Diatonic Penalty removed! Tension is now purely acoustic.
 
         return Math.max(0.0, Math.min(1.0, tensionScore));
     }
@@ -1727,7 +1736,7 @@
 
             if (isOutOfScale) {
                 // THE FILL FIX: Using setProperty smashes the CSS opacity wall!
-                const ghostColor = `hsl(${hue}, 50%, 25%)`;
+                const ghostColor = `hsl(${hue}, 50%, 22%)`;
                 el.style.setProperty('fill', ghostColor, 'important');
                 el.style.setProperty('opacity', '1', 'important');
             } else {
