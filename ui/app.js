@@ -146,6 +146,9 @@
     let showExtensions = true, showChordDegrees = false;
     let currentIdentifiedRootPC = null;
     let currentGravityTargets = [];
+    let rootHistory = []; // Tracks the last 3 chord roots
+    let isStrongSequence = false;   // Toggles the inward Gravity Well
+    let noteMemoryMap = new Map(); // harmonic buffer for heat mapping
     const degreeNames = ['1', 'b2', '2', 'b3', '3', '4', '#4', '5', 'b6', '6', 'b7', '7'];
 
     let currentArpBPM = 120, currentArpRhythm = 'slow', currentArpSwing = 0, currentArpLoop = true;
@@ -767,28 +770,53 @@
         }; inp.click();
     });
 
-    // --- HARMONIC HEATMAP STATE ---
+    // --- HARMONIC HEATMAP STATE & PROFILES ---
     let isHeatmapActive = false;
+    let currentHeatmapProfile = 'off';
     let heatmapBaseNotes = [];
 
-    document.getElementById('btnToggleHeatmap')?.addEventListener('click', (e) => {
-        isHeatmapActive = !isHeatmapActive;
-        e.target.textContent = `Heatmap: ${isHeatmapActive ? 'ON' : 'OFF'}`;
+    // Psychoacoustic tunings across different musical eras
+    const heatmapProfiles = {
+        classical: { // Strict counterpoint. Extensions are tense.
+            0: 0.0, 1: 1.0, 2: 0.5, 3: 0.2, 4: 0.1, 5: 0.2,
+            6: 1.0, 7: 0.0, 8: 0.6, 9: 0.3, 10: 0.5, 11: 0.9
+        },
+        pop: { // 7ths and 9ths are slightly safer, but still have pull.
+            0: 0.0, 1: 1.0, 2: 0.35, 3: 0.2, 4: 0.1, 5: 0.15,
+            6: 0.85, 7: 0.0, 8: 0.5, 9: 0.2, 10: 0.4, 11: 0.6
+        },
+        jazz: { // Neo-Soul/Modern. Major 7ths and 9ths are highly stable chord tones.
+            0: 0.0, 1: 1.0, 2: 0.25, 3: 0.2, 4: 0.1, 5: 0.15,
+            6: 0.75, 7: 0.0, 8: 0.45, 9: 0.15, 10: 0.3, 11: 0.4
+        }
+    };
+
+    document.getElementById('heatmapProfile')?.addEventListener('change', (e) => {
+        currentHeatmapProfile = e.target.value;
+        isHeatmapActive = (currentHeatmapProfile !== 'off');
+
+        // Toggle active styling on the dropdown to match other buttons
         e.target.classList.toggle('active-btn', isHeatmapActive);
 
         if (!isHeatmapActive) {
+            // Clean slate when turned off
             if (cachedGridNodes) {
                 for (let i = 0; i < cachedGridNodes.length; i++) {
                     cachedGridNodes[i].style.removeProperty('fill');
                     cachedGridNodes[i].style.removeProperty('opacity');
-
-                    // --- STRIP THE PULSING BEACON FROM THE CLONES ---
                     if (cachedGridNodes[i]._highlightEl) {
-                        cachedGridNodes[i]._highlightEl.classList.remove('gravity-beacon');
+                        cachedGridNodes[i]._highlightEl.classList.remove('gravity-border-local', 'gravity-border-sequence');
                     }
                 }
             }
+            // --- NEW: Clean the text nodes too ---
+            if (cachedTextNodes) {
+                for (let i = 0; i < cachedTextNodes.length; i++) {
+                    cachedTextNodes[i].classList.remove('gravity-text-local', 'gravity-text-sequence');
+                }
+            }
             heatmapBaseNotes = [];
+            rootHistory = []; // Clear chord history on disable
         } else if (heatmapBaseNotes.length > 0) {
             updateHarmonicHeatmap();
         }
@@ -1671,7 +1699,6 @@
 
         let tensionScore = 0;
 
-        // 1. Shared Notes (Consonance bonus)
         let sharedNotes = 0;
         targetPCs.forEach(pc => { if (basePCs.includes(pc)) sharedNotes++; });
 
@@ -1680,24 +1707,11 @@
 
         tensionScore -= (sharedNotes * 0.2);
 
-        // 2. Interval Tension vs Base Root
         const baseRoot = (currentIdentifiedRootPC !== null) ? currentIdentifiedRootPC : basePCs[0];
 
-        // Fined-tuned psychoacoustic weights (Modern Jazz/Neo-Soul Tuning)
-        const intervalWeights = {
-            0: 0.0,   // Unison / Octave (Pure Consonance)
-            1: 1.0,   // Minor 2nd / ♭9 (Maximum clash against the root - stays Red)
-            2: 0.25,  // Major 2nd / 9th (Modern staple, very safe)
-            3: 0.2,   // Minor 3rd 
-            4: 0.1,   // Major 3rd 
-            5: 0.15,  // Perfect 4th / 11th (Stable quartal color)
-            6: 0.75,  // Tritone / ♯11 / ♭5 (Spicy and tense, but not an "error")
-            7: 0.0,   // Perfect 5th 
-            8: 0.45,  // Minor 6th / ♯5 / ♭13 (Altered tension, warm orange)
-            9: 0.15,  // Major 6th / 13th (Bossa nova home base)
-            10: 0.3,  // Minor 7th (Standard jazz/blues color)
-            11: 0.4   // Major 7th (Lush jazz color)
-        };
+        // --- DYNAMIC WEIGHT INJECTION ---
+        // Fetch the weights for the currently selected genre!
+        const intervalWeights = heatmapProfiles[currentHeatmapProfile] || heatmapProfiles['jazz'];
 
         let maxTension = 0;
         let totalIntervalTension = 0;
@@ -1719,6 +1733,16 @@
         if (!isHeatmapActive || heatmapBaseNotes.length === 0) return;
         if (!cachedGridNodes) return;
 
+        // ==========================================
+        // --- NEW: BPM-DEPENDENT TRANSITION SPEED ---
+        // ==========================================
+        // Base transition is 60% of a quarter note beat. 
+        // At 120 BPM, this is 0.3s. At 60 BPM, this is 0.6s.
+        const beatSecs = 60 / currentArpBPM;
+        // Clamp it: Never faster than 0.15s (prevents strobing), never slower than 0.6s (prevents lag)
+        const transSecs = Math.max(0.15, Math.min(0.6, beatSecs * 0.6));
+        const transitionRule = `fill ${transSecs.toFixed(2)}s ease, opacity ${transSecs.toFixed(2)}s ease`;
+
         for (let i = 0; i < cachedGridNodes.length; i++) {
             let el = cachedGridNodes[i];
             if (!el._st || el._st.length === 0) continue;
@@ -1730,13 +1754,12 @@
 
             const tension = calculateDissonance(heatmapBaseNotes, targetMidiNotes);
             const curvedTension = Math.pow(tension, 0.75);
-
             const hue = 120 - (curvedTension * 120);
+
             const isOutOfScale = currentScale !== 'all' && el.classList.contains('dimmed-scale');
 
             if (isOutOfScale) {
-                // THE FILL FIX: Using setProperty smashes the CSS opacity wall!
-                const ghostColor = `hsl(${hue}, 50%, 22%)`;
+                const ghostColor = `hsl(${hue}, 50%, 20%)`;
                 el.style.setProperty('fill', ghostColor, 'important');
                 el.style.setProperty('opacity', '1', 'important');
             } else {
@@ -1746,20 +1769,49 @@
                 el.style.setProperty('opacity', '1', 'important');
             }
 
-            el.style.transition = 'fill 0.35s ease, opacity 0.35s ease';
-
             // ==========================================
-            // --- NEW: FUNCTIONAL GRAVITY BEACON ---
+            // --- FUNCTIONAL & SEQUENCE GRAVITY BORDERS ---
             // ==========================================
+            if (el._highlightEl) {
+                el._highlightEl.classList.remove('gravity-border-local', 'gravity-border-sequence');
+            }
 
-            // 1. Strip the class from the CLONE layer first
-            if (el._highlightEl) el._highlightEl.classList.remove('gravity-beacon');
-
-            // 2. Check if this node is inside the array of valid targets
             if (currentGravityTargets.length > 0) {
                 const elRootPC = ((el._st[0] % 12) + 12) % 12;
+
                 if (currentGravityTargets.includes(elRootPC) && el._highlightEl) {
-                    el._highlightEl.classList.add('gravity-beacon');
+                    if (isStrongSequence) {
+                        el._highlightEl.classList.add('gravity-border-sequence');
+                    } else {
+                        el._highlightEl.classList.add('gravity-border-local');
+                    }
+                }
+            }
+
+            el.style.transition = transitionRule;
+        }
+
+        // ==========================================
+        // --- TEXT LABEL HIGHLIGHTING ---
+        // ==========================================
+        if (!cachedTextNodes) cachedTextNodes = document.querySelectorAll('.label-text');
+
+        for (let i = 0; i < cachedTextNodes.length; i++) {
+            let textEl = cachedTextNodes[i];
+
+            // Strip old classes
+            textEl.classList.remove('gravity-text-local', 'gravity-text-sequence');
+
+            if (currentGravityTargets.length > 0) {
+                // Read the pitch class assigned to the text element
+                const pc = parseInt(textEl.getAttribute('data-pc'));
+
+                if (currentGravityTargets.includes(pc)) {
+                    if (isStrongSequence) {
+                        textEl.classList.add('gravity-text-sequence');
+                    } else {
+                        textEl.classList.add('gravity-text-local');
+                    }
                 }
             }
         }
@@ -2794,6 +2846,7 @@
     let highlightUpdatePending = false;
     let previousHighlightState = "";
     let cachedGridNodes = null; // RAM Cache for Chrome
+    let cachedTextNodes = null;
 
     function updateHighlights() {
         if (highlightUpdatePending) return;
@@ -2812,7 +2865,32 @@
             });
             midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
 
-            // 1. ALWAYS UPDATE PIANO: It's cheap and provides instant feedback during swipes
+            // ==========================================
+            // --- THE HARMONIC BUFFER (BPM SYNC) ---
+            // ==========================================
+
+            // 1. Refresh memory for currently held physical/looper notes
+            playingMidiNotes.forEach(note => {
+                noteMemoryMap.set(note, now);
+            });
+
+            // 2. Build the aggregated "Contextual Harmony" Set
+            const activeHarmonicNotes = new Set();
+
+            // Calculate 1.5 beats of memory based on the current live BPM!
+            // At 120 BPM = 0.75 seconds of memory. At 60 BPM = 1.5 seconds.
+            const memoryWindowSecs = (60 / currentArpBPM) * 1.5;
+
+            noteMemoryMap.forEach((lastTime, note) => {
+                // Keep it if it's currently physically held, OR if it's within the BPM memory window
+                if (playingMidiNotes.has(note) || (now - lastTime <= memoryWindowSecs)) {
+                    activeHarmonicNotes.add(note);
+                } else {
+                    noteMemoryMap.delete(note); // Purge expired notes
+                }
+            });
+
+            // 1. ALWAYS UPDATE PIANO (Physical Feedback)
             updatePianoVisuals();
 
             // 2. THE USER'S FIX: Skip the heavy Tonnetz grid math during fast slides!
@@ -2874,36 +2952,37 @@
                     }
                 }
             }
-            updateChordDisplay();
+
+            // Pass the BUFFERED harmony to the Chord Display engine
+            updateChordDisplay(activeHarmonicNotes);
+
             updatePianoVisuals(); // Final sweep to render any missed extensions
 
             // --- HARMONIC HEATMAP TRIGGER ---
-            // Evaluates the total active harmony (including inversions and looper tracks)
             if (isHeatmapActive) {
-                const currentNotesStr = Array.from(playingMidiNotes).sort().join(',');
+                // Evaluate the BUFFERED harmony so rolled chords are processed as a single entity!
+                const currentNotesStr = Array.from(activeHarmonicNotes).sort().join(',');
                 if (heatmapBaseNotes.join(',') !== currentNotesStr) {
-                    heatmapBaseNotes = Array.from(playingMidiNotes).sort();
-                    // wrap this in a tiny timeout so it doesn't block the main UI render frame
+                    heatmapBaseNotes = Array.from(activeHarmonicNotes).sort();
                     setTimeout(updateHarmonicHeatmap, 0);
                 }
             }
         });
     }
 
-    function updateChordDisplay() {
+    function updateChordDisplay(harmonicSet) {
         const display = document.getElementById('chord-display');
         if (!display) return;
-        currentIdentifiedRootPC = null;
         currentGravityTargets = [];
 
-        if (playingMidiNotes.size === 0) { display.style.opacity = '0'; return; }
+        if (!harmonicSet || harmonicSet.size === 0) { display.style.opacity = '0'; return; }
 
-        let minNote = Math.min(...Array.from(playingMidiNotes));
+        let minNote = Math.min(...Array.from(harmonicSet));
         if (minNote === Infinity) return;
 
         let bassPC = minNote % 12;
 
-        if (playingMidiNotes.size === 1) {
+        if (harmonicSet.size === 1) {
             let octave = Math.floor(minNote / 12) - 1;
             display.textContent = `${labelAbsoluteSharp[bassPC]}${octave}`;
             display.style.opacity = '1';
@@ -2911,9 +2990,9 @@
             return;
         }
 
-        let pitchClasses = Array.from(new Set(Array.from(playingMidiNotes).map(n => n % 12)));
+        let pitchClasses = Array.from(new Set(Array.from(harmonicSet).map(n => n % 12)));
 
-        if (pitchClasses.length === 1 && playingMidiNotes.size > 1) {
+        if (pitchClasses.length === 1 && harmonicSet.size > 1) {
             display.textContent = `${labelAbsoluteSharp[bassPC]} Octaves`;
             display.style.opacity = '1';
             currentIdentifiedRootPC = bassPC;
@@ -2984,6 +3063,14 @@
         }
 
         if (bestMatch !== null) {
+            // --- UPGRADED CHORD HISTORY TRACKER ---
+            if (currentIdentifiedRootPC !== null && currentIdentifiedRootPC !== bestRoot) {
+                // Push the last chord to the front of the array
+                rootHistory.unshift(currentIdentifiedRootPC);
+                // Keep only the last 3 chords in memory to prevent ancient history from triggering sequences
+                if (rootHistory.length > 3) rootHistory.pop();
+            }
+
             currentIdentifiedRootPC = bestRoot;
             let chordName = labelAbsoluteSharp[bestRoot] + bestMatch;
             if (bestRoot !== bassPC) {
@@ -2991,30 +3078,39 @@
             }
             display.textContent = chordName;
 
-            // ==========================================
-            // --- UPGRADED FUNCTIONAL GRAVITY ENGINE ---
-            // ==========================================
-            currentGravityTargets = []; // Reset array
+            // --- FUNCTIONAL GRAVITY ENGINE ---
+            currentGravityTargets = [];
+            isStrongSequence = false;
 
             const isDominant = (bestMatch.includes('7') || bestMatch.includes('9') || bestMatch.includes('13'))
                 && !bestMatch.includes('maj') && !bestMatch.includes('-') && !bestMatch.includes('dim');
-
             const isDiminished = bestMatch.includes('dim') || bestMatch.includes('b5');
             const isAugmented = bestMatch.includes('aug');
             const isSus = bestMatch.includes('sus');
 
             if (isDominant) {
-                // 1. Standard Resolution (Down a P5)
-                currentGravityTargets.push((bestRoot - 7 + 12) % 12);
-                // 2. Tritone Substitution (Down a minor 2nd)
+                let target = (bestRoot - 7 + 12) % 12;
+                currentGravityTargets.push(target);
                 currentGravityTargets.push((bestRoot - 1 + 12) % 12);
+
+                // --- UPGRADED SEQUENCE DETECTOR ---
+                // Check if ANY of the last 3 chords set up a strong resolution to our target
+                if (rootHistory.length > 0) {
+                    isStrongSequence = rootHistory.some(prevRoot => {
+                        const isTwo = prevRoot === (target + 2) % 12;        // ii (e.g., Dm -> G7)
+                        const isFour = prevRoot === (target + 5) % 12;       // IV or iv (e.g., F -> G7 or Fm -> G7)
+                        const isSix = prevRoot === (target + 9) % 12;        // vi (e.g., Am -> G7)
+                        const isFlatSix = prevRoot === (target + 8) % 12;    // bVI (e.g., Ab7 -> G7 chromatic walkdown)
+
+                        return isTwo || isFour || isSix || isFlatSix;
+                    });
+                }
+
             } else if (isAugmented) {
                 currentGravityTargets.push((bestRoot - 7 + 12) % 12);
             } else if (isDiminished) {
-                // Diminished resolves up a minor 2nd
                 currentGravityTargets.push((bestRoot + 1) % 12);
             } else if (isSus) {
-                // Suspended chords resolve to their own Major/Minor triads
                 currentGravityTargets.push(bestRoot);
             }
 
@@ -5235,17 +5331,39 @@
 
     const tonnetzSvg = document.createElementNS(svgNS, "svg");
 
-    // --- INJECT GRAVITY BEACON CSS ---
+    // --- INJECT GRAVITY BORDER CSS ---
     const gravityStyle = document.createElement('style');
     gravityStyle.innerHTML = `
-    @keyframes beaconPulse {
-        0% { fill: white; fill-opacity: 0.0; }
-        50% { fill: white; fill-opacity: 0.6; }
-        100% { fill: white; fill-opacity: 0.0; }
+    /* Static, clean borders for gravity nodes. Completely transparent inside. */
+    .gravity-border-local {
+        fill: transparent !important;
+        stroke: #00d2ff !important; /* Vivid Cyber Blue */
+        stroke-width: 5px !important;
+        stroke-linejoin: round !important;
+        opacity: 1 !important;
+        pointer-events: none !important;
     }
-    .gravity-beacon {
-        animation: beaconPulse 1.4s infinite ease-in-out !important;
-        opacity: 1 !important; /* Force opacity to 1 so the fill-opacity animation reveals itself */
+    
+    .gravity-border-sequence {
+        fill: transparent !important;
+        stroke: #ff007f !important; /* Vivid Synthwave Pink */
+        stroke-width: 6px !important;
+        stroke-linejoin: round !important;
+        opacity: 1 !important;
+        pointer-events: none !important;
+    }
+
+    /* NEW: High-contrast outlines for the Chord Labels */
+    .gravity-text-local {
+        stroke: #00d2ff !important;
+        stroke-width: 4px !important;
+        paint-order: stroke fill !important; /* Draws the stroke behind the white text! */
+    }
+
+    .gravity-text-sequence {
+        stroke: #ff007f !important;
+        stroke-width: 5px !important;
+        paint-order: stroke fill !important;
     }
     `;
     document.head.appendChild(gravityStyle);

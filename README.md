@@ -44,6 +44,18 @@
 * **Tuning Systems:** Switch the engine from Equal Temperament to Just Intonation or Pythagorean Tuning for mathematically perfect, beatless ratios.
 * **Dynamic Labels:** Toggle node labels between absolute pitch, scale degrees, Roman numerals, or Solfege.
 
+### Harmonic Heatmap + Local & Sequence Gravity Engine
+* **Real-time compositional assistant:** visualizes musical tension and predicts functional chord resolutions on the Tonnetz grid.
+* **Psychoacoustic Heatmap:** Colors nodes based on calculated dissonance against your active chord (Green / Yellow: Stable, consonant chord tones, Orange / Red: High tension and harsh dissonances (e.g., minor 2nds))
+* **Genre-weighted Tuning:** Select Classical, Pop/Rock or Jazz to shift the mathematical interval weights. (e.g., A Major 7th highlights as a tense red in Classical, but a stable green in Jazz).
+* **Gravity Beacons:** Visualizes where unstable chords (Dom7, Dim, Sus) and Jazz Tritone substitutions want to resolve using high-contrast hollow borders and glowing text outlines:
+    - Local Gravity (Cyber Blue): Isolated chord resolutions (e.g., a lone G7 targeting C)
+    - Sequence Gravity (Synthwave Pink): Grammatical progression endings.
+    - Tracks chord history and triggers on strong cadences (ii -> V, IV -> V, or chromatic walkdowns).
+* **BPM-Synced Harmonic Buffer:** Decouples harmonic analysis from raw keypresses using a rolling, tempo-synced memory.
+* **Arpeggio Support:** A 1.5-beat memory window aggregates individually fingerpicked/rolled notes into a single harmonic entity for accurate Heatmap evaluation.
+* **Passing Chord Immunity:** Remembers the last 3 macro-chords, ignoring quick melody notes and passing chords to accurately identify the underlying progression.
+
 ### Audio Engine & Sampling
 * **Dual-Oscillator Synthesizer:** Procedural subtractive audio engine featuring 33 pre-calibrated acoustic and analog presets.
 * **Persistent User Samples:** Hardware-style sampler supporting custom `.wav` loading. Uploaded files are committed to the browser's native IndexedDB, ensuring custom sample libraries survive page reloads and operate entirely offline.
