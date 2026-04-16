@@ -3039,7 +3039,14 @@
             '0,1,4,10': '7♭9(no5)', '0,3,4,10': '7♯9(no5)',
 
             // Power chord
-            '0,7': '5'
+            '0,7': '5',
+
+            // DYADS
+            '0,4': '(no5)',     // Major 3rd dyad
+            '0,3': '-(no5)',    // Minor 3rd dyad
+            '0,5': 'sus4(no5)', // Perfect 4th dyad
+            '0,2': 'sus2(no5)', // Major 2nd dyad
+            '0,6': '(b5, no3)'  // Tritone dyad
         };
 
         let bestMatch = null;
@@ -3063,12 +3070,12 @@
         }
 
         if (bestMatch !== null) {
-            // --- UPGRADED CHORD HISTORY TRACKER ---
-            if (currentIdentifiedRootPC !== null && currentIdentifiedRootPC !== bestRoot) {
-                // Push the last chord to the front of the array
-                rootHistory.unshift(currentIdentifiedRootPC);
-                // Keep only the last 3 chords in memory to prevent ancient history from triggering sequences
-                if (rootHistory.length > 3) rootHistory.pop();
+            // --- UPGRADED CHORD HISTORY TRACKER (Arpeggio Safe!) ---
+            // Only push to history if we've landed on a genuinely NEW full chord!
+            // This completely ignores single passing notes and incomplete dyads.
+            if (rootHistory.length === 0 || rootHistory[0] !== bestRoot) {
+                rootHistory.unshift(bestRoot);
+                if (rootHistory.length > 5) rootHistory.pop(); // Keep history memory clean
             }
 
             currentIdentifiedRootPC = bestRoot;
@@ -3078,43 +3085,91 @@
             }
             display.textContent = chordName;
 
-            // --- FUNCTIONAL GRAVITY ENGINE ---
+            // ==========================================
+            // --- FUNCTIONAL GRAVITY ENGINE V3 ---
+            // ==========================================
             currentGravityTargets = [];
             isStrongSequence = false;
 
+            // 1. Identify the internal structure of the current chord
+            const isMajor = bestMatch === '' || bestMatch === 'maj' || bestMatch === '6' || bestMatch.includes('add');
+            const isMinor = bestMatch.startsWith('-');
             const isDominant = (bestMatch.includes('7') || bestMatch.includes('9') || bestMatch.includes('13'))
-                && !bestMatch.includes('maj') && !bestMatch.includes('-') && !bestMatch.includes('dim');
+                && !bestMatch.includes('maj') && !isMinor && !bestMatch.includes('dim');
             const isDiminished = bestMatch.includes('dim') || bestMatch.includes('b5');
             const isAugmented = bestMatch.includes('aug');
             const isSus = bestMatch.includes('sus');
 
+            // 2. LOCAL GRAVITY: Chords with inherent acoustic tension
             if (isDominant) {
-                let target = (bestRoot - 7 + 12) % 12;
-                currentGravityTargets.push(target);
-                currentGravityTargets.push((bestRoot - 1 + 12) % 12);
-
-                // --- UPGRADED SEQUENCE DETECTOR ---
-                // Check if ANY of the last 3 chords set up a strong resolution to our target
-                if (rootHistory.length > 0) {
-                    isStrongSequence = rootHistory.some(prevRoot => {
-                        const isTwo = prevRoot === (target + 2) % 12;        // ii (e.g., Dm -> G7)
-                        const isFour = prevRoot === (target + 5) % 12;       // IV or iv (e.g., F -> G7 or Fm -> G7)
-                        const isSix = prevRoot === (target + 9) % 12;        // vi (e.g., Am -> G7)
-                        const isFlatSix = prevRoot === (target + 8) % 12;    // bVI (e.g., Ab7 -> G7 chromatic walkdown)
-
-                        return isTwo || isFour || isSix || isFlatSix;
-                    });
-                }
-
-            } else if (isAugmented) {
                 currentGravityTargets.push((bestRoot - 7 + 12) % 12);
+                currentGravityTargets.push((bestRoot - 1 + 12) % 12);
             } else if (isDiminished) {
                 currentGravityTargets.push((bestRoot + 1) % 12);
+            } else if (isAugmented) {
+                currentGravityTargets.push((bestRoot - 7 + 12) % 12);
             } else if (isSus) {
                 currentGravityTargets.push(bestRoot);
             }
 
+            // 3. SEQUENCE GRAVITY: Contextual progressions
+            // Because we just unshifted the CURRENT chord to rootHistory[0], 
+            // the PREVIOUS chord is now safely preserved at rootHistory[1]!
+            if (rootHistory.length > 1) {
+
+                // We check the last 2 valid chords to elegantly "look through" passing chords!
+                const recentRoots = [rootHistory[1]];
+                if (rootHistory.length > 2) recentRoots.push(rootHistory[2]);
+
+                recentRoots.forEach(prevRoot => {
+                    // PATTERN A: Authentic Cadence (ii -> V -> I) or (IV -> V -> I)
+                    if (isMajor || isDominant) {
+                        const targetI = (bestRoot - 7 + 12) % 12;
+                        const isTwo = prevRoot === (targetI + 2) % 12;
+                        const isFour = prevRoot === (targetI + 5) % 12;
+                        const isSix = prevRoot === (targetI + 9) % 12;
+                        const isFlatSix = prevRoot === (targetI + 8) % 12;
+
+                        if (isTwo || isFour || isSix || isFlatSix) {
+                            if (!currentGravityTargets.includes(targetI)) currentGravityTargets.push(targetI);
+                            isStrongSequence = true;
+
+                            // The Deceptive Fake-out (vi)
+                            const targetVi = (targetI + 9) % 12;
+                            if (!currentGravityTargets.includes(targetVi)) currentGravityTargets.push(targetVi);
+                        }
+                    }
+
+                    // PATTERN B: Plagal & Minor Plagal (IV -> I) or (iv -> I)
+                    if (isMajor || isMinor) {
+                        const targetI = (bestRoot - 5 + 12) % 12;
+                        const isOne = prevRoot === targetI;
+                        const isFive = prevRoot === (targetI + 7) % 12;
+                        const isFlatSeven = prevRoot === (targetI + 10) % 12;
+
+                        if (isOne || isFive || isFlatSeven) {
+                            if (!currentGravityTargets.includes(targetI)) currentGravityTargets.push(targetI);
+                            isStrongSequence = true;
+                        }
+                    }
+
+                    // PATTERN C: The Epic/Backdoor Cadence (bVI -> bVII -> I)
+                    if (isMajor || isDominant) {
+                        const targetI = (bestRoot + 2) % 12;
+                        const isFlatSix = prevRoot === (bestRoot - 2 + 12) % 12;
+
+                        if (isFlatSix) {
+                            if (!currentGravityTargets.includes(targetI)) currentGravityTargets.push(targetI);
+                            isStrongSequence = true;
+                        }
+                    }
+                });
+            }
+
         } else {
+            // ==========================================
+            // --- FALLBACK BLOCK ---
+            // ==========================================
             currentIdentifiedRootPC = bassPC;
             let intervals = pitchClasses.map(pc => (pc - bassPC + 12) % 12).sort((a, b) => a - b);
             display.textContent = `${labelAbsoluteSharp[bassPC]} (${intervals.length})`;
