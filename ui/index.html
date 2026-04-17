@@ -25,11 +25,13 @@
     <meta name="description" content="Tonnetz Pro is a free, browser-based digital audio workstation (DAW). Compose music using an isomorphic grid, 16-track looper, and dual-oscillator synth.">
     <title>Tonnetz Pro</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9c27b0">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" href="./icon-192.png" type="image/png">
     <style>
+        /* =========================================================
+           1. CORE VARIABLES & THEMES
+           ========================================================= */
         :root {
             --bg-color: #ffffff;
             --panel-bg: #f8f9fa;
@@ -103,9 +105,6 @@
             --c-loc-txt: #b0bec5;
         }
 
-        /* --- CUSTOM COLOR THEMES --- */
-        /* Default Purple is natively handled by :root and body.dark-theme */
-
         /* Cyber Blue */
         body.theme-blue {
             --main-node: #0288d1;
@@ -158,6 +157,21 @@
             --theme-glow: rgba(255, 64, 129, 0.2);
         }
 
+        /* =========================================================
+           2. BASE STYLES & LAYOUT COMPONENTS
+           ========================================================= */
+        body {
+            background: var(--bg-color);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            transition: background 0.3s, color 0.3s;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
         .close-btn-sm {
             background: #f44336;
             color: white;
@@ -205,6 +219,9 @@
             gap: 5px;
         }
 
+        /* =========================================================
+           3. RESPONSIVE OVERLAY LAYOUTS
+           ========================================================= */
         @media (orientation: landscape) {
             .drum-preset-grid {
                 grid-template-columns: repeat(4, 1fr);
@@ -216,7 +233,6 @@
                 grid-template-rows: repeat(3, 1fr);
             }
 
-            /* 4K OPTIMIZATION: Max width expanded from 450px to 550px to utilize large desktop monitors */
             .overlay.primary {
                 top: 0;
                 left: 0;
@@ -342,6 +358,9 @@
             }
         }
 
+        /* =========================================================
+           4. GLOBAL UI ELEMENTS & SVG RENDERER
+           ========================================================= */
         .manual-drum-btn {
             transition: all 0.1s;
             display: flex;
@@ -361,18 +380,6 @@
                 box-shadow: 0 0 10px rgba(255,255,255,0.5);
             }
 
-        body {
-            background: var(--bg-color);
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            color: var(--text-main);
-            transition: background 0.3s, color 0.3s;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-        }
-
         .svg-wrapper {
             position: absolute;
             top: 0;
@@ -380,8 +387,7 @@
             width: 100vw;
             height: 100vh;
             background-color: var(--bg-color);
-            background-image: /* Stacking the gradient twice doubles the brightness in the center! */
-            radial-gradient(circle at 50% 50%, var(--theme-glow) 0%, transparent calc(var(--bg-pulse-size, 0%) * 0.7)), radial-gradient(circle at 50% 50%, var(--theme-glow) 0%, transparent var(--bg-pulse-size, 0%));
+            background-image: radial-gradient(circle at 50% 50%, var(--theme-glow) 0%, transparent calc(var(--bg-pulse-size, 0%) * 0.7)), radial-gradient(circle at 50% 50%, var(--theme-glow) 0%, transparent var(--bg-pulse-size, 0%));
             cursor: grab;
             z-index: 1;
             overflow: hidden;
@@ -402,13 +408,13 @@
             transform: translateZ(0);
         }
 
-        /* --- Panel Auto-Hide Toggle Button (Extreme Contrast Update) --- */
+        /* Auto-Hide Toggle */
         .auto-hide-toggle {
             background: var(--panel-bg);
             border: 2px solid var(--border-color);
             color: var(--text-muted);
             border-radius: 6px;
-            width: 26px; /* Slightly larger to fit the bold border */
+            width: 26px;
             height: 26px;
             display: inline-flex;
             align-items: center;
@@ -418,7 +424,7 @@
             margin-right: 8px;
             transition: all 0.2s ease;
             opacity: 0.6;
-            filter: grayscale(100%); /* Physically drains color from the OS emoji when off! */
+            filter: grayscale(100%);
         }
 
             .auto-hide-toggle:hover {
@@ -427,11 +433,11 @@
             }
 
             .auto-hide-toggle.active {
-                background: var(--bg-color); /* Guaranteed neutral background for the emoji */
-                border: 2px solid var(--main-node); /* Bold theme-colored outline */
+                background: var(--bg-color);
+                border: 2px solid var(--main-node);
                 color: var(--main-node);
                 opacity: 1;
-                filter: none; /* Restores the icon's natural color */
+                filter: none;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 10px var(--theme-glow);
             }
 
@@ -439,7 +445,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px var(--theme-glow);
         }
 
-        /* --- DOCKED PANEL ARCHITECTURE --- */
+        /* Docked Panel Architecture */
         .overlay.primary, #studio-overlay {
             position: absolute;
             background: var(--panel-bg);
@@ -461,9 +467,9 @@
                 pointer-events: auto;
             }
 
-        /* --- CUSTOM TOUCH SCROLLBARS --- */
-
-        /* 1. Firefox Only (Hides the standard from Chrome) */
+        /* =========================================================
+           5. CUSTOM SCROLLBARS
+           ========================================================= */
         @supports (-moz-appearance: none) {
             .overlay {
                 scrollbar-width: auto;
@@ -475,9 +481,8 @@
             }
         }
 
-        /* 2. Chrome, Safari, Edge, Android */
         .overlay::-webkit-scrollbar {
-            width: 22px !important; /* The massive invisible track */
+            width: 22px !important;
         }
 
         .overlay::-webkit-scrollbar-track {
@@ -487,20 +492,17 @@
         .overlay::-webkit-scrollbar-thumb {
             background-color: var(--text-muted);
             border-radius: 11px;
-            /* 6px of invisible border pushes the thumb into a thick pill */
             border: 6px solid transparent !important;
             background-clip: content-box !important;
             min-height: 40px;
         }
 
-            /* Swells and lights up in the Theme Color on touch/hover! */
             .overlay::-webkit-scrollbar-thumb:hover,
             .overlay::-webkit-scrollbar-thumb:active {
                 background-color: var(--main-node);
                 border-width: 4px !important;
             }
 
-        /* Dark Mode Adjustments */
         .dark-theme .overlay::-webkit-scrollbar-thumb {
             background-color: #666666;
         }
@@ -510,13 +512,15 @@
                 background-color: var(--main-node);
             }
 
-        /* Desktop / Landscape: Left & Right Drawers */
+        /* =========================================================
+           6. EXTENDED RESPONSIVE LAYOUTS
+           ========================================================= */
         @media (orientation: landscape) {
             .overlay.primary {
                 top: 0;
                 left: 0;
                 width: clamp(320px, 30vw, 450px);
-                height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px))); /* Stretch down to piano */
+                height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px)));
                 border-right: 1px solid var(--border-color);
                 border-bottom: 1px solid var(--border-color);
                 border-bottom-right-radius: 12px;
@@ -544,7 +548,6 @@
                 }
         }
 
-        /* Mobile / Portrait: Top Dropdowns */
         @media (orientation: portrait) {
             .overlay.primary, #studio-overlay {
                 top: 0;
@@ -562,7 +565,6 @@
                 gap: 8px;
             }
 
-            /* Admin/Mixing Panels get the full screen minus the piano */
             #settings-overlay, #mixer-overlay {
                 max-height: calc(100vh - var(--piano-h, clamp(80px, 16vh, 140px)) - 15px) !important;
             }
@@ -571,7 +573,7 @@
                 transform: translate3d(0, 0, 0);
             }
 
-            /* Squeeze all internal wells, sections, and headers */
+            /* Compact UI layout */
             .controls-section {
                 padding: 4px;
                 gap: 4px;
@@ -595,6 +597,9 @@
             }
         }
 
+        /* =========================================================
+           7. MULTITRACK STUDIO & MIXER COMPONENTS
+           ========================================================= */
         .looper-controls {
             display: flex;
             flex-direction: column;
@@ -673,18 +678,17 @@
             .track-btn.active {
                 background: var(--bg-color);
                 color: var(--text-main);
-                border: 2px solid var(--text-muted); /* Neutral active border */
+                border: 2px solid var(--text-muted);
             }
 
-            /* Agnostic Type Colors (Applied via JS once recorded) */
+            /* Track Type Colors */
             .track-btn.type-voice {
                 border-bottom: 3px solid #9c27b0;
             }
-            /* Purple for Synth */
+
             .track-btn.type-drum {
                 border-bottom: 3px solid #ff9800;
             }
-            /* Orange for Drums */
 
             .track-btn.recording-track {
                 background: #f44336 !important;
@@ -818,7 +822,6 @@
             background: rgba(255,255,255,0.02);
         }
 
-        /* Colored Section Headers */
         .section-title {
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -834,7 +837,6 @@
             align-items: center;
         }
 
-        /* Row Dividers */
         .control-row {
             display: grid;
             align-items: flex-end;
@@ -848,7 +850,6 @@
                 padding-bottom: 0;
             }
 
-        /* Inset Well for Advanced Settings */
         .control-well {
             background: rgba(0,0,0,0.04);
             border: 1px solid var(--border-color) !important;
@@ -951,6 +952,9 @@
             height: 26px;
         }
 
+        /* =========================================================
+           8. PERFORMANCE PADS & INTERACTIVE ELEMENTS
+           ========================================================= */
         .pads-content-wrapper {
             display: flex;
             flex-direction: column;
@@ -1016,6 +1020,7 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
+        /* Pad Categories */
         .btn-cat-sus {
             background: var(--c-sus-bg);
             color: var(--c-sus-txt);
@@ -1094,6 +1099,9 @@
             border-radius: 8px;
         }
 
+        /* =========================================================
+           9. CIRCLE OF FIFTHS & CANVAS CONTROLS
+           ========================================================= */
         .cof-overlay {
             position: absolute;
             top: var(--active-overlay-height, 0px);
@@ -1200,7 +1208,7 @@
                 border-color: var(--main-node);
             }
 
-        /* GPU-Accelerated FAB Pulse */
+        /* FAB Pulse Animation */
         @keyframes fab-pulse-gpu {
             0% {
                 transform: scale(1);
@@ -1227,11 +1235,10 @@
             font-size: 1.5rem;
             align-items: center;
             justify-content: center;
-            position: relative; /* Needed for the pseudo-element */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4); /* Static shadow is fine */
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
-
-            /* The GPU-friendly animated ring */
+            /* Animated ring */
             .fab-menu-btn::after {
                 content: '';
                 position: absolute;
@@ -1249,24 +1256,25 @@
                 transform: scale(0.9) !important;
             }
 
-        /* Hide the pulse when menu is open */
         .canvas-controls.menu-open .fab-menu-btn::after {
             animation: none;
             opacity: 0;
         }
 
-        /* Dark mode adjustment for the outer ring */
         .dark-theme .fab-menu-btn {
             border-color: #2a2a2a;
         }
 
-        /* --- AUTO-HIDE ENGINE --- */
+        /* Auto-hide classes */
         body.ui-hidden #canvas-controls,
         body.ui-hidden .overlay.auto-hides {
             opacity: 0 !important;
             pointer-events: none !important;
         }
 
+        /* =========================================================
+           10. SYNTH WIDGETS & INFO OVERLAY
+           ========================================================= */
         .env-widget {
             background: var(--panel-bg);
             border-radius: 8px;
@@ -1423,7 +1431,9 @@
             font-size: 0.85rem;
         }
 
-        /* --- SVG Graphics Styles --- */
+        /* =========================================================
+           11. GRID GRAPHICS & PIANO STYLES
+           ========================================================= */
         .line-grid {
             stroke: var(--grid-line);
             stroke-width: 2px;
@@ -1538,7 +1548,7 @@
             opacity: 0.8;
         }
 
-        /* --- MIXER CONSOLE STYLES --- */
+        /* 11b. MIXER CONSOLE STYLES */
         .mixer-grid-4 {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -1602,14 +1612,14 @@
             line-height: 1;
         }
 
-        /* --- AUX SEND SLIDERS --- */
+        /* Aux Send Sliders */
         input[type=range].aux-send {
             -webkit-appearance: none;
             appearance: none;
             width: 85%;
-            height: 16px !important; /* Taller to perfectly frame the embedded letters */
+            height: 16px !important;
             margin: 2px 0 4px 0;
-            background: rgba(0,0,0,0.1); /* Recessed track styling */
+            background: rgba(0,0,0,0.1);
             border-radius: 8px;
             cursor: pointer;
             outline: none;
@@ -1619,7 +1629,6 @@
             background: rgba(255,255,255,0.1);
         }
 
-        /* Common Custom Thumb Setup */
         input[type=range].aux-send::-webkit-slider-thumb {
             -webkit-appearance: none;
             height: 16px;
@@ -1705,7 +1714,7 @@
             }
         }
 
-        /* Highlight overlays (SVG) */
+        /* 11c. SVG Node Overlays */
         .highlight-overlay {
             transition: opacity 0.1s ease-out;
             pointer-events: none;
@@ -1739,6 +1748,7 @@
             filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.5)) !important;
         }
 
+        /* Text and Labels */
         .text-natural {
             fill: var(--text-light);
             font-weight: bold;
@@ -1833,6 +1843,7 @@
             font-size: 10px;
         }
 
+        /* 11d. CHORD DISPLAY */
         #chord-display {
             position: absolute;
             bottom: 15px;
@@ -1860,6 +1871,7 @@
             text-shadow: 0 2px 15px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.8);
         }
 
+        /* 11e. PIANO OVERLAY */
         .piano-overlay {
             --key-width: clamp(30px, 4vw, 60px);
             position: absolute;
@@ -1947,6 +1959,7 @@
             z-index: 5;
         }
 
+        /* TOAST NOTIFICATION */
         #toast-container {
             position: fixed;
             bottom: 20px;
@@ -1972,10 +1985,10 @@
             }
 
         /* =========================================================
-           CONDITIONAL PERFORMANCE CSS
+           12. PERFORMANCE TIERS & RESPONSIVE BEHAVIORS
            ========================================================= */
 
-        /* HIGH TIER: Full eye-candy and glassmorphism (All Orientations) */
+        /* HIGH TIER: Full eye-candy and glassmorphism */
         body.perf-high .nav-grid {
             background: rgba(248, 249, 250, 0.85);
             backdrop-filter: blur(12px);
@@ -1998,7 +2011,6 @@
             filter: none !important;
         }
 
-        /* LOW TIER SAFETIES: Add flat borders since we killed the 3D shadows */
         body.perf-low .overlay.primary,
         body.perf-low #studio-overlay,
         body.perf-low .nav-grid {
@@ -2016,7 +2028,7 @@
             text-rendering: optimizeSpeed;
         }
 
-        /* Ensure FAB and D-Pad Popup work on ALL mobile orientations */
+        /* Mobile FAB Popup Architecture */
         @media (max-width: 1024px) {
             .fab-menu-btn {
                 display: flex;
@@ -2039,7 +2051,6 @@
                 background: var(--panel-bg);
             }
 
-            /* The Open State */
             .canvas-controls.menu-open .nav-grid {
                 transform: scale(1);
                 opacity: 1;
@@ -2054,19 +2065,17 @@
                 box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             }
 
-            /* When a docked panel is open in landscape, shift the ENTIRE control container left */
             @media (orientation: landscape) {
                 .canvas-controls.fab-shifted {
-                    /* Dynamically dodges the exact responsive width of the panel + 20px padding */
                     right: clamp(340px, calc(30vw + 20px), 570px) !important;
                 }
             }
         }
-
     </style>
 </head>
 <body>
 
+    <!-- === SYSTEM MESSAGES & BACKGROUND === -->
     <div id="boot-status" style="position: absolute; top: 10px; left: 10px; z-index: 99999; font-family: monospace; font-weight: bold; color: #ff9800;">
         ⏳ Booting Application...
     </div>
@@ -2078,6 +2087,7 @@
     <div id="chord-display" class="piano-active"></div>
     <div id="toast-container">Message</div>
 
+    <!-- === MAIN NAVIGATION (FAB & TOOLBAR) === -->
     <div class="canvas-controls" id="canvas-controls">
         <button id="btnNavToggle" class="fab-menu-btn" title="Open Menu">🛠️</button>
         <div class="nav-grid" id="main-nav-grid">
@@ -2101,7 +2111,7 @@
         </div>
     </div>
 
-    <!-- OVERLAY 1.1: General Settings -->
+    <!-- === OVERLAY: GENERAL SETTINGS === -->
     <div id="settings-overlay" class="overlay primary auto-hides">
         <div class="controls-section">
             <div class="section-title">
@@ -2226,7 +2236,6 @@
                 </div>
             </div>
 
-            <!-- MIDI & Hardware Well Box -->
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">MIDI & Hardware Settings</div>
 
@@ -2252,7 +2261,7 @@
         </div>
     </div>
 
-    <!-- OVERLAY 1.2: Synthesizer Engine -->
+    <!-- === OVERLAY: SYNTHESIZER ENGINE === -->
     <div id="synth-overlay" class="overlay primary auto-hides">
         <div class="controls-section">
             <div class="section-title">
@@ -2355,7 +2364,6 @@
                 </div>
             </div>
 
-            <!-- Deep Synthesis Well Box -->
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Deep Synthesis</div>
                 <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
@@ -2397,7 +2405,7 @@
         </div>
     </div>
 
-    <!-- OVERLAY 2: Performance Pads -->
+    <!-- === OVERLAY: PERFORMANCE PADS === -->
     <div id="pads-overlay" class="overlay primary">
         <div class="pads-content-wrapper">
             <div class="pads-controls-col">
@@ -2451,7 +2459,7 @@
         </div>
     </div>
 
-    <!-- OVERLAY 5: Drum Machine & Manual Triggers -->
+    <!-- === OVERLAY: DRUM MACHINE & MANUAL TRIGGERS === -->
     <div id="drums-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
@@ -2462,7 +2470,6 @@
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; width: 100%;">
-
                 <button class="synth-btn drum-preset-btn" data-preset="click">CLICK</button>
                 <button class="synth-btn drum-preset-btn" data-preset="basic">BASIC</button>
                 <button class="synth-btn drum-preset-btn" data-preset="rock">ROCK</button>
@@ -2492,20 +2499,16 @@
                 <button class="synth-btn drum-preset-btn" data-preset="hiphop">HIPHOP</button>
                 <button class="synth-btn drum-preset-btn" data-preset="rnb">R&B</button>
                 <button class="synth-btn drum-preset-btn" data-preset="latin">LATIN</button>
-
             </div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; align-items: center;">
-
                 <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; width: 100%; gap: 2px;">
                     <label for="drumFillsSlider" style="font-size: 0.8em; white-space: nowrap;">Fills & Humanize: <span id="drumFillsValue">50</span>%</label>
                     <input type="range" id="drumFillsSlider" min="0" max="100" value="50" style="width: 100%; margin: 0;">
                 </div>
-
                 <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; width: 100%; gap: 2px;">
                     <label for="drumBpmSlider" style="font-size: 0.8em; white-space: nowrap;">BPM: <span id="drumBpmValue">120</span></label>
                     <input type="range" id="drumBpmSlider" min="40" max="240" value="120" style="width: 100%; margin: 0;">
                 </div>
-
             </div>
             <div class="section-title" style="margin-top: 5px; display:flex; justify-content:space-between; align-items:center;">
                 <span>Manual Triggers (Recordable)</span>
@@ -2528,7 +2531,7 @@
         </div>
     </div>
 
-    <!-- OVERLAY 3: Dedicated Circle of Fifths Container -->
+    <!-- === OVERLAY: CIRCLE OF FIFTHS === -->
     <div id="cof-overlay" class="cof-overlay">
         <button id="btnCloseCOF" class="close-btn-sm" style="position: absolute; top: 1vmin; right: 1vmin; z-index: 20;" title="Close">✕</button>
         <div class="cof-slider-container" style="position: absolute; top: 2vmin; left: 2vmin; width: 15vw; z-index: 20;">
@@ -2538,7 +2541,7 @@
         <div id="cof-container"></div>
     </div>
 
-    <!-- Unified Studio Overlay -->
+    <!-- === OVERLAY: MULTITRACK STUDIO === -->
     <div id="studio-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
@@ -2682,10 +2685,10 @@
         </div>
     </div>
 
-    <!-- Piano Overlay -->
+    <!-- === OVERLAY: PIANO KEYBOARD === -->
     <div id="piano-overlay" class="piano-overlay active"></div>
 
-    <!-- Mixer & EQ Overlay -->
+    <!-- === OVERLAY: MIXER & EQ === -->
     <div id="mixer-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
@@ -2755,7 +2758,6 @@
                 </div>
             </div>
 
-
             <!-- Section C: Master Bus, EQ, Peak Meter / Oscilloscope -->
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 4px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Bus, EQ & Dynamics</div>
@@ -2800,7 +2802,7 @@
         </div>
     </div>
 
-    <!-- Info Overlay -->
+    <!-- === OVERLAY: INFO & DOCUMENTATION === -->
     <div id="info-overlay">
         <div class="info-content">
             <div class="section-title" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
@@ -2809,7 +2811,7 @@
             </div>
             <p>Welcome to Tonnetz Pro! What began as an isomorphic chord explorer is now a fully-featured, offline-capable, in-browser DAW (Digital Audio Workstation) with professional stem exporting.</p>
 
-            <h3>🔺 1. Geometric Navigation & Chords</h3>
+            <h3>1. Geometric Navigation & Chords</h3>
             <p>This workstation uses Euler's Tonnetz (German for "tone network"), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
             <ul>
                 <li><strong>Horizontal Axis:</strong> Moving left to right moves in perfect fifths (C -> G -> D).</li>
@@ -2818,7 +2820,7 @@
                 <li>Move (=pan) the grid by clicking and dragging on empty space (desktop), or use the on-screen <strong>D-Pad</strong>. Zoom with your scroll wheel or the <strong>+</strong> / <strong>-</strong> buttons.</li>
             </ul>
 
-            <h3>🎛️ 2. Performance Pads & Arpeggiator</h3>
+            <h3>2. Performance Pads & Arpeggiator (🎛️)</h3>
             <p>You don't need to stretch your mouse across the grid to play complex jazz chords. Use the Performance Pads (mapped to the left side of your physical keyboard) to instantly modify any note or triad you click:</p>
             <ul>
                 <li><strong>Extensions & Alterations:</strong> Use the letter rows (<code>Q-T</code>, <code>A-G</code>, <code>Z-B</code>) to instantly inject lush Jazz tensions. You can alter 5ths (♭5, ♯5), suspend 3rds (sus2, sus4), or stack deep extensions (Maj7, 9, 11, 13, ♭9, ♯9, ♯11, ♭13). When <i>Show Ext. Highlights</i> is ON, safe 7th and 9th extensions light up with a green border.</li>
@@ -2827,7 +2829,7 @@
                 <li><strong>Foot Pedals:</strong> Hold the <code>Spacebar</code> to Sustain notes, or the <code>Left Alt</code> key to Dampen them (smoothly muffling actively sustaining voices like an 'una corda' piano pedal).</li>
             </ul>
 
-            <h3>📈 3. Synthesizer & Persistent Samples</h3>
+            <h3>3. Synthesizer & Persistent Samples</h3>
             <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from beautifully calibrated acoustic and retro analog presets.</p>
             <ul>
                 <li><strong>Custom User Samples:</strong> Select "custom sample" from the instrument preset drop-down, then click "Load SAMPLE" to use your own <code>.wav</code> files as oscillator sources. Your uploaded files are now permanently saved to the browser's <strong>IndexedDB database</strong> and will survive page reloads!</li>
@@ -2836,14 +2838,14 @@
                 <li><strong>Modulations:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch), <strong>Tremolo</strong> (Volume), and <strong>Sweep</strong> (Auto-Wah filter). Add sub-oscillators, noise generators, and stereo effects like Chorus, Echo, and Reverb.</li>
             </ul>
 
-            <h3>🥁 4. Drum Machine & Metronome</h3>
+            <h3>4. Drum Machine & Metronome (🥁)</h3>
             <ul>
                 <li>Select from 16 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova.</li>
                 <li><strong>Auto-Embellish:</strong> Lets the drum machine intelligently add humanized ghost notes, fills and variations to make static presets sound organic.</li>
                 <li><strong>Manual Triggers:</strong> Use the on-screen drum pads to finger-drum custom beats. You can adjust the vertical height of these buttons to fit your screen perfectly.</li>
             </ul>
 
-            <h3>🎙️ 5. The Multitrack Studio</h3>
+            <h3>5. The Multitrack Studio (🎙️)</h3>
             <p>Tonnetz Pro features a 16-track recording environment divided into two distinct engines. Access them via the <strong>STUDIO</strong> panel.</p>
             <ul>
                 <li><strong>The Looper (L1-L8):</strong> 8 tracks dedicated to cyclical loop recording. Perfect for building drum beats and repetitive chord progressions.</li>
@@ -2852,7 +2854,7 @@
                 <li><strong>Master Recording:</strong> Use the bottom of the Studio panel to bounce your entire jam session (synths, loops, and drums) to a downloadable WebM, MP4, MP3, or uncompressed WAV file.</li>
             </ul>
 
-            <h3>📦 6. Project Export & Import (.dawproject)</h3>
+            <h3>6. Project Export & Import (.dawproject)</h3>
             <p>Tonnetz Pro is fully cross-compatible with professional DAWs like Bitwig Studio, Studio One, and Cubase via the open-source <code>.dawproject</code> format.</p>
             <ul>
                 <li><strong>📦 OUT (Export):</strong> Clicking this will package your 16 tracks into a single <code>.dawproject</code> file. It automatically generates high-quality <strong>WAV Stems</strong>, raw binary <strong>MIDI files</strong> of your performances, and invisibly embeds your exact Tonnetz UI session state.</li>
@@ -2863,7 +2865,17 @@
                 </li>
             </ul>
 
-            <h3>⚙️ 7. Advanced Theory & UI Setup</h3>
+            <h3>7. Harmonic Heatmap & Gravity Engine</h3>
+            <p>A real-time compositional assistant that visualizes musical tension and predicts functional chord resolutions directly on the grid.</p>
+            <ul>
+                <li><strong>Psychoacoustic Heatmap:</strong> Colors nodes based on calculated dissonance against your active chord. Green/Yellow indicates stable tones, while Orange/Red indicates high tension. Select a genre tuning (Classical, Pop/Rock, Jazz) in the Settings panel to shift the mathematical interval weights.</li>
+                <li><strong>Gravity Beacons:</strong> Visualizes where unstable chords (Dom7, Dim, Sus) and substitutions want to resolve using high-contrast hollow borders and glowing text.</li>
+                <li><strong>   Local Gravity:</strong> Standard isolated chord resolutions, highlighted in light blue.</li>
+                <li><strong>   Sequence Gravity:</strong> Grammatical progression endings, highlighted in pink. The engine tracks your chord history to detect cadences (e.g., ii -> V, IV -> V) and chromatic walkdowns.</li>
+                <li><strong>BPM-Synced Buffer:</strong> A tempo-synced memory window aggregates arpeggios into single harmonic entities, allowing the engine to "look through" passing notes and identify the underlying progression accurately.</li>
+            </ul>
+
+            <h3>8. Advanced Theory & UI Setup (⚙️)</h3>
             <ul>
                 <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive minimap of the Circle of Fifths to guide your harmonic progressions.</li>
                 <li><strong>Snap to Scale:</strong> Locks the grid so that any note you press is forcefully snapped to the nearest valid note in your chosen Key and Mode (e.g., Dorian, Lydian Dominant).</li>
@@ -2871,7 +2883,7 @@
                 <li><strong>Panel Auto-Hide (⏱):</strong> Every side panel has a small ⏱ toggle button in the top right corner. When activated (Blue), the panel will automatically vanish the moment you touch the Tonnetz grid to give you room to play, and instantly reappear when you release.</li>
             </ul>
 
-            <h3>🔌 8. MIDI Connectivity</h3>
+            <h3>9. MIDI Connectivity</h3>
             <ul>
                 <li><strong>MIDI IN:</strong> Connect any USB MIDI keyboard to play the Tonnetz Pro synthesizer using physical keys. The app responds dynamically to pitch, velocity, and sustain pedal events.</li>
                 <li><strong>MIDI OUT:</strong> Use Tonnetz Pro as an interactive geometric MIDI controller! The chords, arpeggios, and extensions you click on the Tonnetz will be sent out to your external hardware synthesizers or your favorite DAW. Toggle between "Browser + MIDI" or "MIDI Only" to save CPU when controlling external gear.</li>
@@ -2883,8 +2895,9 @@
         </div>
     </div>
 
+    <!-- === EXTERNAL SCRIPTS === -->
     <script src="./jszip.min.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: jszip.min.js failed to load!</div>'"></script>
-
     <script src="./app.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: app.js failed to load!<br>Tauri blocked it (CSP) or the file is missing.</div>'"></script>
+
 </body>
 </html>
