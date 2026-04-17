@@ -73,22 +73,18 @@
 
 ---
 # UI Screenshots
-<table>
-<tr>
-<td width="33%"><img src="media/general_settings.png" alt="General Settings Screenshot"/></td>
-<td width="33%"><img src="media/synth_engine.png" alt="Synth Engine Screenshot"/></td>
-<td width="33%"><img src="media/drum_machine.png" alt="Drum Machine Screenshot"/></td>
-</tr>
-<tr>
-<td><img src="media/performance_pads.png" alt="Performance Pads Screenshot"/></td>
-<td><img src="media/mixer.png" alt="MixEQ Screenshot"/></td>
-<td><img src="media/multitrack_studio.png" alt="Studio Screenshot"/></td>
-</tr>
-<tr>
-<td colspan="2"><img src="media/heatmap.png" alt="HeatMap Screenshot"/></td>
-<td><img src="media/CoF.png" alt="CoF Screenshot"/></td>
-</tr>
-</table>
+<p align="center">
+  <img src="media/general_settings.png" alt="General Settings" align=top width="32%" />
+  <img src="media/synth_engine.png" alt="Synth Engine" align=top width="32%" />
+  <img src="media/drum_machine.png" alt="Drum Machine" align=top width="32%" />
+  <br>
+  <img src="media/performance_pads.png" alt="Performance Pads" align=top width="32%" />
+  <img src="media/mixer.png" alt="MixEQ" align=top width="32%" />
+  <img src="media/multitrack_studio.png" alt="Studio" align=top width="32%" />
+  <br>
+  <img src="media/heatmap.png" alt="HeatMap" align=top width="65%" />
+  <img src="media/CoF.png" alt="CoF" align=top width="32%" />
+</p>
 
 ___
 
