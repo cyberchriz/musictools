@@ -73,16 +73,22 @@
 
 ---
 # UI Screenshots
-<div class="control-row" style="grid-template-columns: repeat(3, 1fr) display: flex; justify-content: space-between; flex-wrap: wrap;">
-        <img src="media/general_settings.png" alt="General Settings Screenshot" align=top width="33%" height="auto"/>
-        <img src="media/synth_engine.png" alt="SynthEngine Settings Screenshot" align=top width="33%" height="auto"/>
-        <img src="media/drum_machine.png" alt="Drum Machine Screenshot" align=top width="33%" height="auto"/>
-        <img src="media/performance_pads.png" alt="Performance Pads Screenshot" align=top width="33%" height="auto"/>
-        <img src="media/mixer.png" alt="MixEQ Screenshot" align=top width="33%" height="auto"/>
-        <img src="media/multitrack_studio.png" alt="Studio Screenshot" align=top width="33%" height="auto"/>
-        <img src="media/heatmap.png" alt="HeatMap Screenshot" width="66%" align=top height="auto"/>
-        <img src="media/CoF.png" alt="CoF Screenshot" align=top width="33%" height="auto"/>
-</div>
+<table>
+<tr>
+<td width="33%"><img src="media/general_settings.png" alt="General Settings Screenshot"/></td>
+<td width="33%"><img src="media/synth_engine.png" alt="Synth Engine Screenshot"/></td>
+<td width="33%"><img src="media/drum_machine.png" alt="Drum Machine Screenshot"/></td>
+</tr>
+<tr>
+<td><img src="media/performance_pads.png" alt="Performance Pads Screenshot"/></td>
+<td><img src="media/mixer.png" alt="MixEQ Screenshot"/></td>
+<td><img src="media/multitrack_studio.png" alt="Studio Screenshot"/></td>
+</tr>
+<tr>
+<td colspan="2"><img src="media/heatmap.png" alt="HeatMap Screenshot"/></td>
+<td><img src="media/CoF.png" alt="CoF Screenshot"/></td>
+</tr>
+</table>
 
 ___
 
