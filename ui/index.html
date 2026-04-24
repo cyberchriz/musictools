@@ -2217,9 +2217,9 @@
                     <div class="control-group">
                         <label>App Theme Color</label>
                         <select id="themeColorSelect" class="highlight-select">
-                            <option value="purple" selected>Neon Purple</option>
+                            <option value="purple">Neon Purple</option>
                             <option value="blue">Cyber Blue</option>
-                            <option value="green">Matrix Green</option>
+                            <option value="green" selected>Matrix Green</option>
                             <option value="orange">Sunset Orange</option>
                             <option value="pink">Synthwave Pink</option>
                         </select>
@@ -2275,46 +2275,65 @@
                 <div class="control-group" style="grid-column: span 2;">
                     <label style="color: var(--main-node);">Instrument</label>
                     <select id="instrumentPreset" class="highlight-select">
-                        <optgroup label="--- ANALOG SYNTHS ---">
+                        <optgroup label="--- KEYS & ORGANS ---">
                             <option value="piano">Acoustic Piano</option>
                             <option value="epiano">Electric Piano</option>
                             <option value="lofi_keys">Lo-Fi Keys</option>
                             <option value="organ">Hammond Organ</option>
-                            <option value="harpsichord">Harpsichord</option>
+                            <option value="church_organ">Church Organ</option>
+                            <option value="reed_organ">Reed Organ</option>
                             <option value="accordion">Accordion</option>
-                            <option value="musicbox">Music Box / Celesta</option>
-                            <option value="pad">Synth Pad</option>
-                            <option value="glasspad">Glass Pad</option>
-                            <option value="pluck">Plucked Harp</option>
-                            <option value="harp">Concert Harp</option>
-                            <option value="guitar">Acoustic Guitar</option>
-                            <option value="banjo">Banjo</option>
-                            <option value="sitar">Sitar</option>
+                            <option value="harpsichord">Harpsichord</option>
+                        </optgroup>
+                        <optgroup label="--- STRINGS & PLUCKS ---">
+                            <option value="nylon_guitar">Nylon Guitar</option>
+                            <option value="western_guitar">Acoustic Guitar</option>
+                            <option value="steel_guitar">Steel Guitar</option>
                             <option value="bass">Synth Bass</option>
                             <option value="slapbass">Slap Bass</option>
-                            <option value="acid303">Acid Synth (303)</option>
-                            <option value="synthlead">Synth Lead</option>
-                            <option value="chiptune">8-Bit Chiptune</option>
-                            <option value="synthbrass">80s Synth Brass</option>
+                            <option value="fretless">Fretless Bass</option>
+                            <option value="harp">Concert Harp</option>
+                            <option value="shamisen">Shamisen</option>
+                            <option value="banjo">Banjo</option>
+                            <option value="sitar">Sitar</option>
+                            <option value="violin">Violin / Bowed</option>
+                            <option value="cello">Solo Cello</option>
+                            <option value="pizzicato">Pizzicato Strings</option>
+                        </optgroup>
+                        <optgroup label="--- BRASS & WINDS ---">
                             <option value="sax">Saxophone</option>
                             <option value="trumpet">Trumpet</option>
                             <option value="frenchhorn">French Horn</option>
                             <option value="tuba">Tuba</option>
+                            <option value="flute">Concert Flute</option>
+                            <option value="pan_flute">Pan Flute</option>
+                            <option value="ocarina">Ocarina</option>
                             <option value="clarinet">Clarinet</option>
                             <option value="oboe">Oboe</option>
-                            <option value="violin">Violin / Strings</option>
-                            <option value="cello">Solo Cello</option>
-                            <option value="pizzicato">Pizzicato Strings</option>
-                            <option value="choir">Choir / Voices</option>
-                            <option value="marimba">Marimba</option>
-                            <option value="vibraphone">Vibraphone</option>
-                            <option value="flute">Flute</option>
-                            <option value="theremin">Theremin</option>
                         </optgroup>
-                        <optgroup label="--- HARDWARE SAMPLER ---">
+                        <optgroup label="--- SYNTHS & PADS ---">
+                            <option value="pad">Deep Synth Pad</option>
+                            <option value="glasspad">Glass Pad</option>
+                            <option value="mellotron">Mellotron</option>
+                            <option value="synth_strings">Synth Strings</option>
+                            <option value="acid303">Acid Synth (303)</option>
+                            <option value="synthlead">Synth Lead</option>
+                            <option value="chiptune">8-Bit Chiptune</option>
+                            <option value="synthbrass">80s Synth Brass</option>
+                            <option value="synth_flute">80s Synth Flute</option>
+                            <option value="choir">Choir / Voices</option>
+                            <option value="theremin">Theremin</option>
                             <option value="sample_fm">80s FM Bass (Built-in)</option>
                             <option value="sample_choir">Lo-Fi Choir (Built-in)</option>
-                            <option value="sample_custom">📂 Custom Sample...</option>
+                        </optgroup>
+                        <optgroup label="--- PERCUSSION & MALLETS ---">
+                            <option value="musicbox">Music Box / Celesta</option>
+                            <option value="glockenspiel">Glockenspiel</option>
+                            <option value="kalimba">Kalimba</option>
+                            <option value="marimba">Marimba</option>
+                            <option value="vibraphone">Vibraphone</option>
+                            <option value="steelpan">Steelpan</option>
+                            <option value="gamelan">Gamelan (Balinese)</option>
                         </optgroup>
                         <optgroup label="--- FOLDER SAMPLES ---" id="folderSamplesGroup"></optgroup>
                     </select>
@@ -2334,6 +2353,7 @@
                 <div class="control-group"><label id="lblEcho">Echo: 0.12</label><input type="range" id="echo" min="0" max="0.5" step="0.01" value="0.12"></div>
                 <div class="control-group"><label id="lblReverbMix">Reverb: 0.00</label><input type="range" id="reverbMix" min="0" max="1" step="0.01" value="0.0"></div>
             </div>
+
             <div class="control-well">
                 <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">LFO Modulation</div>
                 <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
@@ -2344,6 +2364,14 @@
                             <option value="triangle">Tri</option>
                             <option value="square">Square</option>
                             <option value="sawtooth">Saw</option>
+                            <option value="sah">S&H</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Polarity</label>
+                        <select id="lfoPolarity" class="ui-select">
+                            <option value="bipolar" selected>Bipolar (±)</option>
+                            <option value="unipolar">Unipolar (+)</option>
                         </select>
                     </div>
                     <div class="control-group">
@@ -2354,8 +2382,15 @@
                         </select>
                     </div>
                     <div class="control-group"><label>Retrigger</label><button id="btnLfoRetrigger" class="btn-sm">Key Sync: OFF</button></div>
-                    <div class="control-group"><label id="lblLfoSpeed">Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
                 </div>
+
+                <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+                    <div class="control-group"><label id="lblLfoSpeed">Speed: 5.5 Hz</label><input type="range" id="lfoSpeed" min="0.1" max="20" step="0.1" value="5.5"></div>
+                    <div class="control-group"><label id="lblLfoDelay">Delay: 0.0s</label><input type="range" id="lfoDelay" min="0" max="2" step="0.05" value="0"></div>
+                    <div class="control-group"><label id="lblLfoFade">Fade: 0.0s</label><input type="range" id="lfoFade" min="0" max="3" step="0.05" value="0"></div>
+                    <div class="control-group"><label id="lblLfoKeytrack">Keytrack: 0%</label><input type="range" id="lfoKeytrack" min="0" max="100" step="1" value="0"></div>
+                </div>
+
                 <div class="control-row" style="border: none; padding: 0;">
                     <div class="control-group"><label id="lblVibrato">Vib: 0</label><input type="range" id="vibrato" min="0" max="100" step="1" value="0"></div>
                     <div class="control-group"><label id="lblTremolo">Trem: 0</label><input type="range" id="tremolo" min="0" max="1" step="0.01" value="0"></div>
@@ -2375,11 +2410,7 @@
 
                 <div class="control-row" style="border: none; padding: 0;">
                     <div class="control-group" id="grpOscMix"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
-                    <div class="control-group" id="grpCustomSample" style="display: none;">
-                        <label>User Sample</label>
-                        <button id="btnLoadCustomSample" class="btn-sm" style="background: var(--main-node); color: white; border: none;">Load SAMPLE</button>
-                        <input type="file" id="customSampleInput" accept="audio/*" style="display: none;">
-                    </div>
+                    <input type="file" id="customSampleInput" accept="audio/*" multiple style="display: none;">
                     <div class="control-group">
                         <label style="display:flex; justify-content:space-between; align-items:center;">
                             <span id="lblGlideText">Glide: 0.0s</span>
