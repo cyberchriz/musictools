@@ -21,6 +21,25 @@
     });
 
     // =====================================================================
+    // GLOBAL AUDIO WAKE TRAP (Defeats Browser Background Throttling)
+    // =====================================================================
+    const forceAudioWake = () => {
+        if (typeof audioCtx !== 'undefined' && audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => {
+                console.log("AudioContext forcefully awakened by user gesture.");
+                // Resync sequencer clocks so arps don't trigger all at once
+                nextMetroTime = audioCtx.currentTime + 0.1;
+                nextMidiPulseTime = audioCtx.currentTime + 0.1;
+            }).catch(e => console.warn(e));
+        }
+    };
+
+    // Capture every possible interaction at the highest level
+    window.addEventListener('mousedown', forceAudioWake, { capture: true });
+    window.addEventListener('touchstart', forceAudioWake, { capture: true, passive: true });
+    window.addEventListener('keydown', forceAudioWake, { capture: true })
+
+    // =====================================================================
     // BROWSER SAFETY NET (Catches F5, Ctrl+W, Tab Close, Refresh)
     // =====================================================================
     window.addEventListener('beforeunload', (e) => {
@@ -5142,10 +5161,28 @@
         btn.classList.add('highlightable');
     });
 
-    setInterval(() => {
-        scheduleArps();
-        scheduleMetronome();
-        processStudioPlayback();
+    // =====================================================================
+    // UNTHROTTLED WEB WORKER CLOCK (Prevents Sequencer Drift in Background)
+    // =====================================================================
+    const workerCode = `
+        let timerID = null;
+        self.onmessage = function(e) {
+            if (e.data === 'start') {
+                timerID = setInterval(() => self.postMessage('tick'), 25);
+            } else if (e.data === 'stop') {
+                clearInterval(timerID);
+            }
+        };
+    `;
+
+    // Boot the background worker
+    const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+    const engineClockWorker = new Worker(URL.createObjectURL(workerBlob));
+
+    engineClockWorker.onmessage = function () {
+        if (typeof scheduleArps === 'function') scheduleArps();
+        if (typeof scheduleMetronome === 'function') scheduleMetronome();
+        if (typeof processStudioPlayback === 'function') processStudioPlayback();
 
         // --- MIDI MASTER CLOCK SENDER ---
         if (midiSyncMode === 'master' && midiOut && audioCtx) {
@@ -5165,9 +5202,12 @@
 
         if ((isArpOn() && activeNodes.size > 0) || looper.isPlaying) {
             highlightUpdatePending = false;
-            updateHighlights();
+            if (typeof updateHighlights === 'function') updateHighlights();
         }
-    }, 25);
+    };
+
+    // Start the clock!
+    engineClockWorker.postMessage('start');
 
 
     // ==========================================
