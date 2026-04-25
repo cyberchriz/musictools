@@ -341,10 +341,27 @@
         const activeLeft = document.querySelector('.overlay.primary.active:not(#studio-overlay)');
         const studioEl = document.getElementById('studio-overlay');
         const pianoEl = document.getElementById('piano-overlay');
+        const prEl = document.getElementById('piano-roll-overlay');
         const isUiAsleep = document.body.classList.contains('ui-hidden');
 
         // 1. LOGICAL DIMENSIONS for Panning (Ignores Auto-Hide so the grid never jumps!)
         if (isPianoActive && pianoEl) B = pianoEl.offsetHeight;
+
+        // --- Dynamic Piano Roll Auto-Hide Math ---
+        let visiblePrHeight = 0;
+        if (isPianoRollActive && prEl) {
+            // Check if the UI is asleep AND the Piano Roll has auto-hide enabled
+            const isPrAutoHiding = isUiAsleep && prEl.classList.contains('auto-hides');
+
+            if (!isPrAutoHiding) {
+                // If it's actively visible on screen, reserve its vertical space
+                visiblePrHeight = prEl.offsetHeight || (window.innerHeight * (parseFloat(document.getElementById('prHeightSlider')?.value || 50) / 100));
+            }
+        }
+
+        B += visiblePrHeight;
+        // Broadcast the visible height to the CSS Side Panels so they know exactly how far to stretch!
+        document.documentElement.style.setProperty('--pr-actual-h', `${visiblePrHeight}px`);
 
         if (activeLeft) {
             if (isPortrait) T = activeLeft.offsetHeight;
@@ -654,6 +671,7 @@
     document.getElementById('btnTogglePiano')?.addEventListener('click', () => toggleOverlay('piano'));
     document.getElementById('btnToggleCOF')?.addEventListener('click', toggleCof);
     document.getElementById('btnToggleMixer')?.addEventListener('click', () => toggleOverlay('mixer'));
+    document.getElementById('btnQuickPanic')?.addEventListener('click', executePanic);
 
     document.getElementById('btnCloseSettings')?.addEventListener('click', () => toggleOverlay('settings'));
     document.getElementById('btnCloseSynth')?.addEventListener('click', () => toggleOverlay('synth'));
@@ -682,12 +700,13 @@
             overtones: document.getElementById('overtones').value,
             masterVol: document.getElementById('masterVol').value, synthVol: document.getElementById('synthVol').value, drumVol: document.getElementById('drumVol').value, looperMasterVol: document.getElementById('looperMasterVol').value, mixerImportVol: document.getElementById('mixerImportVol').value, eqLow: document.getElementById('eqLow').value, eqMid: document.getElementById('eqMid').value, eqHigh: document.getElementById('eqHigh').value,
             oscMix: document.getElementById('oscMix').value, glide: document.getElementById('glide').value, filterType: document.getElementById('filterType').value,
-            midiVelocity: document.getElementById('midiVelocity').value, looperLength: document.getElementById('looperLength').value,
+            midiVelocity: document.getElementById('midiVelocity').value,
+            looperLength: document.getElementById('looperLength').value,
             looperTrackVols: Array.from(document.querySelectorAll('.track-vol')).map(el => el.value),
             looperEchoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => el.value),
             looperReverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => el.value),
             looperTrackPans: Array.from(document.querySelectorAll('.pan-slider')).map(el => el.value),
-            trackMutes: Array.from(document.querySelectorAll('.mute-btn')).map(el => el.classList.contains('muted')),
+            trackMutes: Array.from(document.querySelectorAll('.mute-btn:not(.solo-btn):not(.edit-btn)')).map(el => el.classList.contains('muted')),
             autoHidePanels: Array.from(document.querySelectorAll('.overlay')).filter(el => el.classList.contains('auto-hides')).map(el => el.id),
             busComp: document.getElementById('busComp').value,
             mixerHeightSlider: document.getElementById('mixerHeightSlider').value,
@@ -763,7 +782,7 @@
 
                     // Restore Mute States safely via click events to ensure audio engine updates
                     if (s.trackMutes) {
-                        document.querySelectorAll('.mute-btn').forEach((el, idx) => {
+                        document.querySelectorAll('.mute-btn:not(.solo-btn):not(.edit-btn)').forEach((el, idx) => {
                             if (s.trackMutes[idx]) {
                                 if (!el.classList.contains('muted')) el.click();
                             } else {
@@ -1040,6 +1059,9 @@
 
         // 3. Update active LFO timings if locked to BPM
         if (currentLfoSync === 'sync' && typeof updateLfoSpeed === 'function') updateLfoSpeed();
+
+        // 4. Update the global BPM display if the master trransport header is visible
+        if (globalBpmDisplay) globalBpmDisplay.textContent = `${currentArpBPM} BPM`;
     }
 
     // Attach listeners to BOTH sliders to trigger the sync function
@@ -2676,6 +2698,699 @@
         }
     }
 
+    // =====================================================================
+    // PIANO ROLL EDITOR ENGINE
+    // =====================================================================
+    const prCanvas = document.getElementById('pr-canvas');
+    let prCtx = null;
+    if (prCanvas) prCtx = prCanvas.getContext('2d');
+
+    const velCanvas = document.getElementById('pr-vel-canvas');
+    let velCtx = null;
+    if (velCanvas) velCtx = velCanvas.getContext('2d');
+
+    let isPianoRollActive = false;
+    let prScrollTime = 0; // The time offset at the bottom of the screen
+    let prZoomY = 80;     // Pixels per second (Vertical Zoom)
+    let isPrAutoScroll = true;
+    let currentPrTool = 'select'; // 'select', 'draw', or 'erase'
+    let prSnapRes = 0.25;         // Default 1/16th note snap
+
+    // The exact 16 colors mapping to L1-L8 and A1-A8
+    const trackColors = [
+        '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4',
+        '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'
+    ];
+
+    // MATHEMATICAL MAGIC: Uniform grid spacing for perfect editing
+    function getNoteXAndWidth(midiNote, canvasWidth) {
+        if (currentPianoMin === null || currentPianoMax === null) return { x: 0, w: 0 };
+
+        // 1. Calculate how many total semitones are visible on screen
+        const totalVisibleNotes = (currentPianoMax - currentPianoMin) + 1;
+        if (totalVisibleNotes <= 0) return { x: 0, w: 0 };
+
+        // 2. Divide the canvas evenly. Every note gets the exact same width!
+        const noteW = canvasWidth / totalVisibleNotes;
+        const x = (midiNote - currentPianoMin) * noteW;
+
+        // 3. We still check if it's black or white just so the background 
+        //    stripes can be colored correctly in the draw loop
+        const whiteKeys = [0, 2, 4, 5, 7, 9, 11];
+        const isBlack = !whiteKeys.includes(midiNote % 12);
+
+        return { x: x, w: noteW, isBlack: isBlack };
+    }
+
+    function drawPianoRoll() {
+        if (!prCanvas || !prCtx || !isPianoRollActive) return;
+
+        // 1. High-DPI Canvas Scaling
+        const dpr = window.devicePixelRatio || 1;
+        const rect = prCanvas.parentElement.getBoundingClientRect();
+        if (prCanvas.width !== Math.floor(rect.width * dpr) || prCanvas.height !== Math.floor(rect.height * dpr)) {
+            prCanvas.width = Math.floor(rect.width * dpr);
+            prCanvas.height = Math.floor(rect.height * dpr);
+            prCtx.scale(dpr, dpr);
+        }
+
+        const w = rect.width;
+        const h = rect.height;
+
+        // 2. Clear Background
+        prCtx.fillStyle = '#1a1a1a';
+        prCtx.fillRect(0, 0, w, h);
+
+        // --- DRAW LOOPER BOUNDARY VOID ---
+        let activeDomain = studio.lastSelectedDomain;
+        let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+
+        if (activeDomain === 'looper') {
+            const beatSecs = 60 / currentArpBPM;
+            const lenEl = document.getElementById('looperLength');
+            const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * beatSecs;
+            const loopSec = looper.trackDurations[activeIdx] || globalLoopSec;
+
+            // Calculate the Y-pixel where the loop ends
+            const loopEndY = h - ((loopSec - prScrollTime) * prZoomY);
+
+            // If the end of the loop is currently visible on screen, draw a dark overlay above it!
+            if (loopEndY > 0) {
+                prCtx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Heavy dark shading
+                prCtx.fillRect(0, 0, w, loopEndY);
+
+                // Draw a bright red boundary line
+                prCtx.strokeStyle = '#f44336';
+                prCtx.lineWidth = 2;
+                prCtx.beginPath();
+                prCtx.moveTo(0, loopEndY);
+                prCtx.lineTo(w, loopEndY);
+                prCtx.stroke();
+            }
+        }
+
+        // 3. Draw Piano Key Lanes (Background Stripes)
+        const whiteKeys = [0, 2, 4, 5, 7, 9, 11];
+        for (let note = currentPianoMin; note <= currentPianoMax; note++) {
+            const { x, w: noteW, isBlack } = getNoteXAndWidth(note, w);
+            if (isBlack) {
+                prCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                prCtx.fillRect(x, 0, noteW, h);
+            } else {
+                prCtx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                prCtx.lineWidth = 1;
+                prCtx.beginPath();
+                prCtx.moveTo(x, 0);
+                prCtx.lineTo(x, h);
+                prCtx.stroke();
+            }
+        }
+
+        // 4. Draw Beat/Bar Lines (Horizontal)
+        const beatSecs = 60 / currentArpBPM;
+        const screenTimeSecs = h / prZoomY;
+        const startTime = prScrollTime;
+        const endTime = prScrollTime + screenTimeSecs;
+
+        let currentBeat = Math.floor(startTime / beatSecs);
+        let currentBeatTime = currentBeat * beatSecs;
+
+        while (currentBeatTime <= endTime) {
+            if (currentBeatTime >= startTime) {
+                const y = h - ((currentBeatTime - prScrollTime) * prZoomY);
+                const isBar = currentBeat % 4 === 0;
+
+                prCtx.strokeStyle = isBar ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+                prCtx.lineWidth = isBar ? 2 : 1;
+                prCtx.beginPath();
+                prCtx.moveTo(0, y);
+                prCtx.lineTo(w, y);
+                prCtx.stroke();
+            }
+            currentBeat++;
+            currentBeatTime += beatSecs;
+        }
+
+        // 5. Draw the Notes!
+        const drawTrackNotes = (trackEvents, trackIdx, isActiveTrack) => {
+            const color = trackColors[trackIdx];
+
+            trackEvents.forEach(evt => {
+                const isSelected = typeof prSelectedNotes !== 'undefined' && prSelectedNotes.has(evt);
+
+                prCtx.fillStyle = isSelected ? '#ffffff' : (isActiveTrack ? color : color + '40');
+                prCtx.strokeStyle = isSelected ? '#ffeb3b' : (isActiveTrack ? '#ffffff' : 'transparent');
+                prCtx.lineWidth = isSelected ? 2 : 1.5;
+
+                let midiNotes = [];
+                if (evt.type === 'play' && evt.freqs) {
+                    midiNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                } else if (evt.type === 'drum' && evt.drumType) {
+                    const drumMap = { 'kick': 36, 'snare': 38, 'hihat': 42, 'clap': 39, 'cymbal': 49, 'tom1': 45, 'tom2': 47, 'tom3': 43, 'cowbell': 56, 'ride': 51, 'rimshot': 37, 'click': 76 };
+                    midiNotes = [drumMap[evt.drumType] || 36];
+                }
+
+                const yBottom = h - ((evt.timeOffset - prScrollTime) * prZoomY);
+                const yTop = h - (((evt.timeOffset + (evt.duration || 0.5)) - prScrollTime) * prZoomY);
+                const noteH = yBottom - yTop;
+
+                if (yBottom < 0 || yTop > h) return;
+
+                midiNotes.forEach(note => {
+                    const { x, w: noteW } = getNoteXAndWidth(note, w);
+                    if (noteW > 0) {
+                        prCtx.fillRect(x + 1, yTop, noteW - 2, noteH);
+                        if (isActiveTrack || isSelected) prCtx.strokeRect(x + 1, yTop, noteW - 2, noteH);
+                    }
+                });
+            });
+        };
+
+        // Draw Looper Tracks (0-7)
+        looper.tracks.forEach((track, idx) => {
+            const isFocus = activeDomain === 'looper' && activeIdx === idx;
+            drawTrackNotes(track, idx, isFocus);
+        });
+
+        // Draw Arranger Tracks (8-15)
+        arranger.tracks.forEach((track, localIdx) => {
+            const isFocus = activeDomain === 'arranger' && activeIdx === (localIdx + 8);
+            drawTrackNotes(track, localIdx + 8, isFocus);
+        });
+
+        // 6. Draw Playhead & Handle Auto-Scroll
+        let playheadTime = null;
+        let isPlayingOrRecording = false;
+
+        if (activeDomain === 'looper' && (looper.isPlaying || looper.isRecording)) {
+            const loopSec = looper.trackDurations[activeIdx] || ((parseInt(document.getElementById('looperLength')?.value) || 4) * 4 * beatSecs);
+            let phase = (audioCtx.currentTime - looper.startTime) % loopSec;
+            if (phase < 0) phase += loopSec;
+            playheadTime = phase;
+            isPlayingOrRecording = true;
+        } else if (activeDomain === 'arranger' && (arranger.isPlaying || arranger.isRecording)) {
+            playheadTime = audioCtx.currentTime - arranger.startTime;
+            isPlayingOrRecording = true;
+        } else if (activeDomain === 'arranger' && !arranger.isPlaying) {
+            playheadTime = arranger.pauseTime;
+        }
+
+        if (playheadTime !== null) {
+            // --- AUTO-SCROLL CAMERA MATH ---
+            if (isPrAutoScroll && isPlayingOrRecording) {
+                // Keep the playhead locked exactly 25% from the bottom of the screen
+                const screenTimeSecs = h / prZoomY;
+                const targetScroll = playheadTime - (screenTimeSecs * 0.25);
+
+                // Only snap the camera if we are within bounds (prevents negative scrolling)
+                // If in Looper mode and it loops back to 0, the camera will instantly jump back!
+                prScrollTime = Math.max(0, targetScroll);
+            }
+
+            // Draw the red line
+            if (playheadTime >= prScrollTime && playheadTime <= prScrollTime + screenTimeSecs) {
+                const playheadY = h - ((playheadTime - prScrollTime) * prZoomY);
+                prCtx.strokeStyle = '#f44336';
+                prCtx.lineWidth = 3;
+                prCtx.beginPath();
+                prCtx.moveTo(0, playheadY);
+                prCtx.lineTo(w, playheadY);
+                prCtx.stroke();
+            }
+        }
+
+        // 7. Draw Marquee Selection Box
+        if (typeof prDragState !== 'undefined' && prDragState.isMarquee) {
+            const startY = h - ((prDragState.marqueeStart.time - prScrollTime) * prZoomY);
+            const currY = h - ((prDragState.marqueeCurrent.time - prScrollTime) * prZoomY);
+
+            const startXInfo = getNoteXAndWidth(prDragState.marqueeStart.note, w);
+            const currXInfo = getNoteXAndWidth(prDragState.marqueeCurrent.note, w);
+
+            // Allow dragging the box in any direction
+            const boxX = Math.min(startXInfo.x, currXInfo.x);
+            const boxY = Math.min(startY, currY);
+            const boxW = Math.abs(currXInfo.x - startXInfo.x) + currXInfo.w;
+            const boxH = Math.abs(currY - startY);
+
+            prCtx.fillStyle = 'rgba(33, 150, 243, 0.2)'; // Transparent blue
+            prCtx.strokeStyle = '#2196f3';
+            prCtx.lineWidth = 1;
+            prCtx.setLineDash([5, 5]); // Dashed border
+            prCtx.fillRect(boxX, boxY, boxW, boxH);
+            prCtx.strokeRect(boxX, boxY, boxW, boxH);
+            prCtx.setLineDash([]); // Reset dashed border for everything else
+        }
+
+        // ==========================================
+        // 8. DRAW VELOCITY LANE (RIGHT SIDE)
+        // ==========================================
+        if (velCanvas && velCtx) {
+            const vw = velCanvas.width / dpr;
+            const vh = velCanvas.height / dpr;
+            velCtx.fillStyle = '#111';
+            velCtx.fillRect(0, 0, vw, vh);
+
+            // Draw 50% vertical guideline
+            velCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            velCtx.lineWidth = 1;
+            velCtx.beginPath();
+            velCtx.moveTo(vw / 2, 0);
+            velCtx.lineTo(vw / 2, vh);
+            velCtx.stroke();
+
+            // ONLY draw the active track to prevent visual clutter
+            let activeDomain = studio.lastSelectedDomain;
+            let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+            let activeColor = trackColors[activeIdx];
+
+            activeTrack.forEach(evt => {
+                // Y-coordinate represents the exact START TIME of the note
+                const yStart = h - ((evt.timeOffset - prScrollTime) * prZoomY);
+
+                // Don't draw if the start of the note is off-screen
+                if (yStart < 0 || yStart > h) return;
+
+                const isSelected = typeof prSelectedNotes !== 'undefined' && prSelectedNotes.has(evt);
+                const drawColor = isSelected ? '#ffeb3b' : activeColor;
+
+                // Normalize velocity to 0.0 - 1.0
+                let normalizedVel = evt.velocity || 1;
+                if (normalizedVel > 1.0) normalizedVel = normalizedVel / 127.0;
+
+                const velW = normalizedVel * vw;
+
+                // Draw a sleek "Lollipop" graph (standard DAW velocity aesthetic)
+                velCtx.strokeStyle = drawColor;
+                velCtx.lineWidth = 2;
+                velCtx.beginPath();
+                velCtx.moveTo(0, yStart);
+                velCtx.lineTo(velW, yStart);
+                velCtx.stroke();
+
+                velCtx.fillStyle = drawColor;
+                velCtx.beginPath();
+                velCtx.arc(velW, yStart, 3, 0, Math.PI * 2);
+                velCtx.fill();
+            });
+        }
+    } // <-- End of drawPianoRoll()
+
+    // =====================================================================
+    // PIANO ROLL: HIT DETECTION & EDITING LOGIC
+    // =====================================================================
+
+    // Convert Canvas Y-Pixel to Time (Seconds)
+    function getPrTimeFromY(yPixel) {
+        const rect = prCanvas.getBoundingClientRect();
+        return prScrollTime + ((rect.height - yPixel) / prZoomY);
+    }
+
+    // Convert Canvas X-Pixel to MIDI Note (0-127)
+    function getPrNoteFromX(xPixel) {
+        const rect = prCanvas.getBoundingClientRect();
+        const totalVisibleNotes = (currentPianoMax - currentPianoMin) + 1;
+        const noteW = rect.width / totalVisibleNotes;
+        const noteOffset = Math.floor(xPixel / noteW);
+        return currentPianoMin + noteOffset;
+    }
+
+    // Convert Time (Seconds) to closest snapped Grid division
+    function snapTime(timeSec) {
+        if (prSnapRes === 0) return timeSec;
+        const beatSecs = 60 / currentArpBPM;
+        const snapSecs = beatSecs * (prSnapRes * 4);
+        return Math.round(timeSec / snapSecs) * snapSecs;
+    }
+
+    // State trackers for Editing and Selecting
+    let prSelectedNotes = new Set();
+    let prDragState = {
+        isDragging: false,
+        isMarquee: false,
+        isResizing: false, // NEW
+        tool: null,
+        noteRef: null,
+        originalTimeOffset: 0,
+        originalDuration: 0,
+        marqueeStart: { time: 0, note: 0 },
+        marqueeCurrent: { time: 0, note: 0 },
+        moveCache: new Map(), // Stores original states of notes before a group move/resize
+        moveAnchor: { time: 0, note: 0 },
+        auditionVoices: []
+    };
+
+    const reverseDrumMap = { 36: 'kick', 38: 'snare', 42: 'hihat', 39: 'clap', 49: 'cymbal', 45: 'tom1', 47: 'tom2', 43: 'tom3', 56: 'cowbell', 51: 'ride', 37: 'rimshot', 76: 'click' };
+
+    function eraseNoteAt(time, note, track) {
+        const targetDrum = reverseDrumMap[note];
+        for (let i = track.length - 1; i >= 0; i--) {
+            const evt = track[i];
+            const end = evt.timeOffset + (evt.duration || 0.5);
+            if (time >= evt.timeOffset && time <= end) {
+                if (evt.type === 'play' && evt.freqs) {
+                    const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                    if (evtNotes.includes(note)) {
+                        prSelectedNotes.delete(evt);
+                        track.splice(i, 1);
+                        break;
+                    }
+                } else if (evt.type === 'drum' && evt.drumType === targetDrum) {
+                    prSelectedNotes.delete(evt);
+                    track.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Helper: Find a specific note event under the cursor
+    function getEventAtCursor(time, note, track) {
+        const targetDrum = reverseDrumMap[note];
+        for (let i = track.length - 1; i >= 0; i--) {
+            const evt = track[i];
+            const end = evt.timeOffset + (evt.duration || 0.5);
+            if (time >= evt.timeOffset && time <= end) {
+                if (evt.type === 'play' && evt.freqs) {
+                    const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                    if (evtNotes.includes(note)) return { evt, originalNote: note };
+                } else if (evt.type === 'drum' && evt.drumType === targetDrum) {
+                    return { evt, originalNote: note };
+                }
+            }
+        }
+        return null;
+    }
+
+    if (prCanvas) {
+        // --- 1. MOUSE DOWN ---
+        prCanvas.addEventListener('mousedown', (e) => {
+            if (!isPianoRollActive) return;
+
+            initAudio();
+            const clickTime = getPrTimeFromY(e.offsetY);
+            const clickNote = getPrNoteFromX(e.offsetX);
+            const snappedTime = snapTime(clickTime);
+
+            let activeDomain = studio.lastSelectedDomain;
+            let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+            const isDrumTrack = studio.trackTypes[activeIdx] === 'drum';
+
+            // Initialize empty track if needed
+            if (studio.trackTypes[activeIdx] === null) {
+                studio.trackTypes[activeIdx] = 'voice';
+                document.querySelector(`.track-btn[data-track="${activeIdx}"]`)?.classList.add('type-voice');
+                const labelEl = document.getElementById(`inst-label-${activeIdx}`);
+                const instSelect = document.getElementById('instrumentPreset');
+                if (labelEl && instSelect) labelEl.textContent = instSelect.options[instSelect.selectedIndex].text;
+            }
+
+            prDragState.isDragging = true;
+            prDragState.tool = currentPrTool;
+
+            // --- INTERCEPT: Did they click the Loop Boundary? ---
+            if (activeDomain === 'looper') {
+                const beatSecs = 60 / currentArpBPM;
+                const lenEl = document.getElementById('looperLength');
+                const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * beatSecs;
+                const loopSec = looper.trackDurations[activeIdx] || globalLoopSec;
+                const loopEndY = prCanvas.height / (window.devicePixelRatio || 1) - ((loopSec - prScrollTime) * prZoomY);
+
+                if (Math.abs(e.offsetY - loopEndY) < 8) {
+                    prDragState.tool = 'loop_brace';
+                    prSelectedNotes.clear(); // Clear any selections
+                    return; // Stop standard draw/select logic
+                }
+            }
+
+            // --- SELECT TOOL ---
+            if (currentPrTool === 'select') {
+                const hit = getEventAtCursor(clickTime, clickNote, activeTrack);
+
+                if (hit) {
+                    const evt = hit.evt;
+                    // Check if we clicked the TOP edge of the note to resize its duration
+                    const yTop = (prCanvas.height / (window.devicePixelRatio || 1)) - (((evt.timeOffset + (evt.duration || 0.5)) - prScrollTime) * prZoomY);
+
+                    if (Math.abs(e.offsetY - yTop) < 10) {
+                        prDragState.isResizing = true;
+                        prDragState.originalTimeOffset = snappedTime;
+
+                        if (!prSelectedNotes.has(evt)) {
+                            prSelectedNotes.clear();
+                            prSelectedNotes.add(evt);
+                        }
+
+                        prDragState.moveCache.clear();
+                        prSelectedNotes.forEach(selectedEvt => {
+                            prDragState.moveCache.set(selectedEvt, { duration: selectedEvt.duration || 0.5 });
+                        });
+                        return; // Skip normal move logic
+                    }
+
+                    // We clicked a note body! Normal Move Mode
+                    if (!prSelectedNotes.has(evt)) {
+                        prSelectedNotes.clear();
+                        prSelectedNotes.add(evt);
+                    }
+
+                    // Prepare to Move the group
+                    prDragState.moveAnchor = { time: snappedTime, note: clickNote };
+                    prDragState.moveCache.clear();
+
+                    // THE FIX: Cache an ARRAY of all pitches so chords don't get collapsed!
+                    prSelectedNotes.forEach(evt => {
+                        let originalPitches = [];
+                        if (evt.type === 'play' && evt.freqs) {
+                            originalPitches = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                        } else if (evt.type === 'drum') {
+                            const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
+                            originalPitches = [parseInt(drumPitch)];
+                        }
+
+                        prDragState.moveCache.set(evt, {
+                            timeOffset: evt.timeOffset,
+                            pitches: originalPitches,
+                            // Save original Tonnetz coords so shifting pitch doesn't crash the harmony engine later!
+                            originalSt: evt.stArray ? [...evt.stArray] : null
+                        });
+                    });
+                } else {
+                    // We clicked empty space! Start a Marquee Selection
+                    prSelectedNotes.clear();
+                    prDragState.isMarquee = true;
+                    prDragState.marqueeStart = { time: clickTime, note: clickNote };
+                    prDragState.marqueeCurrent = { time: clickTime, note: clickNote };
+                }
+            }
+            // --- ERASE TOOL ---
+            else if (currentPrTool === 'erase') {
+                eraseNoteAt(clickTime, clickNote, activeTrack);
+            }
+            // --- DRAW TOOL ---
+            else if (currentPrTool === 'draw') {
+                prSelectedNotes.clear(); // Clear selection when drawing
+                const noteFreq = masterTune * Math.pow(2, (clickNote - 69) / 12);
+                const beatSecs = 60 / currentArpBPM;
+                const defaultDur = prSnapRes > 0 ? (beatSecs * prSnapRes * 4) : (beatSecs * 0.25);
+                const drumType = isDrumTrack ? reverseDrumMap[clickNote] : null;
+
+                if (isDrumTrack && !drumType) return;
+
+                const newEvent = isDrumTrack ? {
+                    id: Date.now(), timeOffset: snappedTime, duration: defaultDur, type: 'drum', drumType: drumType, velocity: 1
+                } : {
+                    id: Date.now(), timeOffset: snappedTime, duration: defaultDur, type: 'play', freqs: [noteFreq], velocity: 100, stArray: null
+                };
+
+                activeTrack.push(newEvent);
+                activeTrack.sort((a, b) => a.timeOffset - b.timeOffset);
+
+                prDragState.noteRef = newEvent;
+                prDragState.originalTimeOffset = snappedTime;
+                prDragState.originalDuration = defaultDur;
+                prDragState.auditionVoices = [];
+
+                const destNode = activeDomain === 'looper' ? looperGainNodes[activeIdx] : linearGainNodes[activeIdx - 8];
+                if (isDrumTrack) {
+                    playDrum(drumType, audioCtx.currentTime, 1, destNode);
+                } else if (studio.trackSynthStates[activeIdx]) {
+                    const voice = spawnVoice(noteFreq, audioCtx.currentTime, 0, 1, false, studio.trackSynthStates[activeIdx], destNode);
+                    prDragState.auditionVoices.push(voice);
+                }
+            }
+        });
+
+        // --- 2. MOUSE MOVE ---
+        prCanvas.addEventListener('mousemove', (e) => {
+            if (!isPianoRollActive) return;
+
+            // 1. Declare state globally for both Hover and Drag logic
+            let activeDomain = studio.lastSelectedDomain;
+            let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+            const isDrumTrack = studio.trackTypes[activeIdx] === 'drum';
+
+            const currentTime = getPrTimeFromY(e.offsetY);
+            const currentNote = getPrNoteFromX(e.offsetX);
+            const snappedCurrent = snapTime(currentTime);
+
+            // 2. --- HOVER DETECTION (Runs even when NOT dragging) ---
+            let isHoveringBoundary = false;
+            let isHoveringEdge = false;
+
+            if (!prDragState.isDragging) {
+                if (activeDomain === 'looper') {
+                    const beatSecs = 60 / currentArpBPM;
+                    const lenEl = document.getElementById('looperLength');
+                    const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * beatSecs;
+                    const loopSec = looper.trackDurations[activeIdx] || globalLoopSec;
+                    const loopEndY = (prCanvas.height / (window.devicePixelRatio || 1)) - ((loopSec - prScrollTime) * prZoomY);
+
+                    if (Math.abs(e.offsetY - loopEndY) < 8) isHoveringBoundary = true;
+                }
+
+                if (currentPrTool === 'select') {
+                    const hit = getEventAtCursor(currentTime, currentNote, activeTrack);
+                    if (hit) {
+                        const yTop = (prCanvas.height / (window.devicePixelRatio || 1)) - (((hit.evt.timeOffset + (hit.evt.duration || 0.5)) - prScrollTime) * prZoomY);
+                        if (Math.abs(e.offsetY - yTop) < 10) isHoveringEdge = true;
+                    }
+                }
+            }
+
+            // Set the cursor dynamically
+            prCanvas.style.cursor = (isHoveringBoundary || isHoveringEdge) ? 'ns-resize' : (currentPrTool === 'draw' ? 'cell' : 'crosshair');
+
+            // 3. --- DRAGGING LOGIC (Bail out if the mouse button isn't held down) ---
+            if (!prDragState.isDragging) return;
+
+            // --- LOOP BRACE TOOL ---
+            if (prDragState.tool === 'loop_brace') {
+                const beatSecs = 60 / currentArpBPM;
+                const minLoopSec = prSnapRes > 0 ? (beatSecs * prSnapRes * 4) : (beatSecs * 0.25);
+                looper.trackDurations[activeIdx] = Math.max(minLoopSec, snappedCurrent);
+                return;
+            }
+
+            // --- SELECT TOOL (Marquee or Move) ---
+            if (prDragState.tool === 'select') {
+                if (prDragState.isMarquee) {
+                    prDragState.marqueeCurrent = { time: currentTime, note: currentNote };
+
+                    const minT = Math.min(prDragState.marqueeStart.time, currentTime);
+                    const maxT = Math.max(prDragState.marqueeStart.time, currentTime);
+                    const minN = Math.min(prDragState.marqueeStart.note, currentNote);
+                    const maxN = Math.max(prDragState.marqueeStart.note, currentNote);
+
+                    prSelectedNotes.clear();
+
+                    activeTrack.forEach(evt => {
+                        const endT = evt.timeOffset + (evt.duration || 0.5);
+                        let noteMatch = false;
+
+                        if (evt.type === 'play' && evt.freqs) {
+                            const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                            noteMatch = evtNotes.some(n => n >= minN && n <= maxN);
+                        } else if (evt.type === 'drum') {
+                            const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
+                            noteMatch = drumPitch >= minN && drumPitch <= maxN;
+                        }
+
+                        if (noteMatch && (endT >= minT && evt.timeOffset <= maxT)) {
+                            prSelectedNotes.add(evt);
+                        }
+                    });
+                }
+                else if (prDragState.isResizing) {
+                    const timeDiff = snappedCurrent - prDragState.originalTimeOffset;
+                    prSelectedNotes.forEach(evt => {
+                        const original = prDragState.moveCache.get(evt);
+                        if (original) {
+                            const minDur = prSnapRes > 0 ? snapTime(0.01) || 0.05 : 0.05;
+                            evt.duration = Math.max(minDur, original.duration + timeDiff);
+                        }
+                    });
+                }
+                else if (prDragState.moveCache.size > 0) {
+                    const deltaTime = snappedCurrent - prDragState.moveAnchor.time;
+                    const deltaNote = currentNote - prDragState.moveAnchor.note;
+
+                    prSelectedNotes.forEach(evt => {
+                        const original = prDragState.moveCache.get(evt);
+                        if (!original) return;
+
+                        evt.timeOffset = Math.max(0, original.timeOffset + deltaTime);
+
+                        if (!isDrumTrack && evt.type === 'play') {
+                            evt.freqs = original.pitches.map(p => {
+                                const newMidi = Math.max(0, Math.min(127, p + deltaNote));
+                                return masterTune * Math.pow(2, (newMidi - 69) / 12);
+                            });
+
+                            if (original.originalSt) {
+                                evt.stArray = original.originalSt.map(st => st + deltaNote);
+                            }
+                        }
+                    });
+                }
+            }
+            // --- ERASE TOOL ---
+            else if (prDragState.tool === 'erase') {
+                eraseNoteAt(currentTime, currentNote, activeTrack);
+            }
+            // --- DRAW TOOL ---
+            else if (prDragState.tool === 'draw' && prDragState.noteRef) {
+                const origStart = prDragState.originalTimeOffset;
+                const defaultDur = prDragState.originalDuration;
+                const minDur = prSnapRes > 0 ? (60 / currentArpBPM * prSnapRes * 4) : 0.05;
+
+                if (snappedCurrent < origStart) {
+                    prDragState.noteRef.timeOffset = Math.max(0, snappedCurrent);
+                    prDragState.noteRef.duration = (origStart - prDragState.noteRef.timeOffset) + defaultDur;
+                } else {
+                    prDragState.noteRef.timeOffset = origStart;
+                    prDragState.noteRef.duration = Math.max(minDur, (snappedCurrent - origStart) + defaultDur);
+                }
+            }
+        });
+    }
+
+    // --- 3. MOUSE UP (Stop Dragging, Kill Synth, Update Timelines) ---
+    window.addEventListener('mouseup', () => {
+        if (prDragState.isDragging) {
+            prDragState.isDragging = false;
+            prDragState.isMarquee = false;
+            prDragState.isResizing = false; // Clear resize flag
+            prDragState.noteRef = null;
+            prDragState.moveCache.clear();
+
+            if (prDragState.auditionVoices && prDragState.auditionVoices.length > 0) {
+                beginRelease(prDragState.auditionVoices, false);
+                prDragState.auditionVoices = [];
+            }
+
+            // Ensure the sequencer knows the song just got longer!
+            let activeDomain = studio.lastSelectedDomain;
+            if (activeDomain === 'arranger') {
+                let maxDur = 0;
+                arranger.tracks.forEach(t => t.forEach(evt => {
+                    if (evt.timeOffset + (evt.duration || 0.5) > maxDur) maxDur = evt.timeOffset + (evt.duration || 0.5);
+                }));
+                arranger.duration = maxDur;
+            } else if (activeDomain === 'looper') {
+                const lenEl = document.getElementById('looperLength');
+                const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
+                let activeIdx = studio.activeLooperTrack;
+                if (!looper.trackDurations[activeIdx]) {
+                    looper.trackDurations[activeIdx] = globalLoopSec;
+                }
+            }
+        }
+    });
+
     // --- Global Visuals Engine (Oscilloscope & Background) ---
     let clipHoldUntil = 0;
     let peakHoldDb = -100;
@@ -2685,6 +3400,8 @@
 
     function renderVisuals(time) {
         requestAnimationFrame(renderVisuals);
+
+        if (isPianoRollActive) drawPianoRoll();
 
         // Strict Framerate Throttling
         if (time - lastVisualFrameTime < frameInterval) return;
@@ -3696,7 +4413,15 @@
         }
 
         if ((looper.isRecording || arranger.isRecording) && !element.isLooper) {
-            if (nodeData && nodeData.looperEvt) nodeData.looperEvt.duration = Math.max(0.1, audioCtx.currentTime - nodeData.startTime);
+            if (nodeData && nodeData.looperEvt) {
+                const dur = Math.max(0.1, audioCtx.currentTime - nodeData.startTime);
+                // THE FIX: Loop over the exploded chord events and update all their durations
+                if (Array.isArray(nodeData.looperEvt)) {
+                    nodeData.looperEvt.forEach(e => e.duration = dur);
+                } else {
+                    nodeData.looperEvt.duration = dur;
+                }
+            }
         }
 
         // Flag if this was a fast glissando swipe (held less than 80ms)
@@ -3727,6 +4452,7 @@
         startTime: 0, recordingType: null,
         tracks: Array.from({ length: 8 }, () => []),
         muted: Array(8).fill(false),
+        soloed: Array(8).fill(false),
         trackDurations: Array(8).fill(0),
         lastPhases: Array(8).fill(0)
     };
@@ -3735,7 +4461,8 @@
         isRecording: false, isPlaying: false, isArmed: false,
         startTime: 0, pauseTime: 0, duration: 0,
         tracks: Array.from({ length: 8 }, () => []),
-        muted: Array(8).fill(false)
+        muted: Array(8).fill(false),
+        soloed: Array(8).fill(false)
     };
 
     let looperQuantize = false;
@@ -3816,6 +4543,24 @@
         else if (looper.isRecording) document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('recording-track');
         if (arranger.isArmed) document.querySelector(`.track-btn[data-track="${studio.activeArrangerTrack}"]`)?.classList.add('armed-track');
         else if (arranger.isRecording) document.querySelector(`.track-btn[data-track="${studio.activeArrangerTrack}"]`)?.classList.add('recording-track');
+
+        // --- Sync Master Transport Header ---
+        const isAnyPlaying = looper.isPlaying || arranger.isPlaying;
+        const isAnyArmed = looper.isArmed || arranger.isArmed;
+        const isAnyRecording = looper.isRecording || arranger.isRecording;
+
+        const tpPlayBtn = document.getElementById('transportPlay');
+        const tpRecBtn = document.getElementById('transportRec');
+
+        if (tpPlayBtn) {
+            tpPlayBtn.classList.toggle('playing', isAnyPlaying);
+            tpPlayBtn.textContent = isAnyPlaying ? '⏸' : '▶';
+        }
+        if (tpRecBtn) {
+            tpRecBtn.classList.remove('armed', 'recording');
+            if (isAnyArmed) tpRecBtn.classList.add('armed');
+            else if (isAnyRecording) tpRecBtn.classList.add('recording');
+        }
     }
 
     document.querySelectorAll('.track-btn').forEach(btn => {
@@ -3849,6 +4594,7 @@
 
     document.querySelectorAll('.mute-btn').forEach(btn => {
         btn.addEventListener('click', e => {
+            if (e.target.classList.contains('edit-btn') || e.target.classList.contains('solo-btn')) return; // Ignore Edit and Solo buttons!
             const track = parseInt(e.target.dataset.track);
             const isLooper = track < 8;
             const domainObj = isLooper ? looper : arranger;
@@ -3858,6 +4604,151 @@
             e.target.classList.toggle('muted', domainObj.muted[localIdx]);
         });
     });
+
+    // =====================================================================
+    // MASTER TRANSPORT HEADER LOGIC
+    // =====================================================================
+    const transportPlay = document.getElementById('transportPlay');
+    const transportStop = document.getElementById('transportStop');
+    const transportRec = document.getElementById('transportRec');
+    const globalTimeDisplay = document.getElementById('global-time-display');
+    const globalBpmDisplay = document.getElementById('global-bpm-display');
+
+    function toggleMasterPlayback() {
+        initAudio();
+        const isPlaying = looper.isPlaying || arranger.isPlaying;
+
+        if (isPlaying) {
+            // Pause
+            looper.isPlaying = false;
+            arranger.isPlaying = false;
+            arranger.pauseTime = audioCtx.currentTime - arranger.startTime;
+        } else {
+            // Play (Syncs both engines)
+            const now = audioCtx.currentTime;
+            looper.isPlaying = true;
+            looper.startTime = now;
+            looper.lastPhases.fill(0);
+
+            arranger.isPlaying = true;
+            arranger.startTime = now - arranger.pauseTime;
+            lastArrangerPhase = arranger.pauseTime - 0.01;
+
+            if (midiSyncMode === 'master' && midiOut) {
+                midiOut.send([250]);
+                nextMidiPulseTime = now;
+            }
+
+            // Auto-scroll the piano roll if it's open
+            isPrAutoScroll = true;
+            document.getElementById('btnPrAutoScroll')?.classList.add('active');
+        }
+        updateStudioUI();
+    }
+
+    // --- GLOBAL TIMELINE SCRUBBING ---
+    const globalSeeker = document.getElementById('global-timeline-seeker');
+    let isGlobalSeeking = false;
+
+    function shiftGlobalTime(shiftSecs) {
+        // Shift Arranger
+        arranger.pauseTime = Math.max(0, arranger.pauseTime + shiftSecs);
+        if (arranger.isPlaying) arranger.startTime -= shiftSecs;
+        lastArrangerPhase = arranger.pauseTime - 0.01;
+
+        // Reset Looper phases to keep them locked to the new downbeat
+        looper.lastPhases.fill(0);
+        if (looper.isPlaying) looper.startTime = audioCtx.currentTime - arranger.pauseTime;
+
+        // Instantly kill currently playing notes so they don't hang during time jumps
+        activeNodes.forEach((nodeData, elementKey) => {
+            if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true);
+        });
+    }
+
+    // Skip Buttons (Jumps by exactly 1 Bar based on current BPM)
+    document.getElementById('btnMasterRw')?.addEventListener('click', () => {
+        const barSecs = (60 / currentArpBPM) * 4;
+        shiftGlobalTime(-barSecs);
+    });
+
+    document.getElementById('btnMasterFf')?.addEventListener('click', () => {
+        const barSecs = (60 / currentArpBPM) * 4;
+        shiftGlobalTime(barSecs);
+    });
+
+    // Interactive Slider Logic
+    globalSeeker?.addEventListener('mousedown', () => isGlobalSeeking = true);
+    globalSeeker?.addEventListener('touchstart', () => isGlobalSeeking = true, { passive: true });
+
+    const finishGlobalSeek = () => {
+        if (!isGlobalSeeking) return;
+        isGlobalSeeking = false;
+
+        if (arranger.duration > 0) {
+            const newTime = (parseFloat(globalSeeker.value) / 100) * arranger.duration;
+            if (arranger.isPlaying) {
+                arranger.startTime = audioCtx.currentTime - newTime;
+                looper.startTime = audioCtx.currentTime - newTime; // Sync looper
+            } else {
+                arranger.pauseTime = newTime;
+            }
+
+            lastArrangerPhase = newTime - 0.01;
+            looper.lastPhases.fill(0);
+
+            activeNodes.forEach((nodeData, elementKey) => {
+                if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true);
+            });
+        }
+    };
+
+    globalSeeker?.addEventListener('mouseup', finishGlobalSeek);
+    globalSeeker?.addEventListener('touchend', finishGlobalSeek);
+
+    function stopMasterPlayback() {
+        looper.isPlaying = false;
+        looper.isRecording = false;
+        looper.isArmed = false;
+        looper.lastPhases.fill(0);
+
+        arranger.isPlaying = false;
+        arranger.isRecording = false;
+        arranger.isArmed = false;
+        arranger.pauseTime = 0;
+        lastArrangerPhase = -0.1;
+
+        if (midiSyncMode === 'master' && midiOut) midiOut.send([252]);
+
+        // Reset UI Seekers
+        const seeker = document.getElementById('arranger-seeker');
+        if (seeker) seeker.value = 0;
+        const pBar = document.getElementById('looper-progress-fill');
+        if (pBar) pBar.style.width = '0%';
+
+        // Kill hanging notes
+        activeNodes.forEach((nodeData, elementKey) => { if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true); });
+
+        updateStudioUI();
+    }
+
+    function toggleMasterRecord() {
+        let activeDomain = studio.lastSelectedDomain;
+        let domainObj = activeDomain === 'looper' ? looper : arranger;
+
+        if (!domainObj.isPlaying && !domainObj.isArmed && !domainObj.isRecording) {
+            domainObj.isArmed = true;
+        } else if (domainObj.isArmed) {
+            domainObj.isArmed = false;
+        } else {
+            domainObj.isRecording = !domainObj.isRecording;
+        }
+        updateStudioUI();
+    }
+
+    transportPlay?.addEventListener('click', toggleMasterPlayback);
+    transportStop?.addEventListener('click', stopMasterPlayback);
+    transportRec?.addEventListener('click', toggleMasterRecord);
 
     // --- Transport Controls ---
     document.getElementById('btnLooperRec')?.addEventListener('click', () => {
@@ -4035,13 +4926,26 @@
                 labelEl.textContent = 'DRUMS';
             }
 
-            const evt = { id: Math.random(), freqs, timeOffset: offsetTime, type, stArray: originalStArray, drumType, velocity, duration: 0.5, synthState };
-            domainObj.tracks[localIdx].push(evt);
+            let createdEvts = [];
+
+            // THE FIX: Explode chords into individual single-note events!
+            if (type === 'play' && freqs.length > 0) {
+                freqs.forEach((f, idx) => {
+                    const singleSt = originalStArray && originalStArray[idx] !== undefined ? [originalStArray[idx]] : null;
+                    const evt = { id: Math.random(), freqs: [f], timeOffset: offsetTime, type, stArray: singleSt, drumType, velocity, duration: 0.5, synthState };
+                    domainObj.tracks[localIdx].push(evt);
+                    createdEvts.push(evt);
+                });
+            } else {
+                const evt = { id: Math.random(), freqs, timeOffset: offsetTime, type, stArray: originalStArray, drumType, velocity, duration: 0.5, synthState };
+                domainObj.tracks[localIdx].push(evt);
+                createdEvts.push(evt);
+            }
 
             if (studio.trackTypes[targetTrack] === 'drum') document.querySelector(`.track-btn[data-track="${targetTrack}"]`)?.classList.add('type-drum');
             else document.querySelector(`.track-btn[data-track="${targetTrack}"]`)?.classList.add('type-voice');
 
-            return evt;
+            return createdEvts;
         };
 
         if (looper.isRecording) {
@@ -4069,13 +4973,14 @@
                 const stepDuration = (60 / currentArpBPM) * (4 / looperQuantizeRes);
                 offset = Math.round(offset / stepDuration) * stepDuration;
             }
-            const aEvt = writeEvent(studio.activeArrangerTrack, offset, arranger, false);
+            const aEvts = writeEvent(studio.activeArrangerTrack, offset, arranger, false);
 
-            if (aEvt && (offset + (aEvt.duration || 0.5)) > arranger.duration) {
-                arranger.duration = offset + (aEvt.duration || 0.5);
+            if (aEvts && aEvts.length > 0 && (offset + (aEvts[0].duration || 0.5)) > arranger.duration) {
+                arranger.duration = offset + (aEvts[0].duration || 0.5);
             }
 
-            if (!evtCreated) evtCreated = aEvt;
+            if (!evtCreated) evtCreated = aEvts;
+            else if (Array.isArray(evtCreated) && Array.isArray(aEvts)) evtCreated = evtCreated.concat(aEvts);
         }
         return evtCreated;
     }
@@ -4086,6 +4991,21 @@
     function processStudioPlayback() {
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
+
+        // --- UPDATE MASTER LCD TIME & SEEKER ---
+        if (globalTimeDisplay) {
+            let phase = arranger.isPlaying ? (now - arranger.startTime) : arranger.pauseTime;
+            const beatSecs = 60 / currentArpBPM;
+            const totalBeats = Math.max(0, phase / beatSecs); // Prevent negative text on glitch
+            const bars = Math.floor(totalBeats / 4) + 1;
+            const beats = Math.floor(totalBeats % 4) + 1;
+            globalTimeDisplay.textContent = `${bars}.${beats}`;
+
+            // Move the slider automatically (only if user isn't currently dragging it)
+            if (globalSeeker && arranger.duration > 0 && !isGlobalSeeking) {
+                globalSeeker.value = Math.min(100, (phase / arranger.duration) * 100);
+            }
+        }
 
         // 1. Process Looper (Independent Multi-Length Polymetric Engine)
         if (looper.isPlaying) {
@@ -4104,8 +5024,11 @@
             if (pBar) pBar.style.width = `${(activePhase / activeTrackLoopSec) * 100}%`;
 
             // Loop through all 8 tracks independently
+            const isLooperSoloActive = looper.soloed.some(s => s);
             looper.tracks.forEach((track, idx) => {
-                if (looper.muted[idx] || track.length === 0) return;
+                if (looper.muted[idx]) return; // MUTE ALWAYS WINS
+                if (isLooperSoloActive && !looper.soloed[idx]) return; // SOLO FILTER
+                if (track.length === 0) return;
 
                 const trackLoopSec = looper.trackDurations[idx] || globalLoopSec;
                 let phase = nowOffset % trackLoopSec;
@@ -4192,8 +5115,10 @@
             }
 
             if (arranger.isPlaying && phase > lastArrangerPhase) {
+                const isArrangerSoloActive = arranger.soloed.some(s => s);
                 arranger.tracks.forEach((track, localIdx) => {
-                    if (arranger.muted[localIdx]) return;
+                    if (arranger.muted[localIdx]) return; // MUTE ALWAYS WINS
+                    if (isArrangerSoloActive && !arranger.soloed[localIdx]) return; // SOLO FILTER
                     track.forEach(evt => {
                         if (evt.timeOffset > lastArrangerPhase && evt.timeOffset <= phase) {
                             if (evt.type === 'play') {
@@ -4611,15 +5536,18 @@
         masterGain.gain.value = 0;
 
         // 4. Wire up 16 independent microphones to the 16 tracks
+        const isLooperSoloExp = looper.soloed.some(s => s);
+        const isArrangerSoloExp = arranger.soloed.some(s => s);
+
         for (let i = 0; i < 16; i++) {
             const isLooper = i < 8;
             const localIdx = isLooper ? i : i - 8;
             const domainObj = isLooper ? looper : arranger;
+            const hasSolo = isLooper ? isLooperSoloExp : isArrangerSoloExp;
 
-            if (domainObj.tracks[localIdx].length === 0 || domainObj.muted[localIdx]) {
-                stemWorklets.push(null); // Skip empty or muted tracks
-                continue;
-            }
+            if (domainObj.tracks[localIdx].length === 0) { stemWorklets.push(null); continue; }
+            if (domainObj.muted[localIdx]) { stemWorklets.push(null); continue; } // MUTE ALWAYS WINS
+            if (hasSolo && !domainObj.soloed[localIdx]) { stemWorklets.push(null); continue; } // SOLO FILTER
 
             let worklet = new AudioWorkletNode(audioCtx, 'recorder-processor');
             const panner = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
@@ -6171,6 +7099,123 @@
         return new Uint8Array([...headerChunk, ...trackHeader, ...trackData]);
     }
 
+    // Bind the Solo buttons next to the Mute buttons in the Studio Panel
+    document.querySelectorAll('.solo-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const track = parseInt(e.target.dataset.track);
+            const isLooper = track < 8;
+            const domainObj = isLooper ? looper : arranger;
+            const localIdx = isLooper ? track : track - 8;
+
+            domainObj.soloed[localIdx] = !domainObj.soloed[localIdx];
+            e.target.classList.toggle('soloed', domainObj.soloed[localIdx]);
+        });
+    });
+
+    // =====================================================================
+    // PIANO ROLL UI & NAVIGATION
+    // =====================================================================
+
+    function initPianoRoll() {
+        const prCanvas = document.getElementById('pr-canvas');
+        if (prCanvas) {
+            prCanvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                wakeNav();
+
+                if (e.ctrlKey || e.metaKey) {
+                    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                    prZoomY = Math.max(20, Math.min(prZoomY * zoomFactor, 500));
+                }
+                else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                    t_panX -= e.deltaX;
+                    applyTransform();
+                }
+                else {
+                    // Vertical Scroll (Standard Scroll) - Moves up and down in Time
+                    const timeShift = e.deltaY / prZoomY;
+                    prScrollTime = Math.max(0, prScrollTime + timeShift);
+
+                    // --- Kill Auto-Scroll if user manually scrolls! ---
+                    if (isPrAutoScroll) {
+                        isPrAutoScroll = false;
+                        document.getElementById('btnPrAutoScroll')?.classList.remove('active');
+                    }
+                }
+            }, { passive: false });
+        }
+
+        document.getElementById('btnTogglePianoRoll')?.addEventListener('click', (e) => {
+            isPianoRollActive = !isPianoRollActive;
+            document.body.classList.toggle('pr-open', isPianoRollActive);
+
+            // --- Broadcast height and update panning engine ---
+            document.documentElement.style.setProperty('--pr-actual-h', isPianoRollActive ? 'var(--pr-height, 25vh)' : '0px');
+            updateOverlayCSSVars();
+
+            const overlay = document.getElementById('piano-roll-overlay');
+            if (overlay) overlay.classList.toggle('active', isPianoRollActive);
+
+            const btn = document.getElementById('btnTogglePianoRoll');
+            if (btn) btn.classList.toggle('toggled', isPianoRollActive);
+
+            if (isPianoRollActive) {
+                wakeNav();
+                closeFabMenu();
+            }
+        });
+
+        document.getElementById('btnClosePianoRoll')?.addEventListener('click', () => {
+            isPianoRollActive = false;
+            document.body.classList.remove('pr-open');
+
+            // --- Reset height and update panning engine ---
+            document.documentElement.style.setProperty('--pr-actual-h', '0px');
+            updateOverlayCSSVars();
+
+            document.getElementById('piano-roll-overlay')?.classList.remove('active');
+            document.getElementById('btnTogglePianoRoll')?.classList.remove('toggled');
+        });
+
+        document.getElementById('prHeightSlider')?.addEventListener('change', (e) => {
+            document.documentElement.style.setProperty('--pr-height', `${e.target.value}vh`);
+            if (isPianoRollActive) {
+                document.documentElement.style.setProperty('--pr-actual-h', `${e.target.value}vh`);
+                updateOverlayCSSVars(); // Re-center the grid while dragging the height slider!
+            }
+        });
+
+        // --- TOOLBAR LISTENERS ---
+
+        document.getElementById('btnPrAutoScroll')?.addEventListener('click', (e) => {
+            isPrAutoScroll = !isPrAutoScroll;
+            e.target.classList.toggle('active', isPrAutoScroll);
+        });
+
+        document.getElementById('prSnapGrid')?.addEventListener('change', (e) => {
+            prSnapRes = parseFloat(e.target.value);
+        });
+
+        const tools = ['Select', 'Draw', 'Erase'];
+        tools.forEach(tool => {
+            document.getElementById(`prTool${tool}`)?.addEventListener('click', (e) => {
+                currentPrTool = tool.toLowerCase();
+                // Visually update active button
+                ['Select', 'Draw', 'Erase'].forEach(t => document.getElementById(`prTool${t}`)?.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
+
+        // Re-engage Auto-Scroll whenever ANY play button is clicked
+        ['btnLooperPlay', 'btnArrangerPlay', 'btn-import-play', 'btn-rec-play'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', () => {
+                isPrAutoScroll = true;
+                document.getElementById('btnPrAutoScroll')?.classList.add('active');
+            });
+        });
+    }
+
     // ==========================================
     // INDEXED-DB SAMPLE MANAGER
     // ==========================================
@@ -6273,6 +7318,11 @@
     // Initialize the UI on boot
     window.addEventListener('DOMContentLoaded', () => {
         refreshSavedSamplesUI();
+        initPianoRoll();
+        document.querySelector('.edit-btn[data-track="0"]')?.classList.add('active-btn');
+        const wrapper = document.getElementById('tonnetz-wrapper');
+        if (wrapper) tonnetzObserver.observe(wrapper);
+        resizeTonnetzSvg();
     });
 
     // --- PWA SERVICE WORKER REGISTRATION ---
@@ -6288,5 +7338,97 @@
     }
 
     document.getElementById('boot-status')?.remove();
+
+    // =====================================================================
+    // STEP 9: VELOCITY LANE RESIZE & EDITING LOGIC (RIGHT-SIDE)
+    // =====================================================================
+    const prVelDivider = document.getElementById('pr-vel-divider');
+    const prVelWrapper = document.getElementById('pr-vel-wrapper');
+    const prMainWrapper = document.getElementById('pr-main-wrapper');
+    let isDraggingVelDivider = false;
+    let isEditingVelocity = false;
+
+    // --- 1. DIVIDER DRAGGING (Horizontal) ---
+    prVelDivider?.addEventListener('mousedown', () => isDraggingVelDivider = true);
+    prVelDivider?.addEventListener('touchstart', () => isDraggingVelDivider = true, { passive: true });
+    window.addEventListener('mouseup', () => { isDraggingVelDivider = false; isEditingVelocity = false; });
+    window.addEventListener('touchend', () => { isDraggingVelDivider = false; isEditingVelocity = false; });
+
+    window.addEventListener('mousemove', (e) => handleVelDragAndEdit(e));
+    window.addEventListener('touchmove', (e) => handleVelDragAndEdit(e.touches[0]), { passive: true });
+
+    function handleVelDragAndEdit(e) {
+        // Resizing the Lane
+        if (isDraggingVelDivider && prVelWrapper) {
+            const prContainer = document.getElementById('pr-container');
+            if (!prContainer) return;
+            const containerRect = prContainer.getBoundingClientRect();
+
+            // Calculate width from the right edge
+            let newVelWidth = containerRect.right - e.clientX;
+            // Clamp width: Min 20px, Max 40% of Piano Roll
+            newVelWidth = Math.max(20, Math.min(newVelWidth, containerRect.width * 0.4));
+            prVelWrapper.style.width = `${newVelWidth}px`;
+            return;
+        }
+
+        // Editing Velocities
+        if (isEditingVelocity && isPianoRollActive && velCanvas) {
+            const rect = velCanvas.getBoundingClientRect();
+
+            // X-Axis = Velocity (0.0 to 1.0)
+            let targetVel = (e.clientX - rect.left) / rect.width;
+            targetVel = Math.max(0.01, Math.min(1.0, targetVel));
+
+            // Y-Axis = Time
+            const clickTime = getPrTimeFromY(e.clientY - rect.top);
+            // Add a +/- 8 pixel forgiveness radius to the mouse click
+            const timeTolerance = 8 / prZoomY;
+
+            let activeDomain = studio.lastSelectedDomain;
+            let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+
+            if (typeof prSelectedNotes !== 'undefined' && prSelectedNotes.size > 0) {
+                // Apply to all specifically selected notes simultaneously
+                prSelectedNotes.forEach(evt => evt.velocity = evt.type === 'drum' ? targetVel : targetVel * 127);
+            } else {
+                // Find any unselected note whose START TIME is directly under the mouse
+                activeTrack.forEach(evt => {
+                    if (Math.abs(clickTime - evt.timeOffset) <= timeTolerance) {
+                        evt.velocity = evt.type === 'drum' ? targetVel : targetVel * 127;
+                    }
+                });
+            }
+            if (typeof drawPianoRoll === 'function') drawPianoRoll();
+        }
+    }
+
+    velCanvas?.addEventListener('mousedown', (e) => { isEditingVelocity = true; handleVelDragAndEdit(e); });
+    velCanvas?.addEventListener('touchstart', (e) => { isEditingVelocity = true; handleVelDragAndEdit(e.touches[0]); }, { passive: true });
+
+    // --- 2. AUTONOMOUS CANVAS RESIZER ---
+    const prResizeObserver = new ResizeObserver(() => {
+        if (!isPianoRollActive) return;
+        const dpr = window.devicePixelRatio || 1;
+
+        if (prMainWrapper && typeof prCanvas !== 'undefined') {
+            prCanvas.width = prMainWrapper.clientWidth * dpr;
+            prCanvas.height = prMainWrapper.clientHeight * dpr;
+            if (typeof prCtx !== 'undefined' && prCtx) prCtx.scale(dpr, dpr);
+        }
+
+        if (velCanvas && prVelWrapper) {
+            velCanvas.width = prVelWrapper.clientWidth * dpr;
+            velCanvas.height = prVelWrapper.clientHeight * dpr;
+            const velCtx = velCanvas.getContext('2d');
+            if (velCtx) velCtx.scale(dpr, dpr);
+        }
+
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
+    });
+
+    if (prMainWrapper) prResizeObserver.observe(prMainWrapper);
+    if (prVelWrapper) prResizeObserver.observe(prVelWrapper);
 
 })(); // end of scope

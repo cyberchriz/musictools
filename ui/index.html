@@ -732,6 +732,12 @@
                 border-color: #f44336;
             }
 
+            .mute-btn.soloed {
+                background: #ffeb3b;
+                color: #222;
+                border-color: #fbc02d;
+            }
+
         .looper-progress-bar {
             width: 100%;
             height: 4px;
@@ -1145,70 +1151,80 @@
                 display: block;
             }
 
+        /* =========================================================
+           9b. D-PAD ARCHITECTURE (DESKTOP DEFAULTS)
+           ========================================================= */
         .canvas-controls {
             position: absolute;
-            bottom: calc(15px + var(--piano-h, clamp(80px, 16vh, 140px)));
-            right: calc(15px + var(--right-panel-w, 0px));
-            left: auto;
-            z-index: 100;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 950;
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
-            gap: 10px;
-            transition: opacity 0.4s ease, bottom 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), right 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+            align-items: center;
+            pointer-events: none; /* FIX: Prevent invisible container from blocking Tonnetz */
         }
 
-        .nav-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 4px;
-            background: var(--panel-bg);
-            padding: 8px;
-            border-radius: 12px;
-            border: 2px solid var(--border-color);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            width: clamp(170px, 22vw, 220px);
-            height: clamp(180px, 22vw, 240px);
+        /* 1. Hide the FAB Button entirely on Desktop */
+        #btnNavToggle {
+            display: none !important;
         }
 
-        .dark-theme .nav-grid {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        /* 2. Force the Grid to always show on Desktop */
+        #main-nav-grid {
+            display: grid !important;
+            grid-template-columns: repeat(6, 1fr) !important;
+            gap: 6px !important;
+            background: var(--panel-bg) !important;
+            padding: 10px !important;
+            border-radius: 12px !important;
+            border: 2px solid var(--border-color) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+            margin: 0 !important;
+            width: max-content !important;
+            height: max-content !important;
+            /* Keep it visible and in normal document flow */
+            opacity: 1 !important;
+            transform: none !important;
+            pointer-events: auto !important;
+            position: static !important;
         }
 
-        .nav-btn {
-            width: 100%;
-            height: 100%;
-            border-radius: 6px;
+        .canvas-controls .nav-btn {
+            width: 42px !important;
+            height: 42px !important;
+            font-size: 1.2rem !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: var(--bg-color);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            font-size: clamp(0.9rem, 2vw, 1.3rem);
-            font-weight: bold;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             cursor: pointer;
-            padding: 0;
-            user-select: none;
-            touch-action: manipulation;
             transition: background 0.1s, transform 0.1s;
         }
 
-            .nav-btn:hover {
+            .canvas-controls .nav-btn:hover {
                 background: var(--border-color);
             }
 
-            .nav-btn:active {
-                transform: scale(0.9);
+            .canvas-controls .nav-btn:active {
+                transform: scale(0.9) !important;
             }
 
-            .nav-btn.toggled {
+            .canvas-controls .nav-btn.toggled {
                 background: var(--main-node);
                 color: white;
                 border-color: var(--main-node);
             }
 
-        /* FAB Pulse Animation */
+        /* =========================================================
+           9c. MOBILE FAB POPUP ARCHITECTURE
+           ========================================================= */
         @keyframes fab-pulse-gpu {
             0% {
                 transform: scale(1);
@@ -1221,55 +1237,80 @@
             }
         }
 
-        .fab-menu-btn {
-            display: none;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ffca28, #ff5722);
-            color: white;
-            border: 3px solid rgba(255, 255, 255, 0.9);
-            cursor: pointer;
-            z-index: 101;
-            transition: all 0.2s cubic-bezier(0.1, 0.8, 0.3, 1);
-            font-size: 1.5rem;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-            /* Animated ring */
-            .fab-menu-btn::after {
-                content: '';
-                position: absolute;
-                top: -3px;
-                left: -3px;
-                right: -3px;
-                bottom: -3px;
-                border-radius: 50%;
-                border: 3px solid #ff9800;
-                animation: fab-pulse-gpu 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
-                pointer-events: none;
+        @media (max-width: 1024px) {
+            /* 1. Restore the Beautiful Animated FAB */
+            #btnNavToggle {
+                display: flex !important;
+                width: 56px !important;
+                height: 56px !important;
+                border-radius: 50% !important;
+                background: linear-gradient(135deg, #ffca28, #ff5722) !important;
+                color: white !important;
+                border: 3px solid rgba(255, 255, 255, 0.9) !important;
+                cursor: pointer !important;
+                z-index: 101 !important;
+                transition: all 0.2s cubic-bezier(0.1, 0.8, 0.3, 1) !important;
+                font-size: 1.5rem !important;
+                align-items: center !important;
+                justify-content: center !important;
+                position: relative !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+                margin-bottom: 10px !important;
+                pointer-events: auto !important; /* FIX: Make FAB clickable inside invisible container */
             }
 
-            .fab-menu-btn:active {
-                transform: scale(0.9) !important;
+                #btnNavToggle::after {
+                    content: '';
+                    position: absolute;
+                    top: -3px;
+                    left: -3px;
+                    right: -3px;
+                    bottom: -3px;
+                    border-radius: 50%;
+                    border: 3px solid #ff9800;
+                    animation: fab-pulse-gpu 2s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+                    pointer-events: none;
+                }
+
+                #btnNavToggle:active {
+                    transform: scale(0.9) !important;
+                }
+
+            .dark-theme #btnNavToggle {
+                border-color: #2a2a2a !important;
             }
 
-        .canvas-controls.menu-open .fab-menu-btn::after {
-            animation: none;
-            opacity: 0;
-        }
+            /* 2. Hide Grid by Default, Drop it beneath the FAB */
+            #main-nav-grid {
+                position: absolute !important;
+                top: 65px !important;
+                left: 50% !important;
+                transform-origin: top center !important;
+                transform: translateX(-50%) scale(0.8) !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) !important;
+            }
 
-        .dark-theme .fab-menu-btn {
-            border-color: #2a2a2a;
-        }
+            /* 3. Reveal Grid on Menu Open */
+            .canvas-controls.menu-open #main-nav-grid {
+                transform: translateX(-50%) scale(1) !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
 
-        /* Auto-hide classes */
-        body.ui-hidden #canvas-controls,
-        body.ui-hidden .overlay.auto-hides {
-            opacity: 0 !important;
-            pointer-events: none !important;
+            /* 4. Transform FAB on Menu Open */
+            .canvas-controls.menu-open #btnNavToggle {
+                background: #f44336 !important;
+                border-color: transparent !important;
+                transform: rotate(90deg) !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+            }
+
+                .canvas-controls.menu-open #btnNavToggle::after {
+                    animation: none !important;
+                    opacity: 0 !important;
+                }
         }
 
         /* =========================================================
@@ -2028,41 +2069,371 @@
             text-rendering: optimizeSpeed;
         }
 
-        /* Mobile FAB Popup Architecture */
-        @media (max-width: 1024px) {
+        /* =========================================================
+           13. PIANO ROLL EDITOR
+           ========================================================= */
+        #piano-roll-overlay {
+            position: absolute;
+            left: var(--active-overlay-width, 0px);
+            right: var(--right-panel-w, 0px);
+            bottom: var(--piano-h, clamp(80px, 16vh, 140px));
+            height: var(--pr-height, 50vh);
+            min-height: 200px;
+            background: var(--panel-bg);
+            border-top: 2px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            border-radius: 12px 12px 0 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            transform: translate3d(0, 100%, 0);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.2s, left 0.3s, right 0.3s, bottom 0.3s;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
+        }
+
+        .dark-theme #piano-roll-overlay {
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.6);
+        }
+
+        #piano-roll-overlay.active {
+            transform: translate3d(0, 0, 0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pr-toolbar {
+            height: 40px;
+            background: rgba(0,0,0,0.05);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .dark-theme .pr-toolbar {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .pr-tool-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border-right: 1px solid var(--border-color);
+            padding-right: 15px;
+        }
+
+        .pr-tool-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.1s;
+        }
+
+            .pr-tool-btn.active {
+                background: var(--main-node);
+                color: white;
+                border-color: var(--main-node);
+            }
+
+        .pr-canvas-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            background: #1a1a1a; /* Dark background to contrast with colorful notes */
+            cursor: crosshair;
+        }
+
+        #pr-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* 16 Track Colors for the rendering engine */
+        :root {
+            --tk-0: #f44336;
+            --tk-1: #e91e63;
+            --tk-2: #9c27b0;
+            --tk-3: #673ab7;
+            --tk-4: #3f51b5;
+            --tk-5: #2196f3;
+            --tk-6: #03a9f4;
+            --tk-7: #00bcd4;
+            --tk-8: #009688;
+            --tk-9: #4caf50;
+            --tk-10: #8bc34a;
+            --tk-11: #cddc39;
+            --tk-12: #ffeb3b;
+            --tk-13: #ffc107;
+            --tk-14: #ff9800;
+            --tk-15: #ff5722;
+        }
+
+        /* Push the D-Pad up when Piano Roll is open, but cap it so it stays on screen */
+        body.pr-open .canvas-controls {
+            bottom: min(calc(15px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-height, 50vh)), calc(100vh - 260px)) !important;
+        }
+
+        /* =========================================================
+           14. MASTER TRANSPORT HEADER
+           ========================================================= */
+        #master-transport {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 45px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            padding: 0 20px;
+            transition: top 0.3s;
+        }
+
+        .dark-theme #master-transport {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
+        }
+
+        /* Auto-hide logic for the transport bar */
+        body.ui-hidden #master-transport {
+            top: -60px;
+        }
+
+        #master-transport .transport-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #master-transport .transport-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.1s;
+        }
+
+            #master-transport .transport-btn:active {
+                transform: scale(0.92);
+            }
+
+            #master-transport .transport-btn.playing {
+                background: #4caf50;
+                color: white;
+                border-color: #4caf50;
+            }
+
+            #master-transport .transport-btn.recording {
+                background: #f44336;
+                color: white;
+                border-color: #f44336;
+            }
+
+            #master-transport .transport-btn.armed {
+                background: #ff9800;
+                color: white;
+                border-color: #ff9800;
+                animation: pulse 1s infinite;
+            }
+
+        #master-transport .lcd-display {
+            background: #0a0a0a;
+            color: #00ff41;
+            font-family: monospace;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: inset 2px #333;
+            font-size: 0.9rem;
+            min-width: 45px;
+            text-align: center;
+            font-weight: bold;
+            box-shadow: inset 0 0 5px rgba(0,255,65,0.2);
+        }
+
+            #master-transport .lcd-display.sm {
+                font-size: 0.75rem;
+                min-width: 60px;
+                color: #03a9f4;
+                box-shadow: inset 0 0 5px rgba(3,169,244,0.2);
+            }
+
+        #master-transport .transport-btn.sm {
+            width: 24px;
+            height: 24px;
+            font-size: 0.7rem;
+        }
+
+
+        /* --- TRANSPORT BUTTON COLORS --- */
+        #transportPlay { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
+        #transportRec { color: #f44336; border-color: rgba(244, 67, 54, 0.3); }
+        #transportStop { color: #eeeeee; border-color: rgba(255, 255, 255, 0.3); }
+        
+        #transportStop:active { background: #eeeeee; color: #000; }
+
+        /* =========================================================
+           15. DAW FLOATING-YIELD ARCHITECTURE (RESPONSIVE)
+           ========================================================= */
+
+        .overlay.primary, #studio-overlay {
+            display: flex;
+            flex-direction: column;
+            transition: bottom 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), top 0.3s, transform 0.3s, opacity 0.2s !important;
+        }
+
+        /* LANDSCAPE: Panels float alongside the Transport Pill */
+        #settings-overlay, #synth-overlay, #pads-overlay,
+        #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
+            top: 15px !important;
+            height: max-content !important;
+            min-height: 10vh;
+            max-height: calc(100vh - (15px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
+            bottom: auto !important;
+            overflow-y: auto;
+        }
+
+        /* PORTRAIT: Panels dock underneath the Solid Transport */
+        @media (orientation: portrait), (max-width: 768px) {
+            #master-transport {
+                top: 0 !important;
+                width: 100vw !important;
+                border-radius: 0 !important;
+                border: none !important;
+                border-bottom: 1px solid var(--border-color) !important;
+                height: 55px !important;
+            }
+
+            body.ui-hidden #master-transport {
+                top: -60px !important;
+            }
+
+            #settings-overlay, #synth-overlay, #pads-overlay,
+            #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
+                top: 55px !important;
+                height: max-content !important; /* Yield, do not stretch */
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+                border-top: none !important;
+                max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
+            }
+
+            /* D-Pad drops exactly below the active panel dynamically! */
+            .canvas-controls {
+                top: calc(65px + var(--active-overlay-height, 0px)) !important;
+            }
+        }
+
+        /* =========================================================
+           GLOBAL AUTO-HIDE & FULL-WIDTH DOCK
+           ========================================================= */
+        body.ui-hidden #canvas-controls {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        body.ui-hidden .overlay.auto-hides {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translate3d(-105%, 0, 0) !important; /* Slide Left */
+        }
+
+        body.ui-hidden #studio-overlay.auto-hides {
+            transform: translate3d(105%, 0, 0) !important; /* Slide Right */
+        }
+
+        @media (orientation: portrait), (max-width: 768px) {
+            body.ui-hidden .overlay.auto-hides,
+            body.ui-hidden #studio-overlay.auto-hides {
+                transform: translate3d(0, -105%, 0) !important; /* Slide Up */
+            }
+        }
+
+        body.ui-hidden #piano-roll-overlay.auto-hides {
+            transform: translateY(100%) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        #piano-roll-overlay {
+            left: 0 !important;
+            right: 0 !important;
+            bottom: var(--piano-h, clamp(80px, 16vh, 140px)) !important;
+            border-radius: 0 !important;
+            border-left: none !important;
+            border-right: none !important;
+            z-index: 90 !important;
+        }
+
+        /* =========================================================
+           Mobile FAB Popup Architecture (UPDATED)
+           ========================================================= */
+        @media (max-width: 1024px) and (pointer: coarse) {
+            .canvas-controls {
+                top: auto !important;
+                bottom: calc(15px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px)) !important;
+                right: 15px !important;
+                left: auto !important;
+                transform: none !important;
+                align-items: flex-end !important;
+            }
+
             .fab-menu-btn {
-                display: flex;
+                display: flex !important;
             }
 
             .nav-grid {
-                position: absolute;
-                bottom: 70px;
-                top: auto;
-                right: 0;
-                transform-origin: bottom right;
-                transform: scale(0.8);
-                opacity: 0;
-                pointer-events: none;
-                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
-                background: var(--panel-bg);
-            }
-
-            .dark-theme .nav-grid {
-                background: var(--panel-bg);
+                position: absolute !important;
+                bottom: 65px !important;
+                top: auto !important;
+                right: 0 !important;
+                left: auto !important;
+                transform-origin: bottom right !important;
+                transform: scale(0.8) !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) !important;
+                background: var(--panel-bg) !important;
             }
 
             .canvas-controls.menu-open .nav-grid {
-                transform: scale(1);
-                opacity: 1;
-                pointer-events: auto;
+                transform: scale(1) !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
             }
 
             .canvas-controls.menu-open .fab-menu-btn {
-                background: #f44336;
-                border-color: transparent;
-                transform: rotate(90deg);
-                animation: none;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                background: #f44336 !important;
+                border-color: transparent !important;
+                transform: rotate(90deg) !important;
+                animation: none !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
             }
 
             @media (orientation: landscape) {
@@ -2088,26 +2459,48 @@
     <div id="toast-container">Message</div>
 
     <!-- === MAIN NAVIGATION (FAB & TOOLBAR) === -->
-    <div class="canvas-controls" id="canvas-controls">
+    <div id="canvas-controls" class="canvas-controls">
         <button id="btnNavToggle" class="fab-menu-btn" title="Open Menu">🛠️</button>
         <div class="nav-grid" id="main-nav-grid">
-            <button id="btnZoomIn" class="nav-btn" title="Zoom In">+</button>
-            <button id="btnPanUp" class="nav-btn" title="Pan Up">▲</button>
-            <button id="btnZoomOut" class="nav-btn" title="Zoom Out">−</button>
-            <button id="btnToggleSettings" class="nav-btn" title="General Settings (F2)">⚙️</button>
-            <button id="btnPanLeft" class="nav-btn" title="Pan Left">◀</button>
-            <button id="btnHome" class="nav-btn" title="Center on Root">◎</button>
-            <button id="btnPanRight" class="nav-btn" title="Pan Right">▶</button>
-            <button id="btnTogglePads" class="nav-btn" title="Performance Pads (F3)">🎛️</button>
-            <button id="btnToggleSynth" class="nav-btn" title="Synth Engine">🎺</button>
-            <button id="btnPanDown" class="nav-btn" title="Pan Down">▼</button>
-            <button id="btnToggleStudio" class="nav-btn" title="Multitrack Studio">🎙️</button>
-            <button id="btnToggleDrums" class="nav-btn" title="Drum Machine">🥁</button>
-            <button id="btnFullscreen" class="nav-btn" title="Fullscreen">⛶</button>
-            <button id="btnToggleCOF" class="nav-btn" title="Circle of Fifths (F4)">⭕</button>
-            <button id="btnTogglePiano" class="nav-btn toggled" title="Piano Keyboard">🎹</button>
-            <button id="btnInfo" class="nav-btn" title="Info & Theory (F1)">ℹ️</button>
-            <button id="btnToggleMixer" class="nav-btn" title="Mixer & EQ Desk" style="grid-column: span 4; font-size: 0.75rem; font-weight: bold; border-radius: 4px;">🎚️MIX/EQ</button>
+            <button class="nav-btn" id="btnZoomIn" title="Zoom In">➕</button>
+            <button class="nav-btn" id="btnPanUp" title="Pan Up">▲</button>
+            <button class="nav-btn" id="btnZoomOut" title="Zoom Out">➖</button>
+            <button class="nav-btn" id="btnInfo" title="Info">ℹ️</button>
+            <button class="nav-btn" id="btnToggleCOF" title="Circle of Fifths">⭕</button>
+            <button class="nav-btn" id="btnToggleSettings" title="Settings">⚙️</button>
+
+            <button class="nav-btn" id="btnPanLeft" title="Pan Left">◀</button>
+            <button class="nav-btn" id="btnHome" title="Center">🎯</button>
+            <button class="nav-btn" id="btnPanRight" title="Pan Right">▶</button>
+            <button class="nav-btn" id="btnToggleSynth" title="Synth">🎺</button>
+            <button class="nav-btn" id="btnTogglePads" title="Pads">🎛️</button>
+            <button class="nav-btn" id="btnToggleMixer" title="Mixer">🎚️</button>
+
+            <button class="nav-btn" id="btnQuickPanic" title="Panic / All Notes Off">🔇</button>
+            <button class="nav-btn" id="btnPanDown" title="Pan Down">▼</button>
+            <button class="nav-btn" id="btnTogglePiano" title="Piano">🎹</button>
+            <button class="nav-btn" id="btnToggleDrums" title="Drums">🥁</button>
+            <button class="nav-btn" id="btnToggleStudio" title="Studio">🎙️</button>
+            <button class="nav-btn" id="btnTogglePianoRoll" title="Piano Roll">🎼</button>
+        </div>
+    </div>
+
+    <!-- === OVERLAY: MASTER TRANSPORT === -->
+    <div id="master-transport">
+        <div class="transport-group">
+            <div class="lcd-display" id="global-time-display" title="Bars.Beats">1.1</div>
+            <input type="range" id="global-timeline-seeker" min="0" max="100" value="0" title="Song Position" style="width: 120px; cursor: pointer;">
+        </div>
+        <div class="transport-group controls">
+            <button id="btnMasterRw" class="transport-btn sm" title="Rewind 1 Bar">⏪</button>
+            <button id="transportStop" class="transport-btn" title="Stop & Return">⏹</button>
+            <button id="transportPlay" class="transport-btn" title="Play / Pause">▶</button>
+            <button id="transportRec" class="transport-btn" title="Global Record">⏺</button>
+            <button id="btnMasterFf" class="transport-btn sm" title="Forward 1 Bar">⏩</button>
+        </div>
+        <div class="transport-group">
+            <div class="lcd-display sm" id="global-bpm-display" title="Current BPM">120 BPM</div>
+            <button id="btnFullscreen" class="transport-btn" title="Fullscreen" style="margin-left: 10px; font-size: 1rem;">⛶</button>
         </div>
     </div>
 
@@ -2591,14 +2984,14 @@
                 <div class="looper-grid">
                     <div class="looper-row">
                         <div class="looper-tracks-row">
-                            <div class="track-col"><div class="inst-label" id="inst-label-0">EMPTY</div><button class="track-btn active" data-track="0" data-domain="looper">L1</button><button class="mute-btn" data-track="0">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-1">EMPTY</div><button class="track-btn" data-track="1" data-domain="looper">L2</button><button class="mute-btn" data-track="1">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-2">EMPTY</div><button class="track-btn" data-track="2" data-domain="looper">L3</button><button class="mute-btn" data-track="2">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-3">EMPTY</div><button class="track-btn" data-track="3" data-domain="looper">L4</button><button class="mute-btn" data-track="3">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-4">EMPTY</div><button class="track-btn" data-track="4" data-domain="looper">L5</button><button class="mute-btn" data-track="4">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-5">EMPTY</div><button class="track-btn" data-track="5" data-domain="looper">L6</button><button class="mute-btn" data-track="5">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-6">EMPTY</div><button class="track-btn" data-track="6" data-domain="looper">L7</button><button class="mute-btn" data-track="6">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-7">EMPTY</div><button class="track-btn" data-track="7" data-domain="looper">L8</button><button class="mute-btn" data-track="7">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-0">EMPTY</div><button class="track-btn active" data-track="0" data-domain="looper">L1</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="0" title="Mute">M</button><button class="mute-btn solo-btn" data-track="0" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-1">EMPTY</div><button class="track-btn" data-track="1" data-domain="looper">L2</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="1" title="Mute">M</button><button class="mute-btn solo-btn" data-track="1" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-2">EMPTY</div><button class="track-btn" data-track="2" data-domain="looper">L3</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="2" title="Mute">M</button><button class="mute-btn solo-btn" data-track="2" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-3">EMPTY</div><button class="track-btn" data-track="3" data-domain="looper">L4</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="3" title="Mute">M</button><button class="mute-btn solo-btn" data-track="3" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-4">EMPTY</div><button class="track-btn" data-track="4" data-domain="looper">L5</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="4" title="Mute">M</button><button class="mute-btn solo-btn" data-track="4" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-5">EMPTY</div><button class="track-btn" data-track="5" data-domain="looper">L6</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="5" title="Mute">M</button><button class="mute-btn solo-btn" data-track="5" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-6">EMPTY</div><button class="track-btn" data-track="6" data-domain="looper">L7</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="6" title="Mute">M</button><button class="mute-btn solo-btn" data-track="6" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-7">EMPTY</div><button class="track-btn" data-track="7" data-domain="looper">L8</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="7" title="Mute">M</button><button class="mute-btn solo-btn" data-track="7" title="Solo">S</button></div></div>
                         </div>
                     </div>
                 </div>
@@ -2625,14 +3018,14 @@
                 <div class="looper-grid">
                     <div class="looper-row">
                         <div class="looper-tracks-row">
-                            <div class="track-col"><div class="inst-label" id="inst-label-8">EMPTY</div><button class="track-btn" data-track="8" data-domain="arranger">A1</button><button class="mute-btn" data-track="8">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-9">EMPTY</div><button class="track-btn" data-track="9" data-domain="arranger">A2</button><button class="mute-btn" data-track="9">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-10">EMPTY</div><button class="track-btn" data-track="10" data-domain="arranger">A3</button><button class="mute-btn" data-track="10">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-11">EMPTY</div><button class="track-btn" data-track="11" data-domain="arranger">A4</button><button class="mute-btn" data-track="11">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-12">EMPTY</div><button class="track-btn" data-track="12" data-domain="arranger">A5</button><button class="mute-btn" data-track="12">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-13">EMPTY</div><button class="track-btn" data-track="13" data-domain="arranger">A6</button><button class="mute-btn" data-track="13">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-14">EMPTY</div><button class="track-btn" data-track="14" data-domain="arranger">A7</button><button class="mute-btn" data-track="14">Mute</button></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-15">EMPTY</div><button class="track-btn" data-track="15" data-domain="arranger">A8</button><button class="mute-btn" data-track="15">Mute</button></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-8">EMPTY</div><button class="track-btn" data-track="8" data-domain="arranger">A1</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="8" title="Mute">M</button><button class="mute-btn solo-btn" data-track="8" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-9">EMPTY</div><button class="track-btn" data-track="9" data-domain="arranger">A2</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="9" title="Mute">M</button><button class="mute-btn solo-btn" data-track="9" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-10">EMPTY</div><button class="track-btn" data-track="10" data-domain="arranger">A3</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="10" title="Mute">M</button><button class="mute-btn solo-btn" data-track="10" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-11">EMPTY</div><button class="track-btn" data-track="11" data-domain="arranger">A4</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="11" title="Mute">M</button><button class="mute-btn solo-btn" data-track="11" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-12">EMPTY</div><button class="track-btn" data-track="12" data-domain="arranger">A5</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="12" title="Mute">M</button><button class="mute-btn solo-btn" data-track="12" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-13">EMPTY</div><button class="track-btn" data-track="13" data-domain="arranger">A6</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="13" title="Mute">M</button><button class="mute-btn solo-btn" data-track="13" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-14">EMPTY</div><button class="track-btn" data-track="14" data-domain="arranger">A7</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="14" title="Mute">M</button><button class="mute-btn solo-btn" data-track="14" title="Solo">S</button></div></div>
+                            <div class="track-col"><div class="inst-label" id="inst-label-15">EMPTY</div><button class="track-btn" data-track="15" data-domain="arranger">A8</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="15" title="Mute">M</button><button class="mute-btn solo-btn" data-track="15" title="Solo">S</button></div></div>
                         </div>
                     </div>
                 </div>
@@ -2829,6 +3222,51 @@
                     </div>
                 </div>
                 <canvas id="oscilloscope" style="width: 100%; height: 50px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); display: block; margin-top: 2px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- === OVERLAY: PIANO ROLL === -->
+    <div id="piano-roll-overlay">
+        <div class="pr-toolbar">
+            <span style="font-weight:bold; font-size:0.8rem; color:var(--text-muted);">PIANO ROLL</span>
+
+            <div class="pr-tool-group">
+                <button id="prToolSelect" class="pr-tool-btn active" title="Select / Move">👆</button>
+                <button id="prToolDraw" class="pr-tool-btn" title="Draw Note">✏️</button>
+                <button id="prToolErase" class="pr-tool-btn" title="Erase Note">🗑️</button>
+            </div>
+
+            <div class="pr-tool-group">
+                <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Snap:</label>
+                <select id="prSnapGrid" style="width: auto;">
+                    <option value="1">1/4</option>
+                    <option value="0.5">1/8</option>
+                    <option value="0.25" selected>1/16</option>
+                    <option value="0.125">1/32</option>
+                    <option value="0">Off</option>
+                </select>
+            </div>
+
+            <div class="pr-tool-group" style="flex-grow:1; border-right:none; justify-content: flex-end;">
+                <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↓ SCROLL</button>
+                <button class="auto-hide-toggle" title="Auto-Hide Disabled" style="margin-right: 15px;">⏱</button>
+                <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Height:</label>
+                <input type="range" id="prHeightSlider" min="10" max="85" value="25" style="width: 100px;">
+                <button id="btnClosePianoRoll" class="close-btn-sm" title="Close" style="margin-left: 15px;">✕</button>
+            </div>
+        </div>
+        <div class="pr-canvas-container" id="pr-container" style="display: flex; flex-direction: row;">
+            <div id="pr-main-wrapper" style="flex: 1; position: relative; overflow: hidden; min-width: 50px;">
+                <canvas id="pr-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none;"></canvas>
+            </div>
+
+            <div id="pr-vel-divider" title="Drag to resize Velocity Lane" style="width: 8px; background: var(--panel-bg); border-left: 1px solid var(--grid-line); border-right: 1px solid var(--grid-line); cursor: ew-resize; display: flex; justify-content: center; align-items: center; flex-shrink: 0; z-index: 5;">
+                <div style="height: 40px; width: 2px; background: var(--text-muted); border-radius: 1px;"></div>
+            </div>
+
+            <div id="pr-vel-wrapper" style="width: 80px; min-width: 20px; position: relative; background: #111; overflow: hidden;">
+                <canvas id="pr-vel-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none;"></canvas>
             </div>
         </div>
     </div>
