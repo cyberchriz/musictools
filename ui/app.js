@@ -902,21 +902,32 @@
     document.querySelectorAll('.track-vol').forEach(slider => {
         slider.addEventListener('input', e => {
             const trackIdx = parseInt(e.target.getAttribute('data-track'));
-            if (looperGainNodes[trackIdx] && !looper.muted[trackIdx]) looperGainNodes[trackIdx].gain.value = parseFloat(e.target.value);
+            const isLooper = trackIdx < 8;
+            const localIdx = isLooper ? trackIdx : trackIdx - 8;
+            const gainNodes = isLooper ? looperGainNodes : linearGainNodes;
+            const domainObj = isLooper ? looper : arranger;
+            
+            if (gainNodes[localIdx] && !domainObj.muted[localIdx]) {
+                gainNodes[localIdx].gain.value = parseFloat(e.target.value);
+            }
         });
     });
 
     document.querySelectorAll('.echo-send').forEach(slider => {
         slider.addEventListener('input', e => {
             const trackIdx = parseInt(e.target.getAttribute('data-track'));
-            if (looperEchoSends[trackIdx]) looperEchoSends[trackIdx].gain.value = parseFloat(e.target.value);
+            const nodes = trackIdx < 8 ? looperEchoSends : linearEchoSends;
+            const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
+            if (nodes[localIdx]) nodes[localIdx].gain.value = parseFloat(e.target.value);
         });
     });
 
     document.querySelectorAll('.reverb-send').forEach(slider => {
         slider.addEventListener('input', e => {
             const trackIdx = parseInt(e.target.getAttribute('data-track'));
-            if (looperReverbSends[trackIdx]) looperReverbSends[trackIdx].gain.value = parseFloat(e.target.value);
+            const nodes = trackIdx < 8 ? looperReverbSends : linearReverbSends;
+            const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
+            if (nodes[localIdx]) nodes[localIdx].gain.value = parseFloat(e.target.value);
         });
     });
 
@@ -2281,7 +2292,9 @@
     document.querySelectorAll('.pan-slider').forEach(slider => {
         slider.addEventListener('input', e => {
             const trackIdx = parseInt(e.target.getAttribute('data-track'));
-            if (looperPanners[trackIdx]) looperPanners[trackIdx].pan.value = parseFloat(e.target.value);
+            const nodes = trackIdx < 8 ? looperPanners : linearPanners;
+            const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
+            if (nodes[localIdx]) nodes[localIdx].pan.value = parseFloat(e.target.value);
         });
     });
 
@@ -3723,6 +3736,10 @@
         for (let i = 0; i < 8; i++) {
             if (looperEchoSends[i]) looperEchoSends[i].connect(delayNode);
             if (looperReverbSends[i]) looperReverbSends[i].connect(convolver);
+            
+            // Wire up the Arranger tracks!
+            if (linearEchoSends[i]) linearEchoSends[i].connect(delayNode);
+            if (linearReverbSends[i]) linearReverbSends[i].connect(convolver);
         }
 
         if (audioCtx.state === 'suspended') audioCtx.resume();
