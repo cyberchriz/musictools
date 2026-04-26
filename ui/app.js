@@ -4144,7 +4144,18 @@
         // --- ANALOG SYNTH MODE ---
         else {
             osc1 = audioCtx.createOscillator(); osc2 = audioCtx.createOscillator();
-            if (acousticWaveCache) { osc1.setPeriodicWave(acousticWaveCache); osc2.setPeriodicWave(acousticWaveCache); }
+            
+            // THE FIX: Generate the overtones wave using the track's saved state, not the global cache!
+            let customWave = null;
+            if (s.overtones > 0) {
+                const real = new Float32Array(8);
+                const imag = new Float32Array(8);
+                real[1] = 1; // Fundamental
+                for (let i = 2; i < 8; i++) real[i] = s.overtones * (1 / i); // Harmonics
+                customWave = audioCtx.createPeriodicWave(real, imag);
+            }
+
+            if (customWave) { osc1.setPeriodicWave(customWave); osc2.setPeriodicWave(customWave); }
             else { osc1.type = s.osc1; osc2.type = s.osc2; }
 
             const targetFreq2 = freq * Math.pow(2, s.detune / 1200) * s.osc2Mult;
@@ -4210,9 +4221,9 @@
         if (globalLfoOutput) globalLfoOutput.connect(voiceLfoEnv);
 
         // --- PER-VOICE LFO DEPTHS ---
-        const vPitchGain = audioCtx.createGain(); vPitchGain.gain.value = currentVibrato;
-        const vFilterGain = audioCtx.createGain(); vFilterGain.gain.value = currentSweep;
-        const vAmpGain = audioCtx.createGain(); vAmpGain.gain.value = currentTremolo;
+        const vPitchGain = audioCtx.createGain(); vPitchGain.gain.value = s.vibrato !== undefined ? s.vibrato : currentVibrato;
+        const vFilterGain = audioCtx.createGain(); vFilterGain.gain.value = s.sweep !== undefined ? s.sweep : currentSweep;
+        const vAmpGain = audioCtx.createGain(); vAmpGain.gain.value = s.tremolo !== undefined ? s.tremolo : currentTremolo;
 
         voiceLfoEnv.connect(vPitchGain);
         if (osc1) vPitchGain.connect(osc1.detune);
@@ -4485,7 +4496,7 @@
     let looperQuantize = false;
     let looperQuantizeRes = 16;
 
-    function captureCurrentSynthState() {
+function captureCurrentSynthState() {
         return {
             osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
             subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
@@ -4493,15 +4504,19 @@
             attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
             oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType,
             instrumentPreset: document.getElementById('instrumentPreset')?.value || 'piano',
-            // --- NEW: LFO State Tracking ---
             lfoDelay: typeof currentLfoDelay !== 'undefined' ? currentLfoDelay : 0,
             lfoFade: typeof currentLfoFade !== 'undefined' ? currentLfoFade : 0,
             lfoKeytrack: typeof currentLfoKeytrack !== 'undefined' ? currentLfoKeytrack : 0,
-            lfoPolarity: typeof currentLfoPolarity !== 'undefined' ? currentLfoPolarity : 'bipolar'
+            lfoPolarity: typeof currentLfoPolarity !== 'undefined' ? currentLfoPolarity : 'bipolar',
+            overtones: typeof currentOvertones !== 'undefined' ? currentOvertones : 0,
+            glideMode: typeof currentGlideMode !== 'undefined' ? currentGlideMode : 'always',
+            vibrato: typeof currentVibrato !== 'undefined' ? currentVibrato : 0,
+            sweep: typeof currentSweep !== 'undefined' ? currentSweep : 0,
+            tremolo: typeof currentTremolo !== 'undefined' ? currentTremolo : 0
         };
     }
 
-    function applySynthStateToUI(s) {
+function applySynthStateToUI(s) {
         if (!s) return;
         const presetEl = document.getElementById('instrumentPreset');
         if (presetEl) presetEl.value = s.instrumentPreset;
@@ -4510,11 +4525,13 @@
 
         currentOsc1 = s.osc1; currentOsc2 = s.osc2; currentOsc2Mult = s.osc2Mult;
 
+        // THE FIX: Add the new parameters to the UI sync map
         const map = {
             detune: s.detune, subOsc: s.subOsc, noise: s.noise, resonance: s.resonance,
             brightness: s.brightness, filterEnv: s.filterEnv, attack: s.attack, decay: s.decay,
             sustain: s.sustain, release: s.release, oscMix: s.oscMix, glide: s.glide,
-            lfoDelay: s.lfoDelay, lfoFade: s.lfoFade, lfoKeytrack: s.lfoKeytrack
+            lfoDelay: s.lfoDelay, lfoFade: s.lfoFade, lfoKeytrack: s.lfoKeytrack,
+            overtones: s.overtones, vibrato: s.vibrato, sweep: s.sweep, tremolo: s.tremolo
         };
         for (const [id, val] of Object.entries(map)) {
             const el = document.getElementById(id);
@@ -4525,6 +4542,12 @@
             currentLfoPolarity = s.lfoPolarity;
             const pEl = document.getElementById('lfoPolarity');
             if (pEl) pEl.value = currentLfoPolarity;
+        }
+        
+        if (s.glideMode !== undefined) {
+            currentGlideMode = s.glideMode;
+            const gEl = document.getElementById('glideMode');
+            if (gEl) gEl.value = currentGlideMode;
         }
 
         if (typeof drawEnvelope === 'function') drawEnvelope();
