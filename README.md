@@ -74,6 +74,8 @@
 ---
 # UI Screenshots
 <p align="center">
+  <img src="media/overview.png" alt="UI_overview" align=top width="99%" />
+  <br>
   <img src="media/general_settings.png" alt="General Settings" align=top width="32%" />
   <img src="media/synth_engine.png" alt="Synth Engine" align=top width="32%" />
   <img src="media/drum_machine.png" alt="Drum Machine" align=top width="32%" />

@@ -2671,7 +2671,16 @@
             importedAudioEl.currentTime = (seeker.value / 100) * importedAudioEl.duration;
         }
     }
-    seeker?.addEventListener('input', (e) => { if (isSeeking) updateSeek(); });
+    seeker?.addEventListener('input', (e) => { 
+        if (isSeeking) {
+            updateSeek(); 
+            // Instantly update UI text while dragging
+            const timeDisp = document.getElementById('import-time-display');
+            if (timeDisp && importedAudioEl.duration) {
+                timeDisp.textContent = `${fmtTime(importedAudioEl.currentTime)} / ${fmtTime(importedAudioEl.duration)}`;
+            }
+        }
+    });
 
     volControl?.addEventListener('input', (e) => {
         if (importedAudioGainNode) importedAudioGainNode.gain.value = parseFloat(e.target.value);
@@ -3742,6 +3751,17 @@
             if (linearReverbSends[i]) linearReverbSends[i].connect(convolver);
         }
 
+        // --- Hardcode a "Studio Room" feel for the global Drum Machine ---
+        const globalDrumReverb = audioCtx.createGain();
+        globalDrumReverb.gain.value = 0.3; // 30% Room Reverb
+        drumGain.connect(globalDrumReverb);
+        globalDrumReverb.connect(convolver);
+
+        const globalDrumEcho = audioCtx.createGain();
+        globalDrumEcho.gain.value = 0.1; // 10% Echo to thicken the snares
+        drumGain.connect(globalDrumEcho);
+        globalDrumEcho.connect(delayNode);
+
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
         // Bake the acoustic wave (overtones emulation)
@@ -4188,6 +4208,8 @@
         }
 
         const filter = audioCtx.createBiquadFilter(); filter.type = s.filterType;
+        filter.channelCount = 2; // Force stereo processing
+        filter.channelCountMode = 'explicit'; // = Prevent dynamic channel switching warnings
         filter.Q.value = s.resonance;
         const targetBaseCutoff = Math.min(freq * s.brightness, 12000);
 
@@ -4562,19 +4584,18 @@ function applySynthStateToUI(s) {
         const btnLPlay = document.getElementById('btnLooperPlay');
         const lStatus = document.getElementById('looper-status-text');
 
-        if (looper.isArmed) { if (btnLRec) { btnLRec.classList.add('armed'); btnLRec.classList.remove('recording'); btnLRec.innerHTML = '⏱'; } if (lStatus) lStatus.textContent = 'ARMED'; }
-        else if (looper.isRecording) { if (btnLRec) { btnLRec.classList.add('recording'); btnLRec.classList.remove('armed'); btnLRec.innerHTML = '⏺'; } if (lStatus) lStatus.textContent = 'RECORDING'; }
-        else { if (btnLRec) { btnLRec.classList.remove('recording', 'armed'); btnLRec.innerHTML = '⏺'; } if (lStatus) lStatus.textContent = looper.isPlaying ? 'PLAYING' : 'STOPPED'; }
-        if (btnLPlay) btnLPlay.classList.toggle('playing', looper.isPlaying);
+    if (looper.isArmed) { if (btnLRec) { btnLRec.classList.add('armed'); btnLRec.classList.remove('recording'); btnLRec.innerHTML = '&#x23F2;&#xFE0E;'; } if (lStatus) lStatus.textContent = 'ARMED'; }
+        else if (looper.isRecording) { if (btnLRec) { btnLRec.classList.add('recording'); btnLRec.classList.remove('armed'); btnLRec.innerHTML = '&#x23FA;&#xFE0E;'; } if (lStatus) lStatus.textContent = 'RECORDING'; }
+        else { if (btnLRec) { btnLRec.classList.remove('recording', 'armed'); btnLRec.innerHTML = '&#x23FA;&#xFE0E;'; } if (lStatus) lStatus.textContent = looper.isPlaying ? 'PLAYING' : 'STOPPED'; }
 
         // Arranger UI Updates
         const btnARec = document.getElementById('btnArrangerRec');
         const btnAPlay = document.getElementById('btnArrangerPlay');
         const aStatus = document.getElementById('arranger-status-text');
 
-        if (arranger.isArmed) { if (btnARec) { btnARec.classList.add('armed'); btnARec.classList.remove('recording'); btnARec.innerHTML = '⏱'; } if (aStatus) aStatus.textContent = 'ARMED'; }
-        else if (arranger.isRecording) { if (btnARec) { btnARec.classList.add('recording'); btnARec.classList.remove('armed'); btnARec.innerHTML = '⏺'; } if (aStatus) aStatus.textContent = 'RECORDING'; }
-        else { if (btnARec) { btnARec.classList.remove('recording', 'armed'); btnARec.innerHTML = '⏺'; } if (aStatus) aStatus.textContent = arranger.isPlaying ? 'PLAYING' : 'STOPPED'; }
+        if (arranger.isArmed) { if (btnARec) { btnARec.classList.add('armed'); btnARec.classList.remove('recording'); btnARec.innerHTML = '&#x23F2;&#xFE0E;'; } if (aStatus) aStatus.textContent = 'ARMED'; }
+        else if (arranger.isRecording) { if (btnARec) { btnARec.classList.add('recording'); btnARec.classList.remove('armed'); btnARec.innerHTML = '&#x23FA;&#xFE0E;'; } if (aStatus) aStatus.textContent = 'RECORDING'; }
+        else { if (btnARec) { btnARec.classList.remove('recording', 'armed'); btnARec.innerHTML = '&#x23FA;&#xFE0E;'; } if (aStatus) aStatus.textContent = arranger.isPlaying ? 'PLAYING' : 'STOPPED'; }
         if (btnAPlay) btnAPlay.classList.toggle('playing', arranger.isPlaying);
 
         // Track Button Flashing
@@ -4589,17 +4610,18 @@ function applySynthStateToUI(s) {
         const isAnyArmed = looper.isArmed || arranger.isArmed;
         const isAnyRecording = looper.isRecording || arranger.isRecording;
 
-        const tpPlayBtn = document.getElementById('transportPlay');
+    const tpPlayBtn = document.getElementById('transportPlay');
         const tpRecBtn = document.getElementById('transportRec');
 
         if (tpPlayBtn) {
             tpPlayBtn.classList.toggle('playing', isAnyPlaying);
-            tpPlayBtn.textContent = isAnyPlaying ? '⏸' : '▶';
+            tpPlayBtn.innerHTML = isAnyPlaying ? '&#x23F8;&#xFE0E;' : '&#x25B6;&#xFE0E;';
         }
         if (tpRecBtn) {
             tpRecBtn.classList.remove('armed', 'recording');
-            if (isAnyArmed) tpRecBtn.classList.add('armed');
-            else if (isAnyRecording) tpRecBtn.classList.add('recording');
+            if (isAnyArmed) { tpRecBtn.classList.add('armed'); tpRecBtn.innerHTML = '&#x23F2;&#xFE0E;'; }
+            else if (isAnyRecording) { tpRecBtn.classList.add('recording'); tpRecBtn.innerHTML = '&#x23FA;&#xFE0E;'; }
+            else { tpRecBtn.innerHTML = '&#x23FA;&#xFE0E;'; }
         }
     }
 
@@ -4659,20 +4681,24 @@ function applySynthStateToUI(s) {
         const isPlaying = looper.isPlaying || arranger.isPlaying;
 
         if (isPlaying) {
-            // Pause
+            // Save the pause state correctly based on which engine was driving
+            if (arranger.isPlaying) arranger.pauseTime = audioCtx.currentTime - arranger.startTime;
+            else if (looper.isPlaying) arranger.pauseTime = audioCtx.currentTime - looper.startTime;
+            
             looper.isPlaying = false;
             arranger.isPlaying = false;
-            arranger.pauseTime = audioCtx.currentTime - arranger.startTime;
-        } else {
+        }
+        else {
             // Play (Syncs both engines)
             const now = audioCtx.currentTime;
-            looper.isPlaying = true;
-            looper.startTime = now;
-            looper.lastPhases.fill(0);
-
+            
             arranger.isPlaying = true;
             arranger.startTime = now - arranger.pauseTime;
             lastArrangerPhase = arranger.pauseTime - 0.01;
+
+            looper.isPlaying = true;
+            looper.startTime = arranger.startTime; // Perfectly lock the Looper downbeat to the Arranger timeline!
+            looper.lastPhases.fill(0);
 
             if (midiSyncMode === 'master' && midiOut) {
                 midiOut.send([250]);
@@ -4691,43 +4717,46 @@ function applySynthStateToUI(s) {
     let isGlobalSeeking = false;
 
     function shiftGlobalTime(shiftSecs) {
-        // Shift Arranger
         arranger.pauseTime = Math.max(0, arranger.pauseTime + shiftSecs);
         if (arranger.isPlaying) arranger.startTime -= shiftSecs;
         lastArrangerPhase = arranger.pauseTime - 0.01;
 
-        // Reset Looper phases to keep them locked to the new downbeat
         looper.lastPhases.fill(0);
         if (looper.isPlaying) looper.startTime = audioCtx.currentTime - arranger.pauseTime;
 
-        // Instantly kill currently playing notes so they don't hang during time jumps
         activeNodes.forEach((nodeData, elementKey) => {
             if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true);
         });
     }
 
-    // Skip Buttons (Jumps by exactly 1 Bar based on current BPM)
-    document.getElementById('btnMasterRw')?.addEventListener('click', () => {
-        const barSecs = (60 / currentArpBPM) * 4;
-        shiftGlobalTime(-barSecs);
-    });
+    document.getElementById('btnMasterRw')?.addEventListener('click', () => shiftGlobalTime(-(60 / currentArpBPM) * 4));
+    document.getElementById('btnMasterFf')?.addEventListener('click', () => shiftGlobalTime((60 / currentArpBPM) * 4));
 
-    document.getElementById('btnMasterFf')?.addEventListener('click', () => {
-        const barSecs = (60 / currentArpBPM) * 4;
-        shiftGlobalTime(barSecs);
-    });
-
-    // Interactive Slider Logic
     globalSeeker?.addEventListener('mousedown', () => isGlobalSeeking = true);
     globalSeeker?.addEventListener('touchstart', () => isGlobalSeeking = true, { passive: true });
+
+    // Instantly update the text display while dragging the master slider
+    globalSeeker?.addEventListener('input', (e) => {
+        let maxDuration = Math.max(arranger.duration, ...looper.trackDurations);
+        if (maxDuration > 0) {
+            const newTime = (parseFloat(e.target.value) / 100) * maxDuration;
+            const beatSecs = 60 / currentArpBPM;
+            const totalBeats = Math.max(0, newTime / beatSecs);
+            const bars = Math.floor(totalBeats / 4) + 1;
+            const beats = Math.floor(totalBeats % 4) + 1;
+            if (globalTimeDisplay) globalTimeDisplay.textContent = `${bars}.${beats}`;
+        }
+    });
 
     const finishGlobalSeek = () => {
         if (!isGlobalSeeking) return;
         isGlobalSeeking = false;
 
-        if (arranger.duration > 0) {
-            const newTime = (parseFloat(globalSeeker.value) / 100) * arranger.duration;
-            if (arranger.isPlaying) {
+        let maxDuration = Math.max(arranger.duration, ...looper.trackDurations);
+
+        if (maxDuration > 0) {
+            const newTime = (parseFloat(globalSeeker.value) / 100) * maxDuration;
+            if (arranger.isPlaying || looper.isPlaying) {
                 arranger.startTime = audioCtx.currentTime - newTime;
                 looper.startTime = audioCtx.currentTime - newTime; // Sync looper
             } else {
@@ -4945,10 +4974,19 @@ function applySynthStateToUI(s) {
 
                 const eSlider = document.querySelector(`.echo-send[data-track="${targetTrack}"]`);
                 const rSlider = document.querySelector(`.reverb-send[data-track="${targetTrack}"]`);
+                const pSlider = document.querySelector(`.pan-slider[data-track="${targetTrack}"]`);
                 const eNodes = isLooperDomain ? looperEchoSends : linearEchoSends;
                 const rNodes = isLooperDomain ? looperReverbSends : linearReverbSends;
-                if (eSlider && eNodes[localIdx]) { eSlider.value = currentEcho; eNodes[localIdx].gain.value = currentEcho; }
-                if (rSlider && rNodes[localIdx]) { rSlider.value = currentReverb; rNodes[localIdx].gain.value = currentReverb; }
+                const pNodes = isLooperDomain ? looperPanners : linearPanners;
+                
+                // Smart Inheritance: Drums get the Studio Room & Center Pan. Synths get the active UI state.
+                const inheritedEcho = type === 'drum' ? 0.1 : currentEcho;
+                const inheritedReverb = type === 'drum' ? 0.3 : currentReverb;
+                const inheritedPan = type === 'drum' ? 0 : (typeof currentPan !== 'undefined' ? currentPan : 0);
+
+                if (eSlider && eNodes[localIdx]) { eSlider.value = inheritedEcho; eNodes[localIdx].gain.value = inheritedEcho; }
+                if (rSlider && rNodes[localIdx]) { rSlider.value = inheritedReverb; rNodes[localIdx].gain.value = inheritedReverb; }
+                if (pSlider && pNodes[localIdx]) { pSlider.value = inheritedPan; pNodes[localIdx].pan.value = inheritedPan; }
             }
 
             if (type === 'drum') {
@@ -5032,18 +5070,31 @@ function applySynthStateToUI(s) {
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
 
+        // Detect if the browser has deep-slept the audio hardware
+        if (audioCtx.state === 'suspended' && (looper.isPlaying || arranger.isPlaying)) {
+            if (globalTimeDisplay) globalTimeDisplay.textContent = "Zzz... (Click to Wake)";
+            if (document.getElementById('arranger-status-text')) document.getElementById('arranger-status-text').textContent = "BROWSER AUDIO SUSPENDED";
+            return; // Halt the sequencer until the user clicks the screen
+        }
+
         // --- UPDATE MASTER LCD TIME & SEEKER ---
         if (globalTimeDisplay) {
-            let phase = arranger.isPlaying ? (now - arranger.startTime) : arranger.pauseTime;
+            // Track phase based on whichever engine is actively running!
+            let phase = 0;
+            if (arranger.isPlaying) phase = now - arranger.startTime;
+            else if (looper.isPlaying) phase = now - looper.startTime;
+            else phase = arranger.pauseTime;
+
             const beatSecs = 60 / currentArpBPM;
-            const totalBeats = Math.max(0, phase / beatSecs); // Prevent negative text on glitch
+            const totalBeats = Math.max(0, phase / beatSecs); 
             const bars = Math.floor(totalBeats / 4) + 1;
             const beats = Math.floor(totalBeats % 4) + 1;
             globalTimeDisplay.textContent = `${bars}.${beats}`;
 
-            // Move the slider automatically (only if user isn't currently dragging it)
-            if (globalSeeker && arranger.duration > 0 && !isGlobalSeeking) {
-                globalSeeker.value = Math.min(100, (phase / arranger.duration) * 100);
+            let maxDuration = Math.max(arranger.duration, ...looper.trackDurations);
+            // Move the slider automatically to reflect the ENTIRE project duration
+            if (globalSeeker && maxDuration > 0 && !isGlobalSeeking) {
+                globalSeeker.value = Math.min(100, (phase / maxDuration) * 100);
             }
         }
 
@@ -5409,6 +5460,11 @@ function applySynthStateToUI(s) {
     masterSeeker?.addEventListener('input', (e) => {
         if (masterPlayer && !isNaN(masterPlayer.duration)) {
             masterPlayer.currentTime = (e.target.value / 100) * masterPlayer.duration;
+            // Instantly update UI text while dragging
+            if (lblRecTime) {
+                const fmt = (t) => `${Math.floor(t / 60).toString().padStart(2, '0')}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
+                lblRecTime.textContent = `${fmt(masterPlayer.currentTime)} / ${fmt(masterPlayer.duration)}`;
+            }
         }
     });
 
@@ -6323,7 +6379,13 @@ function applySynthStateToUI(s) {
 
     function triggerManualDrum(type, velocity = 1) {
         initAudio();
-        playDrum(type, audioCtx.currentTime, velocity);
+        
+        // THE FIX: Route live drumming through the currently active mixer track!
+        let activeDomain = studio.lastSelectedDomain;
+        let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+        let destNode = activeDomain === 'looper' ? looperGainNodes[activeIdx] : linearGainNodes[activeIdx - 8];
+        
+        playDrum(type, audioCtx.currentTime, velocity, destNode);
 
         if (looper.isArmed) {
             looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true;
@@ -7359,7 +7421,11 @@ function applySynthStateToUI(s) {
     window.addEventListener('DOMContentLoaded', () => {
         refreshSavedSamplesUI();
         initPianoRoll();
-        document.querySelector('.edit-btn[data-track="0"]')?.classList.add('active-btn');
+        
+        // Visually highlight the Piano/Synth button on the D-Pad by default
+        const defaultNavBtn = document.getElementById('btnTogglePiano');
+        if (defaultNavBtn) defaultNavBtn.classList.add('active-btn'); 
+        
         const wrapper = document.getElementById('tonnetz-wrapper');
         if (wrapper) tonnetzObserver.observe(wrapper);
         resizeTonnetzSvg();

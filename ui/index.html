@@ -2292,11 +2292,10 @@
 
 
         /* --- TRANSPORT BUTTON COLORS --- */
-        #transportPlay { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
-        #transportRec { color: #f44336; border-color: rgba(244, 67, 54, 0.3); }
-        #transportStop { color: #eeeeee; border-color: rgba(255, 255, 255, 0.3); }
-        
-        #transportStop:active { background: #eeeeee; color: #000; }
+        #master-transport #transportPlay { color: #4caf50; border-color: rgba(76, 175, 80, 0.3); }
+        #master-transport #transportRec { color: #f44336; border-color: rgba(244, 67, 54, 0.3); }
+        #master-transport #transportStop { color: #eeeeee; border-color: rgba(255, 255, 255, 0.3); }
+        #master-transport #transportStop:active { background: #eeeeee; color: #000; }
 
         /* =========================================================
            15. DAW FLOATING-YIELD ARCHITECTURE (RESPONSIVE)
@@ -2392,7 +2391,7 @@
         }
 
         /* =========================================================
-           Mobile FAB Popup Architecture (UPDATED)
+           17. MOBILE FAB POPUP ARCHITECTURE
            ========================================================= */
         @media (max-width: 1024px) and (pointer: coarse) {
             .canvas-controls {
@@ -2406,15 +2405,17 @@
 
             .fab-menu-btn {
                 display: flex !important;
+                pointer-events: auto !important;
             }
 
+            /* Pop UP from the bottom, anchor to the right */
             .nav-grid {
                 position: absolute !important;
-                bottom: 65px !important;
-                top: auto !important;
-                right: 0 !important;
-                left: auto !important;
-                transform-origin: bottom right !important;
+                bottom: 65px !important; /* Pushes it UP above the FAB */
+                top: auto !important; /* Overrides the old 'top: 65px' */
+                right: 0 !important; /* Keeps it safely inside the right edge of the screen */
+                left: auto !important; /* Overrides the old 'left: 50%' */
+                transform-origin: bottom right !important; /* Animates growing out of the FAB */
                 transform: scale(0.8) !important;
                 opacity: 0 !important;
                 pointer-events: none !important;
@@ -2434,12 +2435,6 @@
                 transform: rotate(90deg) !important;
                 animation: none !important;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
-            }
-
-            @media (orientation: landscape) {
-                .canvas-controls.fab-shifted {
-                    right: clamp(340px, calc(30vw + 20px), 570px) !important;
-                }
             }
         }
     </style>
@@ -2492,11 +2487,11 @@
             <input type="range" id="global-timeline-seeker" min="0" max="100" value="0" title="Song Position" style="width: 120px; cursor: pointer;">
         </div>
         <div class="transport-group controls">
-            <button id="btnMasterRw" class="transport-btn sm" title="Rewind 1 Bar">⏪</button>
-            <button id="transportStop" class="transport-btn" title="Stop & Return">⏹</button>
-            <button id="transportPlay" class="transport-btn" title="Play / Pause">▶</button>
-            <button id="transportRec" class="transport-btn" title="Global Record">⏺</button>
-            <button id="btnMasterFf" class="transport-btn sm" title="Forward 1 Bar">⏩</button>
+            <button id="btnMasterRw" class="transport-btn sm" title="Rewind 1 Bar">&#x23EA;&#xFE0E;</button>
+            <button id="transportStop" class="transport-btn" title="Stop & Return">&#x23F9;&#xFE0E;</button>
+            <button id="transportPlay" class="transport-btn" title="Play / Pause">&#x25B6;&#xFE0E;</button>
+            <button id="transportRec" class="transport-btn" title="Global Record">&#x23FA;&#xFE0E;</button>
+            <button id="btnMasterFf" class="transport-btn sm" title="Forward 1 Bar">&#x23E9;&#xFE0E;</button>
         </div>
         <div class="transport-group">
             <div class="lcd-display sm" id="global-bpm-display" title="Current BPM">120 BPM</div>
@@ -2997,9 +2992,9 @@
                 </div>
                 <div class="looper-progress-bar" style="margin-top: 0px; margin-bottom: 0; height: 5px;"><div id="looper-progress-fill"></div></div>
                 <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0; margin-top: 4px;">
-                    <button id="btnLooperRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">⏺</button>
+                    <button id="btnLooperRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">&#x23FA;&#xFE0E;</button>
                     <div style="grid-column: span 1; pointer-events: none; visibility: hidden;"></div>
-                    <button id="btnLooperPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">▶</button>
+                    <button id="btnLooperPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
                     <div style="grid-column: span 1; pointer-events: none; visibility: hidden;"></div>
                     <select id="looperLength" class="looper-btn" style="grid-column: span 2; text-align: center; appearance: none; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
                         <option value="1">1 Bar</option>
@@ -3030,10 +3025,10 @@
                     </div>
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0; margin-top: 4px;">
-                    <button id="btnArrangerRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">⏺</button>
-                    <button id="btn-arranger-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">⏪</button>
-                    <button id="btnArrangerPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">▶</button>
-                    <button id="btn-arranger-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">⏩</button>
+                    <button id="btnArrangerRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">&#x23FA;&#xFE0E;</button>
+                    <button id="btn-arranger-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">&#x23EA;&#xFE0E;</button>
+                    <button id="btnArrangerPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
+                    <button id="btn-arranger-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
                     <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
                         <span id="arranger-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">0:00</span>
                         <input type="range" id="arranger-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; accent-color: #2196f3; cursor: pointer;">
@@ -3060,9 +3055,9 @@
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0;">
                     <button id="btn-import-mix-master" class="looper-btn active-btn" style="grid-column: span 1; padding:0; font-size: 0.6rem; border-color:var(--main-node);" title="Master Mix">MIX: ON</button>
-                    <button id="btn-import-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">⏪</button>
-                    <button id="btn-import-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">▶</button>
-                    <button id="btn-import-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">⏩</button>
+                    <button id="btn-import-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">&#x23EA;&#xFE0E;</button>
+                    <button id="btn-import-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
+                    <button id="btn-import-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
                     <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
                         <span id="import-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">0:00 / 0:00</span>
                         <input type="range" id="import-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
@@ -3095,10 +3090,10 @@
                     </div>
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0;">
-                    <button id="btn-master-rec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record Master">⏺</button>
-                    <button id="btn-rec-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Rewind 5s">⏪</button>
-                    <button id="btn-rec-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" disabled title="Play/Pause">▶</button>
-                    <button id="btn-rec-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Fast Forward 5s">⏩</button>
+                    <button id="btn-master-rec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record Master">&#x23FA;&#xFE0E;</button>
+                    <button id="btn-rec-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Rewind 5s">&#x23EA;&#xFE0E;</button>
+                    <button id="btn-rec-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" disabled title="Play/Pause">&#x25B6;&#xFE0E;</button>
+                    <button id="btn-rec-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
                     <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
                         <span id="lbl-rec-time" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">00:00 / 00:00</span>
                         <input type="range" id="master-seeker" min="0" max="100" value="0" disabled style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
