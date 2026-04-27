@@ -2437,6 +2437,39 @@
                 box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
             }
         }
+
+        /* =========================================================
+           18. AI GENERATOR PANEL
+           ========================================================= */
+        #gen-overlay {
+            position: absolute;
+            /* Magically floats right above the dynamic piano roll height! */
+            bottom: calc(var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + 15px);
+            right: 15px;
+            width: clamp(280px, 25vw, 340px);
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+            transform: translateY(20px);
+        }
+
+        .dark-theme #gen-overlay {
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            border-color: var(--main-node);
+        }
+
+        #gen-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
@@ -3280,23 +3313,35 @@
 
             <div class="pr-tool-group">
                 <button id="prToolSelect" class="pr-tool-btn active" title="Select / Move">👆</button>
+                <button id="prToolCopy" class="pr-tool-btn" title="Marquee Copy / Duplicate">⎘</button>
                 <button id="prToolDraw" class="pr-tool-btn" title="Draw Note">✏️</button>
                 <button id="prToolErase" class="pr-tool-btn" title="Erase Note">🗑️</button>
+                <button id="prToolStep" class="pr-tool-btn" title="Step Entry Mode">👣</button>
+                <button id="prStepRest" class="pr-tool-btn" title="Rest / Move Forward" style="display: none;">⏭</button>
+                <button id="prStepBack" class="pr-tool-btn" title="Move Backward" style="display: none;">⏮</button>
+                <button id="prToolRegion" class="pr-tool-btn" title="Draw Loop Regions (Global Timeline)">🧱</button>
+                <button id="btnToggleGenPr" class="pr-tool-btn" title="AI Chord Generator" style="margin-left: 15px; color: #ff007f; border-color: #ff007f;">AI</button>
             </div>
 
             <div class="pr-tool-group">
                 <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Snap:</label>
                 <select id="prSnapGrid" style="width: auto;">
-                    <option value="1">1/4</option>
-                    <option value="0.5">1/8</option>
-                    <option value="0.25" selected>1/16</option>
+                    <option value="0">Off (Free)</option>
                     <option value="0.125">1/32</option>
-                    <option value="0">Off</option>
+                    <option value="0.25" selected>1/16</option>
+                    <option value="0.375">1/16 Dotted</option>
+                    <option value="0.5">1/8</option>
+                    <option value="0.75">1/8 Dotted</option>
+                    <option value="1">1/4</option>
+                    <option value="1.5">1/4 Dotted</option>
+                    <option value="2">1/2 (Half)</option>
+                    <option value="4">1/1 (Whole)</option>
                 </select>
             </div>
 
             <div class="pr-tool-group" style="flex-grow:1; border-right:none; justify-content: flex-end;">
-                <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↓ SCROLL</button>
+                <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll with Playhead" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↕️</button>
+                <input type="range" id="prZoomSlider" class="control-input" min="20" max="500" value="80" title="Zoom Time Axis" style="width: 80px; margin: 0 10px; vertical-align: middle;">
                 <button class="auto-hide-toggle" title="Auto-Hide Disabled" style="margin-right: 15px;">⏱</button>
                 <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Height:</label>
                 <input type="range" id="prHeightSlider" min="10" max="85" value="25" style="width: 100px;">
@@ -3419,6 +3464,87 @@
             <div style="text-align: center; margin-top: 30px;">
                 <button class="btn-sm active-btn" onclick="document.getElementById('btnInfo').click()" style="width: 150px; height: 35px; border-radius: 8px; font-size: 1rem;">Got it!</button>
             </div>
+        </div>
+    </div>
+
+    <!-- === OVERLAY: CHORD PROGRESSION ENGINE === -->
+    <div id="gen-overlay" class="overlay auto-hides">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 1.1rem;">Chord Progression Generator</h3>
+            <button id="btnCloseGen" class="close-btn-sm" title="Close" style="cursor: pointer;">✕</button>
+        </div>
+        <div class="panel-content">
+            <div class="control-group">
+                <label style="display: flex; align-items: center;">
+                    Mood / Style
+                    <span id="genScaleWarning" style="display: none; color: #ff5252; font-size: 0.75rem; font-weight: normal; margin-left: 10px;">
+                        ⚠️ Chromatic Scale Active
+                    </span>
+                </label>
+                <select id="genMood" class="control-input">
+                    <option value="pop">Pop / Uplifting</option>
+                    <option value="dark">Dark / Melancholic</option>
+                    <option value="jazz">Jazz / Sophisticated</option>
+                    <option value="soul">Neo-Soul / R&B</option>
+                    <option value="epic">Epic / Cinematic</option>
+                    <option value="lofi">Lo-Fi / Chill</option>
+                    <option value="classical">Classical / Orchestral</option>
+                    <option value="rnb">Modern R&B</option>
+                    <option value="synthwave">Synthwave / 80s</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label id="lblGenComplexity">Creativity: 50%</label>
+                <input type="range" id="genComplexity" class="control-input" min="0" max="100" value="50">
+            </div>
+
+            <div class="control-group" style="margin-bottom: 10px;">
+                <label>Rhythmic Style & Articulation</label>
+                <select id="genStyle" class="control-input">
+                    <optgroup label="Block & Strum">
+                        <option value="block_4">Block Chords (1/4)</option>
+                        <option value="strum_down_4">Guitar: Downstrokes (1/4)</option>
+                        <option value="strum_updown_8">Guitar: Up / Down (1/8)</option>
+                        <option value="strum_sync_8">Guitar: Syncopated Pop (1/8)</option>
+                    </optgroup>
+                    <optgroup label="Arpeggiators">
+                        <option value="arp_up_8" selected>Arp: Up (1/8)</option>
+                        <option value="arp_down_8">Arp: Down (1/8)</option>
+                        <option value="arp_updown_16">Arp: Up / Down (1/16)</option>
+                        <option value="arp_pattern1">Arp: Rolling 16ths (1/16)</option>
+                        <option value="arp_euclid">Arp: Euclidean 3-3-2 (1/8)</option>
+                        <option value="travis">Guitar: Travis Picking (1/8)</option>
+                    </optgroup>
+                    <optgroup label="Lead Melodies">
+                        <option value="melody_slow">Melody: Slow & Sustained</option>
+                        <option value="melody_med">Melody: Medium Varied</option>
+                        <option value="melody_fast">Melody: Fast Runs</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-main); cursor: pointer;">
+                    <input type="checkbox" id="genHumanize" checked> Humanize (Timing/Vel)
+                </label>
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-main); cursor: pointer;">
+                    <input type="checkbox" id="genContextAware" checked> Avoid Dissonance
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="control-group" style="flex: 1;">
+                    <label>Start Bar</label>
+                    <input type="number" id="genStartBar" class="control-input" value="1" min="1">
+                </div>
+                <div class="control-group" style="flex: 1;">
+                    <label>Bars</label>
+                    <input type="number" id="genLength" class="control-input" value="4" min="1" max="16">
+                </div>
+            </div>
+
+            <button id="btnExecuteGen" class="synth-btn active-btn" style="width: 100%; height: 45px; margin-top: 10px;">✨ GENERATE MIDI</button>
         </div>
     </div>
 

@@ -191,7 +191,7 @@
 
     let snapToScale = false, currentTuning = 'equal';
 
-    let isEnvActive = false, isPianoActive = true, isCofActive = false, isInfoActive = false, isSettingsActive = false;
+    let isGenActive = false, isEnvActive = false, isPianoActive = true, isCofActive = false, isInfoActive = false, isSettingsActive = false;
     let isSynthActive = false, isPadsActive = false, isDrumsActive = false, isMixerActive = false, isStudioActive = false;
 
     let activeOverlay = 'settings';
@@ -314,6 +314,12 @@
             // Update the memory bank so the engine tracks this modified chord's new center of gravity!
             if (typeof lastPlayedMidiNotes !== 'undefined') {
                 lastPlayedMidiNotes = targetFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+            }
+
+            // --- REAL-TIME EXTENSION INJECTION ---
+            if (nodeData.isStepPreview && typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
+                handleStepEntry(targetFreqs, snapped, null, 1);
+                if (typeof drawPianoRoll === 'function') drawPianoRoll();
             }
 
             const shouldBeArp = isArpOn() && targetFreqs.length > 1;
@@ -581,7 +587,23 @@
         wakeNav();
         closeFabMenu();
 
+        // 1. Independent Panels (Floaters that return immediately)
         if (type === 'info') { isInfoActive = !isInfoActive; document.getElementById('info-overlay')?.classList.toggle('active', isInfoActive); document.getElementById('btnInfo')?.classList.toggle('toggled', isInfoActive); return; }
+        if (type === 'gen') { 
+            isGenActive = !isGenActive; 
+            document.getElementById('gen-overlay')?.classList.toggle('active', isGenActive); 
+            document.getElementById('btnToggleGenPr')?.classList.toggle('active', isGenActive); 
+                
+            // --- DAW FEATURE: AI Scale Warning ---
+            if (isGenActive) {
+                const scaleWarning = document.getElementById('genScaleWarning');
+                if (scaleWarning) {
+                    const isChromatic = !currentScale || currentScale === 'all' || currentScale === 'chromatic';
+                    scaleWarning.style.display = isChromatic ? 'inline' : 'none';
+                }
+            }
+            return; 
+        }
         if (type === 'piano') {
             isPianoActive = !isPianoActive;
             document.getElementById('piano-overlay')?.classList.toggle('active', isPianoActive);
@@ -592,47 +614,37 @@
             return;
         }
 
-        const isPortrait = window.innerHeight > window.innerWidth;
-
-        const leftPanels = ['settings', 'synth', 'pads', 'drums', 'mixer'];
-        const rightPanels = ['studio']; // <--- Updated!
-        const allPanels = [...leftPanels, ...rightPanels];
-
-        const closePanel = (p) => {
-            if (p === 'settings') { isSettingsActive = false; document.getElementById('settings-overlay')?.classList.remove('active'); document.getElementById('btnToggleSettings')?.classList.remove('toggled'); }
-            if (p === 'synth') { isSynthActive = false; document.getElementById('synth-overlay')?.classList.remove('active'); document.getElementById('btnToggleSynth')?.classList.remove('toggled'); }
-            if (p === 'pads') { isPadsActive = false; document.getElementById('pads-overlay')?.classList.remove('active'); document.getElementById('btnTogglePads')?.classList.remove('toggled'); }
-            if (p === 'drums') { isDrumsActive = false; document.getElementById('drums-overlay')?.classList.remove('active'); document.getElementById('btnToggleDrums')?.classList.remove('toggled'); }
-            if (p === 'mixer') { isMixerActive = false; document.getElementById('mixer-overlay')?.classList.remove('active'); document.getElementById('btnToggleMixer')?.classList.remove('toggled'); }
-            if (p === 'studio') { isStudioActive = false; document.getElementById('studio-overlay')?.classList.remove('active'); document.getElementById('btnToggleStudio')?.classList.remove('toggled'); } // <--- Updated!
+        // 2. Standard DAW Panels Configuration Map
+        const panels = {
+            settings: { overlay: 'settings-overlay', btn: 'btnToggleSettings', side: 'left',  get: () => isSettingsActive, set: v => isSettingsActive = v },
+            synth:    { overlay: 'synth-overlay',    btn: 'btnToggleSynth',    side: 'left',  get: () => isSynthActive,    set: v => { isSynthActive = v; if(v) drawEnvelope(); } },
+            pads:     { overlay: 'pads-overlay',     btn: 'btnTogglePads',     side: 'left',  get: () => isPadsActive,     set: v => isPadsActive = v },
+            drums:    { overlay: 'drums-overlay',    btn: 'btnToggleDrums',    side: 'left',  get: () => isDrumsActive,    set: v => isDrumsActive = v },
+            mixer:    { overlay: 'mixer-overlay',    btn: 'btnToggleMixer',    side: 'left',  get: () => isMixerActive,    set: v => isMixerActive = v },
+            studio:   { overlay: 'studio-overlay',   btn: 'btnToggleStudio',   side: 'right', get: () => isStudioActive,   set: v => isStudioActive = v }
         };
 
-        let isOpening = false;
-        if (type === 'settings' && !isSettingsActive) isOpening = true;
-        if (type === 'synth' && !isSynthActive) isOpening = true;
-        if (type === 'pads' && !isPadsActive) isOpening = true;
-        if (type === 'drums' && !isDrumsActive) isOpening = true;
-        if (type === 'mixer' && !isMixerActive) isOpening = true;
-        if (type === 'studio' && !isStudioActive) isOpening = true; // <--- Updated!
+        const target = panels[type];
+        if (!target) return; // Failsafe abort if panel doesn't exist
 
-        if (isOpening) {
-            if (isPortrait) {
-                allPanels.forEach(p => { if (p !== type) closePanel(p); });
-            } else {
-                if (leftPanels.includes(type)) {
-                    leftPanels.forEach(p => { if (p !== type) closePanel(p); });
-                } else if (rightPanels.includes(type)) {
-                    rightPanels.forEach(p => { if (p !== type) closePanel(p); });
+        // 3. Layout Exclusivity (The Traffic Cop)
+        if (!target.get()) { // Only trigger auto-close rules if we are OPENING a panel
+            const isPortrait = window.innerHeight > window.innerWidth;
+            Object.keys(panels).forEach(p => {
+                // If on mobile (portrait), close ALL others. If on desktop, close only panels on the SAME side.
+                if (p !== type && (isPortrait || panels[p].side === target.side)) {
+                    panels[p].set(false);
+                    document.getElementById(panels[p].overlay)?.classList.remove('active');
+                    document.getElementById(panels[p].btn)?.classList.remove('toggled');
                 }
-            }
+            });
         }
 
-        if (type === 'settings') { isSettingsActive = !isSettingsActive; document.getElementById('settings-overlay')?.classList.toggle('active', isSettingsActive); document.getElementById('btnToggleSettings')?.classList.toggle('toggled', isSettingsActive); }
-        if (type === 'synth') { isSynthActive = !isSynthActive; document.getElementById('synth-overlay')?.classList.toggle('active', isSynthActive); document.getElementById('btnToggleSynth')?.classList.toggle('toggled', isSynthActive); if (isSynthActive) drawEnvelope(); }
-        if (type === 'pads') { isPadsActive = !isPadsActive; document.getElementById('pads-overlay')?.classList.toggle('active', isPadsActive); document.getElementById('btnTogglePads')?.classList.toggle('toggled', isPadsActive); }
-        if (type === 'drums') { isDrumsActive = !isDrumsActive; document.getElementById('drums-overlay')?.classList.toggle('active', isDrumsActive); document.getElementById('btnToggleDrums')?.classList.toggle('toggled', isDrumsActive); }
-        if (type === 'mixer') { isMixerActive = !isMixerActive; document.getElementById('mixer-overlay')?.classList.toggle('active', isMixerActive); document.getElementById('btnToggleMixer')?.classList.toggle('toggled', isMixerActive); }
-        if (type === 'studio') { isStudioActive = !isStudioActive; document.getElementById('studio-overlay')?.classList.toggle('active', isStudioActive); document.getElementById('btnToggleStudio')?.classList.toggle('toggled', isStudioActive); } // <--- Updated!
+        // 4. Toggle the requested panel
+        const newState = !target.get();
+        target.set(newState);
+        document.getElementById(target.overlay)?.classList.toggle('active', newState);
+        document.getElementById(target.btn)?.classList.toggle('toggled', newState);
 
         updateOverlayCSSVars();
     }
@@ -710,6 +722,7 @@
     document.getElementById('btnToggleCOF')?.addEventListener('click', toggleCof);
     document.getElementById('btnToggleMixer')?.addEventListener('click', () => toggleOverlay('mixer'));
     document.getElementById('btnQuickPanic')?.addEventListener('click', executePanic);
+    document.getElementById('btnToggleGenPr')?.addEventListener('click', () => toggleOverlay('gen'));
 
     document.getElementById('btnCloseSettings')?.addEventListener('click', () => toggleOverlay('settings'));
     document.getElementById('btnCloseSynth')?.addEventListener('click', () => toggleOverlay('synth'));
@@ -720,6 +733,7 @@
     document.getElementById('btnCloseInfo')?.addEventListener('click', () => toggleOverlay('info'));
     document.getElementById('btnInfo')?.addEventListener('click', () => toggleOverlay('info'));
     document.getElementById('btnCloseMixer')?.addEventListener('click', () => toggleOverlay('mixer'));
+    document.getElementById('btnCloseGen')?.addEventListener('click', () => toggleOverlay('gen'));
 
     document.getElementById('btnSavePreset')?.addEventListener('click', () => {
         const s = {
@@ -1116,6 +1130,54 @@
     // Attach listeners to BOTH sliders to trigger the sync function
     document.getElementById('arpBpm')?.addEventListener('input', (e) => syncBPM(e.target.value));
     document.getElementById('drumBpmSlider')?.addEventListener('input', (e) => syncBPM(e.target.value));
+
+    // --- DAW FEATURE: Time-Stretching Engine ---
+    let anchorBPM = 120; // Will be overwritten instantly on click
+    
+    ['arpBpm', 'drumBpmSlider'].forEach(id => {
+        const slider = document.getElementById(id);
+        if (!slider) return;
+
+        // 1. Capture the exact BPM right before the user starts dragging
+        slider.addEventListener('mousedown', () => { anchorBPM = currentArpBPM; });
+        slider.addEventListener('touchstart', () => { anchorBPM = currentArpBPM; }, { passive: true });
+
+        // 2. Perform the deep time-stretch ONLY when they let go of the mouse!
+        slider.addEventListener('change', (e) => {
+            const newBPM = parseInt(e.target.value) || 120;
+            if (newBPM === anchorBPM) return;
+            
+            const ratio = anchorBPM / newBPM; // E.g. stretching 120 to 60 yields a 2.0x time multiplier
+            
+            // Helper to stretch all temporal data in an array of tracks
+            const stretchTracks = (tracksArray) => {
+                tracksArray.forEach(track => {
+                    track.forEach(evt => {
+                        if (evt.timeOffset !== undefined) evt.timeOffset *= ratio;
+                        if (evt.start !== undefined) { evt.start *= ratio; evt.end *= ratio; }
+                        if (evt.duration !== undefined) evt.duration *= ratio;
+                    });
+                });
+            };
+
+            // Stretch Looper
+            stretchTracks(looper.tracks);
+            if (looper.trackDurations) looper.trackDurations = looper.trackDurations.map(d => d * ratio);
+            if (looper.regions) {
+                looper.regions.forEach(regionArr => regionArr.forEach(r => { r.start *= ratio; r.end *= ratio; }));
+            }
+            
+            // Stretch Arranger
+            stretchTracks(arranger.tracks);
+            if (arranger.duration !== undefined) arranger.duration *= ratio;
+
+            // Reset anchor for the next time the user clicks the slider
+            anchorBPM = newBPM; 
+            
+            if (typeof drawPianoRoll === 'function') drawPianoRoll();
+            // Optional: showToast(`Tempo stretched to ${newBPM} BPM`);
+        });
+    });
 
     // Global state for drum fill intensity (0.0 to 1.0)
     let currentDrumFills = 0.50;
@@ -2273,19 +2335,30 @@
 
             // Update LFO Select Dropdowns (Fallback to defaults if missing)
             const shapeEl = document.getElementById('lfoShape');
-            if (shapeEl) { shapeEl.value = p.lfoShape || 'sine'; shapeEl.dispatchEvent(new Event('change')); }
-
+            if (shapeEl) { shapeEl.value = p.lfoShape || 'sine'; currentLfoShape = shapeEl.value; }
+            
             const syncEl = document.getElementById('lfoSync');
-            if (syncEl) { syncEl.value = p.lfoSync || 'free'; syncEl.dispatchEvent(new Event('change')); }
-
-            // --- NEW: Polarity Dropdown Update ---
+            if (syncEl) { syncEl.value = p.lfoSync || 'free'; currentLfoSync = syncEl.value; }
+            
             const polarityEl = document.getElementById('lfoPolarity');
-            if (polarityEl) { polarityEl.value = p.lfoPolarity || 'bipolar'; polarityEl.dispatchEvent(new Event('change')); }
+            if (polarityEl) { polarityEl.value = p.lfoPolarity || 'bipolar'; currentLfoPolarity = polarityEl.value; }
+            
+            // Rebuild the audio chain exactly ONE time!
+            buildLfoChain(); 
+            if (typeof updateLfoSpeed === 'function') updateLfoSpeed();
 
             if (lfoRetrigger) document.getElementById('btnLfoRetrigger')?.click(); // Reset Key Sync to OFF
         }
 
         if (typeof drawEnvelope === 'function') drawEnvelope();
+
+        // If the user changes presets while a track is selected, update all recorded notes!
+        if (typeof studio !== 'undefined') {
+            const activeTrack = studio.lastSelectedDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            if (studio.trackTypes[activeTrack] === 'voice' || studio.trackTypes[activeTrack] === null) {
+                syncActiveTrackInstrument();
+            }
+        }
     });
 
     const syncADSR = (id, val) => {
@@ -2774,6 +2847,504 @@
         }
     }
 
+    // ==========================================
+    // AI PROGRESSION GENERATOR ENGINE
+    // ==========================================
+
+    // --- AI COMPOSER: Context Scanner ---
+    function getActiveMidiNotesAtTime(targetTime) {
+        let activeMidi = [];
+        const scanTrack = (track) => {
+            track.forEach(evt => {
+                if (evt.type === 'play' && evt.freqs) {
+                    const startT = evt.timeOffset !== undefined ? evt.timeOffset : evt.start;
+                    const dur = evt.duration || (evt.end ? evt.end - evt.start : 0.25);
+                    if (targetTime >= startT && targetTime < startT + dur) {
+                        evt.freqs.forEach(f => {
+                            activeMidi.push(Math.round(12 * Math.log2(f / masterTune) + 69));
+                        });
+                    }
+                }
+            });
+        };
+        
+        // Scan all Arranger and Looper tracks
+        arranger.tracks.forEach(scanTrack);
+        looper.tracks.forEach(scanTrack);
+        return activeMidi;
+    }
+
+    const progressionLibrary = {
+        pop: [
+            // 4-Chord Loops
+            [1, 5, 6, 4], // Classic Pop Anthem
+            [4, 5, 3, 6], // "The Royal Road" (Modern Pop/K-Pop)
+            [1, 4, 6, 5], // Upbeat / Driving Pop
+            [6, 4, 1, 5], // "Sensitive" Pop 
+            // 8-Chord Phrases (Question & Answer)
+            [1, 5, 6, 3, 4, 1, 4, 5], // Pachelbel's Narrative (Great storytelling)
+            [1, 4, 1, 5, 1, 4, 6, 5], // Verse to Chorus build
+            [4, 5, 6, 1, 4, 5, 3, 6], // Royal Road extended turnaround
+            [6, 4, 1, 5, 6, 4, 2, 5]  // Minor epic pop build
+        ],
+        dark: [
+            // 4-Chord Loops
+            [6, 4, 1, 5], // Standard Melancholy
+            [6, 5, 4, 3], // Andalusian Cadence (Classic descending tension)
+            [6, 3, 4, 2], // Unsettled & Moody
+            [6, 2, 4, 3], // Tense & Restless
+            // 8-Chord Phrases
+            [6, 4, 7, 3, 6, 2, 4, 5], // Extended Dark Narrative
+            [6, 5, 4, 3, 6, 5, 2, 3], // Andalusian variation (Tragic end)
+            [6, 4, 1, 5, 6, 4, 3, 3], // Lingering, unresolved tension
+            [6, 1, 4, 5, 6, 1, 2, 3]  // Gothic rise and fall
+        ],
+        jazz: [
+            // 4-Chord Loops
+            [2, 5, 1, 6], // The "Coltrane" Turnaround
+            [2, 5, 1, 4], // "Just the Two of Us" movement
+            [3, 6, 2, 5], // Rhythm Changes intro
+            [1, 4, 7, 3], // Circle of Fifths sequence
+            // 8-Chord Phrases
+            [3, 6, 2, 5, 1, 4, 7, 3], // "Autumn Leaves" (Full circle resolution)
+            [1, 6, 2, 5, 3, 6, 2, 5], // Rhythm Changes extended turnaround
+            [2, 5, 1, 6, 2, 5, 1, 1], // Standard turnaround to resolution
+            [1, 4, 3, 6, 2, 5, 1, 5]  // "Bird" blues turnaround feel
+        ],
+        soul: [
+            // 4-Chord Loops
+            [4, 3, 2, 1], // Classic descending Neo-Soul
+            [2, 5, 3, 6], // Vintage Motown turnaround
+            [4, 5, 3, 6], // Emotional Lift
+            [1, 2, 3, 4], // Ascending "My Girl" progression
+            // 8-Chord Phrases
+            [4, 3, 6, 1, 2, 5, 1, 1], // Extended Gospel/Soul cadence
+            [1, 4, 1, 4, 3, 6, 2, 5], // Classic verse to pre-chorus tension
+            [4, 5, 3, 6, 2, 5, 1, 1], // Lift and resolve
+            [1, 6, 2, 5, 3, 6, 4, 5]  // Extended Motown bounce
+        ],
+        epic: [ 
+            // 4-Chord Loops
+            [1, 6, 3, 7], // The "Zimmer" / Interstellar feel
+            [6, 4, 1, 5], // Heroic Minor
+            [1, 5, 6, 4], // Triumphant Major
+            [6, 7, 1, 2], // Building Tension
+            // 8-Chord Phrases
+            [1, 4, 6, 5, 1, 4, 2, 5], // Extended Triumphant Journey
+            [6, 4, 1, 5, 6, 4, 5, 5], // Heroic build holding on the Dominant
+            [1, 5, 6, 3, 4, 1, 5, 5], // Triumphant march holding tension
+            [6, 7, 1, 4, 6, 7, 2, 3]  // Modulating Cinematic tension
+        ],
+        lofi: [
+            // 4-Chord Loops
+            [4, 3, 2, 1], // Chill descending
+            [2, 5, 1, 6], // Jazzy Loop
+            [4, 5, 6, 1], // Nostalgic & Dreamy
+            [4, 3, 6, 5], // Melancholic resolution
+            // 8-Chord Phrases
+            [2, 5, 1, 4, 7, 3, 6, 6], // Floating, unresolved loop (Keeps listener hooked)
+            [4, 3, 2, 1, 4, 3, 6, 5], // Chill drop variation
+            [4, 5, 3, 6, 2, 5, 1, 6], // "Anime" Lofi extended sequence
+            [1, 2, 3, 4, 3, 2, 1, 1]  // Lazy day ascending/descending sweep
+        ],
+        classical: [
+            // 4-Chord Loops
+            [1, 4, 5, 1], // Perfect Authentic Cadence
+            [1, 6, 2, 5], // Standard progression
+            [1, 4, 6, 5], // Deceptive Setup
+            [6, 4, 1, 5], // Minor Sonata theme
+            // 8-Chord Phrases
+            [1, 5, 6, 3, 4, 1, 2, 5], // Canon in D movement
+            [1, 4, 1, 5, 1, 4, 5, 1], // Symphony Resolution
+            [1, 6, 4, 2, 5, 1, 5, 1], // Mozart-style Cadence
+            [6, 2, 5, 1, 4, 2, 3, 6]  // Minor classical sequence
+        ],
+        rnb: [
+            // 4-Chord Loops
+            [4, 5, 6, 2], // Modern R&B tension
+            [1, 4, 2, 5], // Smooth 90s Groove
+            [4, 3, 2, 6], // Moody Trap-Soul
+            [2, 5, 1, 6], // Vintage R&B
+            // 8-Chord Phrases
+            [4, 3, 6, 5, 4, 3, 2, 5], // Extended Narrative
+            [2, 5, 3, 6, 4, 5, 1, 1], // 90s Boyband bridge resolution
+            [4, 5, 6, 1, 4, 5, 2, 3], // Modern trap-soul build
+            [1, 6, 2, 5, 1, 6, 4, 5]  // Smooth 8-bar groove
+        ],
+        synthwave: [ 
+            // 4-Chord Loops
+            [6, 4, 1, 5], // The "Drive" progression
+            [4, 6, 5, 5], // Driving night feel
+            [1, 4, 6, 5], // 80s upbeat
+            [6, 2, 4, 5], // Dark synth pop
+            // 8-Chord Phrases
+            [6, 4, 1, 5, 6, 4, 2, 3], // Dark neon drive (Ends on tense III)
+            [4, 5, 6, 1, 4, 5, 6, 3], // Outrun training montage
+            [1, 6, 4, 5, 1, 6, 2, 5], // 80s teen movie anthem
+            [6, 5, 4, 5, 6, 5, 2, 3]  // Cyberpunk tension loop
+        ]
+    };
+
+    // --- DAW FEATURE: Global Harmony Scanner ---
+    function getGlobalActivePitchClasses(targetTime, activeDomain, targetTrackIdx) {
+        let activePcs = new Set();
+
+        const scanEngine = (engineObj, isLooper) => {
+            if (!engineObj || !engineObj.tracks) return;
+            engineObj.tracks.forEach((track, trackIdx) => {
+                // Skip the track we are currently generating onto!
+                if (isLooper === (activeDomain === 'looper') && trackIdx === targetTrackIdx) return;
+                if (studio.trackTypes[isLooper ? trackIdx : trackIdx + 8] !== 'voice') return; // Skip drums
+                
+                track.forEach(evt => {
+                    if (evt.type === 'play' && evt.freqs) {
+                        // Check if the event overlaps with our exact target time (with a tiny 10ms tolerance)
+                        const start = evt.timeOffset - 0.01;
+                        const end = evt.timeOffset + evt.duration + 0.01;
+                        if (targetTime >= start && targetTime <= end) {
+                            evt.freqs.forEach(f => {
+                                if (isFinite(f)) {
+                                    const midi = Math.round(12 * Math.log2(f / masterTune) + 69);
+                                    activePcs.add(((midi % 12) + 12) % 12);
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        };
+
+        scanEngine(arranger, false);
+        scanEngine(looper, true);
+
+        return activePcs;
+    }
+
+    function generateAIProgression() {
+        const mood = document.getElementById('genMood').value;
+        const complexity = parseInt(document.getElementById('genComplexity').value);
+        const style = document.getElementById('genStyle').value;
+        const startBar = parseInt(document.getElementById('genStartBar').value) - 1;
+        const lengthBars = parseInt(document.getElementById('genLength').value);
+        
+        const beatSecs = 60 / currentArpBPM;
+        const barSecs = beatSecs * beatsPerBar;
+        let currentTime = startBar * barSecs;
+
+        // 1. Pick a random progression from the library
+        const lib = progressionLibrary[mood];
+        const romanBase = lib[Math.floor(Math.random() * lib.length)];
+        
+        let lastMidiChord = [];
+        let previousCenter = null; // Track Center of Gravity for smooth voice leading
+
+        // 2. Iterate through bars
+        for (let b = 0; b < lengthBars; b++) {
+            const stepIndex = b % romanBase.length;
+            let degree = romanBase[stepIndex];
+            
+            // --- CREATIVITY: Borrowed Chords (Complexity > 75%) ---
+            if (complexity > 75 && Math.random() > 0.7) {
+                const overrides = { 4: 4, 1: 1, 5: 5 }; // Simple parallel minor swap
+                if (overrides[degree]) degree = overrides[degree];
+            }
+
+            // 3. Map Degree to Semitones (Diatonic to current scale)
+            const mask = scaleMasks[currentScale] || scaleMasks['major'];
+            const rootSt = mask[(degree - 1) % mask.length];
+            
+            // Initial Anchor (Octave 3)
+            let rootMidi = 48 + ((rootSt % 12 + 12) % 12);
+            let midiArray = [rootMidi, rootMidi + 4, rootMidi + 7]; 
+            if ([2, 3, 6].includes(degree)) midiArray = [rootMidi, rootMidi + 3, rootMidi + 7];
+            if (degree === 7) midiArray = [rootMidi, rootMidi + 3, rootMidi + 6];
+
+            if (complexity > 40) midiArray.push(rootMidi + (complexity > 80 ? 14 : 10)); // 7ths/9ths
+
+            // --- PRO FEATURE 1: Center of Gravity Voice Leading ---
+            if (previousCenter !== null) {
+                // Shift the whole chord up or down by octaves until it is closest to the previous center
+                let currentAvg = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
+                let bestDiff = Math.abs(currentAvg - previousCenter);
+                let bestShift = 0;
+
+                for (let oct = -2; oct <= 2; oct++) {
+                    let testAvg = currentAvg + (oct * 12);
+                    if (Math.abs(testAvg - previousCenter) < bestDiff) {
+                        bestDiff = Math.abs(testAvg - previousCenter);
+                        bestShift = oct * 12;
+                    }
+                }
+                midiArray = midiArray.map(m => m + bestShift);
+                
+                // Then perform internal inversion (drop high notes or raise low notes)
+                const currentCenter = previousCenter; 
+                midiArray = midiArray.map(m => {
+                    if (m - currentCenter > 8) return m - 12; // Bring high notes down
+                    if (currentCenter - m > 8) return m + 12; // Bring low notes up
+                    return m;
+                });
+            }
+            
+            // Update Center of Gravity for the next bar
+            previousCenter = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
+
+            // Sort to ensure lowest pitch is first
+            midiArray.sort((a, b) => a - b);
+
+            // --- Context-Aware Dissonance Filtering ---
+            const isContextAware = document.getElementById('genContextAware')?.checked;
+            if (isContextAware) {
+                const playingMidi = getActiveMidiNotesAtTime(currentTime);
+                if (playingMidi.length > 0) {
+                    midiArray = midiArray.filter(m => {
+                        // Check for minor 2nd clashes (1 semitone difference)
+                        const isClashing = playingMidi.some(pm => Math.abs((pm % 12) - (m % 12)) === 1);
+                        // If it clashes, omit it (creates a clean shell voicing) unless it's the root note
+                        return !(isClashing && m !== midiArray[0]); 
+                    });
+                }
+            }
+
+            // Transform to Absolute Frequencies
+            let targetFreqs = midiArray.map(midi => masterTune * Math.pow(2, (midi - 69) / 12));
+
+            // --- PRO FEATURE: Advanced Styles & Legato Melting ---
+            const isHuman = document.getElementById('genHumanize')?.checked;
+            
+            // Extract the implicit rate from the new combined style names
+            let rateDivisor = 8;
+            if (style.includes('_4') || style === 'melody_slow') rateDivisor = 4;
+            if (style.includes('_16') || style === 'arp_pattern1' || style === 'melody_fast') rateDivisor = 16;
+            
+            const stepDur = barSecs / rateDivisor;
+            const steps = beatsPerBar * (rateDivisor / 4);
+
+            let barNotes = []; // Temporary buffer to hold notes for this bar so we can "melt" them
+
+            const bufferNote = (freqs, timeOffset, duration) => {
+                let t = timeOffset;
+                let vel = 100;
+                if (isHuman) {
+                    t += (Math.random() * 0.03) - 0.015; // +/- 15ms swing
+                    vel = 85 + Math.random() * 30; // 85 to 115 velocity
+                }
+                barNotes.push({ freqs, timeOffset: t, duration, velocity: vel });
+            };
+
+            // 1. BLOCK CHORDS
+            if (style === 'block_4') {
+                bufferNote(targetFreqs, currentTime, barSecs);
+            } 
+            // 2. GUITAR STRUMMING
+            else if (style.startsWith('strum_')) {
+                let syncPattern = [1, 0, 1, 1, 0, 1, 1, 1]; // Classic pop strum
+                
+                for (let i = 0; i < steps; i++) {
+                    if (style === 'strum_sync_8' && syncPattern[i % 8] === 0) continue; // Rests in syncopated strum
+                    
+                    const isDown = style === 'strum_down_4' || (style.includes('updown') && i % 2 === 0) || (style === 'strum_sync_8' && [0, 2, 6].includes(i % 8));
+                    let currentStrum = [...targetFreqs];
+                    if (isDown) currentStrum.reverse();
+                    
+                    currentStrum.forEach((f, strIdx) => {
+                        const delay = strIdx * 0.035; 
+                        bufferNote([f], currentTime + (i * stepDur) + delay, (stepDur * 0.9) - delay);
+                    });
+                }
+            } 
+            // 3. SOLO MELODIES
+            else if (style.startsWith('melody_')) {
+                let remainingTime = barSecs;
+                let t = currentTime;
+                const base16th = barSecs / 16;
+                
+                // Sort the chord tones low-to-high so we can step through them musically
+                let sortedChord = [...targetFreqs].sort((a, b) => a - b);
+                
+                // Start the melody in the middle of the available chord range
+                let lastIdx = Math.floor(sortedChord.length / 2); 
+                let isStrongBeat = true; // Beat 1 is always strong
+
+                while (remainingTime > 0.01) {
+                    let durChoices = [];
+                    if (style === 'melody_slow') durChoices = [4, 8, 8, 12]; // 1/4, 1/2, dotted 1/2
+                    else if (style === 'melody_med') durChoices = [2, 4, 4, 6]; // 1/8, 1/4, dotted 1/4
+                    else durChoices = [1, 2, 2, 4]; // 1/16, 1/8, 1/4
+                    
+                    let stepMult = durChoices[Math.floor(Math.random() * durChoices.length)];
+                    let noteDur = stepMult * base16th;
+                    if (noteDur > remainingTime) noteDur = remainingTime;
+
+                    // Melodies need space to breathe. Faster melodies have fewer rests.
+                    const restChance = style === 'melody_fast' ? 0.05 : 0.15;
+                    
+                    if (Math.random() > restChance) { 
+                        let note;
+                        
+                        // --- THE VOICE LEADING ENGINE ---
+                        // Creativity (0-100) dictates how far the melody is allowed to jump.
+                        // Low Creativity = Max jump of 1 index (Stepwise). High Creativity = Up to 3 indices (Leaps).
+                        let maxLeap = Math.max(1, Math.floor(complexity / 33)); 
+                        
+                        // Pick a direction: move up, move down, or repeat the note
+                        let step = Math.floor(Math.random() * (maxLeap * 2 + 1)) - maxLeap;
+                        
+                        // Strong beats (e.g., the 1 and 3) strongly prefer anchoring to stable chord tones.
+                        if (isStrongBeat && complexity < 70) {
+                            if (Math.random() > 0.4) step = 0; // 60% chance to anchor firmly
+                        }
+
+                        // Apply the step safely without going out of bounds
+                        lastIdx = Math.max(0, Math.min(sortedChord.length - 1, lastIdx + step));
+                        note = sortedChord[lastIdx];
+
+                        // --- PRO FEATURE: GLOBAL HARMONY AWARENESS ---
+                        if (complexity > 50 && !isStrongBeat && Math.random() > 0.5) {
+                            const currentMidi = Math.round(12 * Math.log2(note / masterTune) + 69);
+                            
+                            // 1. Get the current scale structure
+                            const mask = scaleMasks[currentScale] || scaleMasks['all'];
+                            const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
+                            
+                            // 2. SCAN THE ENTIRE DAW FOR ACTIVE CHORDS AT THIS EXACT MILLISECOND!
+                            const activeDomain = studio.lastSelectedDomain;
+                            const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : (studio.activeArrangerTrack - 8);
+                            const globalActivePCs = getGlobalActivePitchClasses(t, activeDomain, targetTrackIdx);
+
+                            // 3. Decide direction (up or down)
+                            const direction = Math.random() > 0.5 ? 1 : -1;
+                            let testMidi = currentMidi + direction;
+                            let foundValidNote = false;
+
+                            // 4. Search up to 4 semitones for a perfect, safe note
+                            for (let search = 0; search < 4; search++) {
+                                const pc = ((testMidi % 12) + 12) % 12; 
+                                
+                                // Condition A: It must be in the selected scale
+                                let isSafe = activeScalePCs.has(pc);
+                                
+                                // Condition B: It cannot be a minor 2nd (+/- 1) from our melody anchor
+                                if (Math.abs(testMidi - currentMidi) <= 1) isSafe = false;
+
+                                // Condition C: THE GLOBAL VETO. It cannot clash (minor 2nd) with ANY note currently playing on ANY other track!
+                                if (isSafe && globalActivePCs.size > 0) {
+                                    const pcUp = (pc + 1) % 12;
+                                    const pcDown = ((pc - 1) + 12) % 12;
+                                    if (globalActivePCs.has(pcUp) || globalActivePCs.has(pcDown)) {
+                                        isSafe = false; // VETOED BY ANOTHER TRACK!
+                                    }
+                                }
+
+                                if (isSafe) {
+                                    foundValidNote = true;
+                                    break;
+                                }
+                                testMidi += direction;
+                            }
+
+                            if (foundValidNote) {
+                                note = masterTune * Math.pow(2, (testMidi - 69) / 12);
+                            }
+                        }
+
+                        bufferNote([note], t, noteDur * 0.9);
+                    }
+                    
+                    t += noteDur;
+                    remainingTime -= noteDur;
+                    
+                    // Toggle strong/weak beat for phrasing logic
+                    // If we land exactly on a 1/4 note division grid line, it is a "strong" downbeat.
+                    const beatPosition = (t - currentTime) / base16th;
+                    isStrongBeat = (Math.abs(beatPosition % 4) < 0.01); 
+                }
+            }
+            // 4. ARPEGGIATORS
+            else if (style.startsWith('arp_') || style === 'travis') {
+                let sortedFreqs = [...targetFreqs];
+                let pattern = [];
+                
+                if (style.includes('arp_up')) {
+                    for (let i = 0; i < steps; i++) pattern.push(sortedFreqs[i % sortedFreqs.length]);
+                } else if (style.includes('arp_down')) {
+                    let rev = [...sortedFreqs].reverse();
+                    for (let i = 0; i < steps; i++) pattern.push(rev[i % rev.length]);
+                } else if (style === 'arp_updown_16') {
+                    let ud = [...sortedFreqs];
+                    for (let i = sortedFreqs.length - 2; i > 0; i--) ud.push(sortedFreqs[i]);
+                    for (let i = 0; i < steps; i++) pattern.push(ud[i % ud.length]);
+                } else if (style === 'arp_pattern1') {
+                    const root = sortedFreqs[0];
+                    for (let i = 0; i < steps; i++) {
+                        const upIndex = Math.floor(i / 2) + 1;
+                        pattern.push(i % 2 === 0 ? root : sortedFreqs[upIndex % sortedFreqs.length]);
+                    }
+                } else if (style === 'arp_euclid') {
+                    for (let i = 0; i < steps; i++) {
+                        if (i % 8 === 0 || i % 8 === 3 || i % 8 === 6) pattern.push(sortedFreqs[Math.floor(Math.random() * sortedFreqs.length)]);
+                        else pattern.push(null);
+                    }
+                } else if (style === 'travis') {
+                    const root = sortedFreqs[0];
+                    const high = sortedFreqs[sortedFreqs.length - 1];
+                    const mid = sortedFreqs[1] || root;
+                    const travSeq = [root, high, mid, high];
+                    for (let i = 0; i < steps; i++) pattern.push(travSeq[i % travSeq.length]);
+                }
+                
+                pattern.forEach((f, i) => {
+                    if (f !== null && isFinite(f)) bufferNote([f], currentTime + (i * stepDur), stepDur * 0.85); 
+                });
+            }
+
+            // --- THE LEGATO MELTING PASS ---
+            if (barNotes.length > 0) {
+                barNotes.sort((a, b) => a.timeOffset - b.timeOffset);
+                let mergedBuffer = [];
+                let currentNote = barNotes[0];
+
+                const mergeChance = complexity / 100; // Creativity controls how often notes melt!
+
+                for (let i = 1; i < barNotes.length; i++) {
+                    let nextNote = barNotes[i];
+                    const isSamePitch = currentNote.freqs.length === nextNote.freqs.length && 
+                        currentNote.freqs.every((f, idx) => Math.abs(f - nextNote.freqs[idx]) < 0.1);
+                    const gap = nextNote.timeOffset - (currentNote.timeOffset + currentNote.duration);
+                    
+                    // If pitches are identical, they touch (within 60ms tolerance), and RNG passes, MELT THEM!
+                    if (isSamePitch && gap < 0.06 && Math.random() < mergeChance && !style.startsWith('strum_')) {
+                        currentNote.duration = (nextNote.timeOffset + nextNote.duration) - currentNote.timeOffset;
+                    } else {
+                        mergedBuffer.push(currentNote);
+                        currentNote = nextNote;
+                    }
+                }
+                mergedBuffer.push(currentNote);
+
+                // Write the final melted buffer to the timeline
+                mergedBuffer.forEach(n => {
+                    handleStepEntry(n.freqs, null, null, n.velocity, n.timeOffset, n.duration);
+                });
+            }
+
+            currentTime += barSecs;
+        }
+
+    // --- Auto-advance the UI Start Bar! ---
+    const startBarInput = document.getElementById('genStartBar');
+    if (startBarInput) startBarInput.value = parseInt(startBarInput.value) + lengthBars;
+
+    if (typeof drawPianoRoll === 'function') drawPianoRoll();
+    showToast(`Generated ${lengthBars} bars of ${mood} harmony!`);
+    }
+
+    // Wire up the Generator Execute button
+    document.getElementById('btnExecuteGen')?.addEventListener('click', generateAIProgression);
+    document.getElementById('genComplexity')?.addEventListener('input', (e) => {
+        document.getElementById('lblGenComplexity').textContent = `Creativity: ${e.target.value}%`;
+    });
+
     // =====================================================================
     // PIANO ROLL EDITOR ENGINE
     // =====================================================================
@@ -2791,6 +3362,10 @@
     let isPrAutoScroll = true;
     let currentPrTool = 'select'; // 'select', 'draw', or 'erase'
     let prSnapRes = 0.25;         // Default 1/16th note snap
+
+    // --- STEP ENTRY ENGINE STATE ---
+    let isStepEntryMode = false;
+    let stepCursorTime = 0;
 
     // The exact 16 colors mapping to L1-L8 and A1-A8
     const trackColors = [
@@ -2823,11 +3398,23 @@
 
         // 1. High-DPI Canvas Scaling
         const dpr = window.devicePixelRatio || 1;
+        
+        // Scale Main Piano Roll Canvas
         const rect = prCanvas.parentElement.getBoundingClientRect();
         if (prCanvas.width !== Math.floor(rect.width * dpr) || prCanvas.height !== Math.floor(rect.height * dpr)) {
             prCanvas.width = Math.floor(rect.width * dpr);
             prCanvas.height = Math.floor(rect.height * dpr);
             prCtx.scale(dpr, dpr);
+        }
+
+        // --- THE FIX: Scale Velocity Canvas using the exact same math! ---
+        if (typeof velCanvas !== 'undefined' && velCanvas && velCanvas.parentElement) {
+            const velRect = velCanvas.parentElement.getBoundingClientRect();
+            if (velCanvas.width !== Math.floor(velRect.width * dpr) || velCanvas.height !== Math.floor(velRect.height * dpr)) {
+                velCanvas.width = Math.floor(velRect.width * dpr);
+                velCanvas.height = Math.floor(velRect.height * dpr);
+                velCanvas.getContext('2d')?.scale(dpr, dpr);
+            }
         }
 
         const w = rect.width;
@@ -2907,6 +3494,28 @@
             currentBeatTime += beatSecs;
         }
 
+        // 4.5 Draw Looper Regions (Arrangement Mode)
+        if (activeDomain === 'looper' && looper.regions[activeIdx]) {
+            looper.regions[activeIdx].forEach(region => {
+                const yBottom = h - ((region.start - prScrollTime) * prZoomY);
+                const yTop = h - ((region.end - prScrollTime) * prZoomY);
+                const regionH = Math.max(2, yBottom - yTop);
+
+                if (yBottom > 0 && yTop < h) {
+                    prCtx.fillStyle = 'rgba(156, 39, 176, 0.25)'; // Transparent Purple
+                    prCtx.fillRect(0, yTop, w, regionH);
+                    
+                    prCtx.strokeStyle = '#9c27b0'; // Solid Purple Border
+                    prCtx.lineWidth = 2;
+                    prCtx.strokeRect(0, yTop, w, regionH);
+                    
+                    prCtx.fillStyle = '#9c27b0';
+                    prCtx.font = `bold ${12 * dpr}px sans-serif`;
+                    prCtx.fillText('⬛ ACTIVE REGION', 10, yTop + 15 * dpr);
+                }
+            });
+        }
+
         // 5. Draw the Notes!
         const drawTrackNotes = (trackEvents, trackIdx, isActiveTrack) => {
             const color = trackColors[trackIdx];
@@ -2973,7 +3582,7 @@
 
         if (playheadTime !== null) {
             // --- AUTO-SCROLL CAMERA MATH ---
-            if (isPrAutoScroll && isPlayingOrRecording) {
+            if (isPrAutoScroll) {
                 // Keep the playhead locked exactly 25% from the bottom of the screen
                 const screenTimeSecs = h / prZoomY;
                 const targetScroll = playheadTime - (screenTimeSecs * 0.25);
@@ -2995,7 +3604,21 @@
             }
         }
 
-        // 7. Draw Marquee Selection Box
+        // 7. DRAW STEP ENTRY CURSOR
+        if (isStepEntryMode) {
+            const stepY = h - ((stepCursorTime - prScrollTime) * prZoomY);
+            if (stepY >= 0 && stepY <= h) {
+                prCtx.strokeStyle = '#00d2ff'; // Bright Cyber Blue
+                prCtx.lineWidth = 3;
+                prCtx.beginPath();
+                prCtx.moveTo(0, stepY);
+                prCtx.lineTo(w, stepY);
+                prCtx.stroke();
+                prCtx.fillText('▶', 5, stepY - (5 * dpr));
+            }
+        }
+
+        // 8. Draw Marquee Selection Box
         if (typeof prDragState !== 'undefined' && prDragState.isMarquee) {
             const startY = h - ((prDragState.marqueeStart.time - prScrollTime) * prZoomY);
             const currY = h - ((prDragState.marqueeCurrent.time - prScrollTime) * prZoomY);
@@ -3009,8 +3632,13 @@
             const boxW = Math.abs(currXInfo.x - startXInfo.x) + currXInfo.w;
             const boxH = Math.abs(currY - startY);
 
-            prCtx.fillStyle = 'rgba(33, 150, 243, 0.2)'; // Transparent blue
-            prCtx.strokeStyle = '#2196f3';
+            if (prDragState.tool === 'erase') {
+                prCtx.fillStyle = 'rgba(244, 67, 54, 0.2)'; // Transparent RED for deletion
+                prCtx.strokeStyle = '#f44336';
+            } else {
+                prCtx.fillStyle = 'rgba(33, 150, 243, 0.2)'; // Transparent BLUE for selection
+                prCtx.strokeStyle = '#2196f3';
+            }
             prCtx.lineWidth = 1;
             prCtx.setLineDash([5, 5]); // Dashed border
             prCtx.fillRect(boxX, boxY, boxW, boxH);
@@ -3096,7 +3724,7 @@
     function snapTime(timeSec) {
         if (prSnapRes === 0) return timeSec;
         const beatSecs = 60 / currentArpBPM;
-        const snapSecs = beatSecs * (prSnapRes * 4);
+        const snapSecs = beatSecs * prSnapRes;
         return Math.round(timeSec / snapSecs) * snapSecs;
     }
 
@@ -3168,6 +3796,13 @@
             const clickTime = getPrTimeFromY(e.offsetY);
             const clickNote = getPrNoteFromX(e.offsetX);
             const snappedTime = snapTime(clickTime);
+
+            // --- STEP ENTRY CURSOR TELEPORT ---
+            if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
+                stepCursorTime = Math.max(0, snappedTime);
+                if (typeof drawPianoRoll === 'function') drawPianoRoll();
+                return; // Stop the standard draw/select/erase tools from firing!
+            }
 
             let activeDomain = studio.lastSelectedDomain;
             let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
@@ -3261,9 +3896,124 @@
                     prDragState.marqueeCurrent = { time: clickTime, note: clickNote };
                 }
             }
+            // --- COPY TOOL ---
+            else if (currentPrTool === 'copy') {
+                const hit = getEventAtCursor(clickTime, clickNote, activeTrack);
+                
+                // Region hit detection
+                let hitRegion = null;
+                if (!hit && activeDomain === 'looper' && looper.regions[activeIdx]) {
+                    hitRegion = looper.regions[activeIdx].find(r => clickTime >= r.start && clickTime <= r.end);
+                }
+
+                if (hit || hitRegion) {
+                    // --- Properly unwrap the 'hit' object! ---
+                    const target = hit ? hit.evt : hitRegion;
+                    
+                    // If clicking an unselected item, select only it
+                    if (!prSelectedNotes.has(target)) {
+                        prSelectedNotes.clear();
+                        prSelectedNotes.add(target);
+                    }
+
+                    // --- THE CLONE ENGINE ---
+                    const newSelection = new Set();
+                    prDragState.moveCache.clear();
+                    
+                    prSelectedNotes.forEach(item => {
+                        const clone = { ...item, id: Math.random() };
+                        
+                        if (item.freqs) clone.freqs = [...item.freqs];
+                        if (item.stArray) clone.stArray = [...item.stArray];
+                        
+                        if (item.start !== undefined && activeDomain === 'looper') {
+                            looper.regions[activeIdx].push(clone);
+                        } else {
+                            activeTrack.push(clone);
+                        }
+                        
+                        newSelection.add(clone);
+                        
+                        let originalPitches = [];
+                        if (clone.type === 'play' && clone.freqs) {
+                            originalPitches = clone.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                        } else if (clone.type === 'drum') {
+                            const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === clone.drumType) || 36;
+                            originalPitches = [parseInt(drumPitch)];
+                        }
+                        
+                        prDragState.moveCache.set(clone, {
+                            timeOffset: clone.timeOffset !== undefined ? clone.timeOffset : clone.start,
+                            pitches: originalPitches,
+                            originalSt: clone.stArray ? [...clone.stArray] : null
+                        });
+                    });
+                    
+                    prSelectedNotes = newSelection;
+
+                    // Initialize drag exactly like the Select tool
+                    prDragState.isDragging = true;
+                    prDragState.tool = 'select'; // <--- WE USE 'select' NOW
+                    prDragState.moveAnchor = { time: snappedTime, note: clickNote };
+                    
+                } else {
+                    // Start Marquee Selection if clicking empty space...
+                    prSelectedNotes.clear();
+                    prDragState.isMarquee = true;
+                    prDragState.tool = 'select'; // Acts like a standard selection box
+                    prDragState.marqueeStart = { time: clickTime, note: clickNote };
+                    prDragState.marqueeCurrent = { time: clickTime, note: clickNote };
+                }
+            }
+            // --- REGION TOOL ---
+            else if (currentPrTool === 'region') {
+                if (activeDomain !== 'looper') {
+                    showToast("Regions can only be drawn on Looper tracks.");
+                    return;
+                }
+                prDragState.isDragging = true;
+                prDragState.tool = 'region';
+                
+                const beatSecs = 60 / currentArpBPM;
+                const defaultDur = prSnapRes > 0 ? (beatSecs * prSnapRes) : (beatSecs * 4); // Default to 1 full bar
+                
+                const newRegion = { start: snappedTime, end: snappedTime + defaultDur };
+                looper.regions[activeIdx].push(newRegion);
+                prDragState.noteRef = newRegion; // We reuse noteRef to track resizing!
+                prDragState.originalTimeOffset = snappedTime;
+
+                // --- Instantly expand global timeline when painting a region! ---
+                if (newRegion.end > arranger.duration) {
+                    arranger.duration = newRegion.end;
+                }
+            }
             // --- ERASE TOOL ---
             else if (currentPrTool === 'erase') {
-                eraseNoteAt(clickTime, clickNote, activeTrack);
+                let erasedRegion = false;
+                
+                // Check if we clicked a Region block first
+                if (activeDomain === 'looper') {
+                    const hitRegionIndex = looper.regions[activeIdx].findIndex(r => clickTime >= r.start && clickTime <= r.end);
+                    if (hitRegionIndex !== -1) {
+                        looper.regions[activeIdx].splice(hitRegionIndex, 1);
+                        erasedRegion = true;
+                        if (typeof drawPianoRoll === 'function') drawPianoRoll();
+                    }
+                }
+
+                if (!erasedRegion) {
+                    const hit = getEventAtCursor(clickTime, clickNote, activeTrack);
+                    if (hit) {
+                        eraseNoteAt(clickTime, clickNote, activeTrack); // Single brush erase
+                    } else {
+                        // Start Marquee Erase
+                        prSelectedNotes.clear();
+                        prDragState.isMarquee = true;
+                        prDragState.tool = 'erase';
+                        prDragState.marqueeStart = { time: clickTime, note: clickNote };
+                        prDragState.marqueeCurrent = { time: clickTime, note: clickNote };
+                    }
+                }
             }
             // --- DRAW TOOL ---
             else if (currentPrTool === 'draw') {
@@ -3394,28 +4144,67 @@
                     const deltaTime = snappedCurrent - prDragState.moveAnchor.time;
                     const deltaNote = currentNote - prDragState.moveAnchor.note;
 
+                    let draggedMaxTime = 0;
+
                     prSelectedNotes.forEach(evt => {
                         const original = prDragState.moveCache.get(evt);
                         if (!original) return;
 
-                        evt.timeOffset = Math.max(0, original.timeOffset + deltaTime);
+                        // Check if we are moving a Region or a standard Note
+                        if (evt.start !== undefined) {
+                            const dur = evt.end - evt.start;
+                            evt.start = Math.max(0, original.timeOffset + deltaTime);
+                            evt.end = evt.start + dur;
+                            if (evt.end > draggedMaxTime) draggedMaxTime = evt.end; // Track region boundary
+                        } else {
+                            evt.timeOffset = Math.max(0, original.timeOffset + deltaTime);
+                            const endT = evt.timeOffset + (evt.duration || 0.25);
+                            if (endT > draggedMaxTime) draggedMaxTime = endT; // Track note boundary
+                        }
 
+                        // Pitch Shifting (Ignored for Drums and Regions)
                         if (!isDrumTrack && evt.type === 'play') {
                             evt.freqs = original.pitches.map(p => {
                                 const newMidi = Math.max(0, Math.min(127, p + deltaNote));
                                 return masterTune * Math.pow(2, (newMidi - 69) / 12);
                             });
-
                             if (original.originalSt) {
                                 evt.stArray = original.originalSt.map(st => st + deltaNote);
                             }
                         }
                     });
+
+                    // --- Instantly expand the global timeline (if needed)! ---
+                    if (draggedMaxTime > arranger.duration) {
+                        arranger.duration = draggedMaxTime;
+                    }
+                }
+            }
+            // --- LOOPER REGION TOOL ---
+            else if (prDragState.tool === 'region' && prDragState.noteRef) {
+                const origStart = prDragState.originalTimeOffset;
+                const minDur = prSnapRes > 0 ? snapTime(0.01) || 0.05 : 0.05;
+
+                if (snappedCurrent < origStart) {
+                    prDragState.noteRef.start = Math.max(0, snappedCurrent);
+                    prDragState.noteRef.end = origStart;
+                } else {
+                    prDragState.noteRef.start = origStart;
+                    prDragState.noteRef.end = Math.max(origStart + minDur, snappedCurrent);
+                }
+                
+                // If a region is dragged past the current end of the song, expand the global timeline!
+                if (prDragState.noteRef.end > arranger.duration) {
+                    arranger.duration = prDragState.noteRef.end;
                 }
             }
             // --- ERASE TOOL ---
             else if (prDragState.tool === 'erase') {
-                eraseNoteAt(currentTime, currentNote, activeTrack);
+                if (prDragState.isMarquee) {
+                    prDragState.marqueeCurrent = { time: currentTime, note: currentNote };
+                } else {
+                    eraseNoteAt(currentTime, currentNote, activeTrack); // Standard brush
+                }
             }
             // --- DRAW TOOL ---
             else if (prDragState.tool === 'draw' && prDragState.noteRef) {
@@ -3437,6 +4226,50 @@
     // --- 3. MOUSE UP (Stop Dragging, Kill Synth, Update Timelines) ---
     window.addEventListener('mouseup', () => {
         if (prDragState.isDragging) {
+            
+            // --- MARQUEE ERASE ---
+            if (prDragState.isMarquee && prDragState.tool === 'erase') {
+                const minT = Math.min(prDragState.marqueeStart.time, prDragState.marqueeCurrent.time);
+                const maxT = Math.max(prDragState.marqueeStart.time, prDragState.marqueeCurrent.time);
+                const minN = Math.min(prDragState.marqueeStart.note, prDragState.marqueeCurrent.note);
+                const maxN = Math.max(prDragState.marqueeStart.note, prDragState.marqueeCurrent.note);
+
+                let activeDomain = studio.lastSelectedDomain;
+                let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+                let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+
+                // Loop backwards so `splice` doesn't break our index!
+                for (let i = activeTrack.length - 1; i >= 0; i--) {
+                    const evt = activeTrack[i];
+                    const endT = evt.timeOffset + (evt.duration || 0.5);
+                    let noteMatch = false;
+
+                    if (evt.type === 'play' && evt.freqs) {
+                        const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+                        noteMatch = evtNotes.some(n => n >= minN && n <= maxN);
+                    } else if (evt.type === 'drum') {
+                        const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
+                        noteMatch = drumPitch >= minN && drumPitch <= maxN;
+                    }
+
+                    if (noteMatch && (endT >= minT && evt.timeOffset <= maxT)) {
+                        activeTrack.splice(i, 1);
+                    }
+                }
+                
+                // --- Wipe looper regions inside the Marquee box! ---
+                if (activeDomain === 'looper') {
+                    for (let i = looper.regions[activeIdx].length - 1; i >= 0; i--) {
+                        const r = looper.regions[activeIdx][i];
+                        if (r.start <= maxT && r.end >= minT) {
+                            looper.regions[activeIdx].splice(i, 1);
+                        }
+                    }
+                }
+
+                if (typeof drawPianoRoll === 'function') drawPianoRoll();
+            }
+
             prDragState.isDragging = false;
             prDragState.isMarquee = false;
             prDragState.isResizing = false; // Clear resize flag
@@ -3600,7 +4433,7 @@
     }
 
 
-    function initAudio() {
+function initAudio() {
         // --- FORCE WAKE IN CASE OF AUDIO THROTTLING ---
         if (audioCtx) {
             if (audioCtx.state === 'suspended') {
@@ -3613,6 +4446,29 @@
 
         // latencyHint: Politely demand high-priority hardware threading
         audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+
+        // --- NATIVE AUDIO STATE CHANGE LISTENER ---
+        // Updates the UI immediately if the browser forces the audio engine to sleep,
+        // bypassing the need for the sequencer worker to detect it!
+        audioCtx.onstatechange = () => {
+            if (audioCtx.state === 'suspended') {
+                if (typeof globalTimeDisplay !== 'undefined' && globalTimeDisplay) {
+                    globalTimeDisplay.textContent = "Zzz... (Click to Wake)";
+                }
+                const arrStatus = document.getElementById('arranger-status-text');
+                if (arrStatus) arrStatus.textContent = "AUDIO SUSPENDED";
+            }
+        };
+
+        // --- SILENT BACKGROUND WAKE LOCK ---
+        // A silent oscillator prevents modern browsers (especially Firefox) from suspending the 
+        // Web Audio API when the tab is hidden, which ALSO prevents Web Worker throttling!
+        const wakeLockOsc = audioCtx.createOscillator();
+        const wakeLockGain = audioCtx.createGain();
+        wakeLockGain.gain.value = 1e-8; // Virtually silent, but non-zero to prevent browser optimization
+        wakeLockOsc.connect(wakeLockGain);
+        wakeLockGain.connect(audioCtx.destination);
+        wakeLockOsc.start();
 
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         if (wakeLock === null) requestWakeLock();
@@ -4346,7 +5202,7 @@
             const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * s.sustain);
 
             // --- DE-CLICK INJECTION ---
-            const safeAttack = Math.max(currentDeclick, s.attack);
+            const safeAttack = Math.max(currentDeclick, parseFloat(s.attack || 0));
 
             gainNode.gain.linearRampToValueAtTime(peak, startTime + safeAttack);
             gainNode.gain.exponentialRampToValueAtTime(sustainLevel, startTime + safeAttack + s.decay);
@@ -4419,13 +5275,42 @@
         return voicedMidiNotes.map(midi => masterTune * Math.pow(2, (midi - 69) / 12));
     }
 
+    let stepAdvanceTimeout = null; // Declare the debounce timer
+
     function playFrequencies(element, freqs, originalStArray = null, synthState = null, destination = null) {
         initAudio(); if (activeNodes.has(element)) return;
 
         if (!element.isLooper) {
-            if (activeUserNotes === 0) retriggerLFO(); // Resets LFO phase on the first key press
+            if (activeUserNotes === 0) retriggerLFO(); 
             activeUserNotes++;
             if (uiHideDelay > 0) hideNav();
+
+            // --- STEP ENTRY CHORD INTERCEPT ---
+            if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
+                clearTimeout(stepAdvanceTimeout); // Stop the cursor from advancing if a new note hits!
+                
+                let finalFreqs = [...freqs];
+                if (originalStArray) {
+                    let extendedSt = getExtendedStArray(originalStArray);
+                    let snapped = snapStArray(extendedSt);
+                    finalFreqs = snapped.map(st => getFreqFromSt(st));
+                    if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2);
+                    if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
+                    if (voiceLeadHeld) finalFreqs = applyVoiceLeading(finalFreqs);
+                }
+                lastPlayedMidiNotes = finalFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+
+                handleStepEntry(finalFreqs, originalStArray, null, 1);
+
+                const stateToUse = synthState || captureCurrentSynthState();
+                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, stateToUse, destination));
+                
+                // Added originalStArray to the memory block so modifiers can read it!
+                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, isStepPreview: true, startTime: audioCtx.currentTime, originalStArray: originalStArray });
+                
+                updateHighlights();
+                return;
+            }
         }
 
         // Trigger Armed Engines on First Note!
@@ -4537,6 +5422,18 @@
 
         if (!element.isLooper) {
             activeUserNotes = Math.max(0, activeUserNotes - 1);
+            
+            // --- THE FIX: SMART MIDI ROLLING DEBOUNCE ---
+            if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode && activeUserNotes === 0) {
+                clearTimeout(stepAdvanceTimeout);
+                stepAdvanceTimeout = setTimeout(() => {
+                    // Only advance if the user hasn't pressed another key within the 40ms grace period!
+                    if (activeUserNotes === 0 && isStepEntryMode) {
+                        advanceStepCursor();
+                    }
+                }, 40); 
+            }
+
             if (activeUserNotes === 0) {
                 clearTimeout(navFadeTimeout);
                 if (uiHideDelay > 0) navFadeTimeout = setTimeout(wakeNav, uiHideDelay); else wakeNav();
@@ -4582,6 +5479,7 @@
         isRecording: false, isPlaying: false, isArmed: false,
         startTime: 0, recordingType: null,
         tracks: Array.from({ length: 8 }, () => []),
+        regions: Array.from({ length: 8 }, () => []), // NEW: Loop Regions (Arrangement Mode)
         muted: Array(8).fill(false),
         soloed: Array(8).fill(false),
         trackDurations: Array(8).fill(0),
@@ -4599,7 +5497,7 @@
     let looperQuantize = false;
     let looperQuantizeRes = 16;
 
-function captureCurrentSynthState() {
+    function captureCurrentSynthState() {
         return {
             osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
             subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
@@ -4619,7 +5517,42 @@ function captureCurrentSynthState() {
         };
     }
 
-function applySynthStateToUI(s) {
+    // --- DAW FEATURE: Retroactive Track Instrument Synchronization ---
+    function syncActiveTrackInstrument(drumType = null) {
+        let activeDomain = studio.lastSelectedDomain;
+        let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+        let localIdx = activeDomain === 'looper' ? activeIdx : activeIdx - 8;
+        let domainObj = activeDomain === 'looper' ? looper : arranger;
+        
+        // 1. Update Track Type & CSS
+        if (studio.trackTypes[activeIdx] === null || drumType) {
+            studio.trackTypes[activeIdx] = drumType ? 'drum' : 'voice';
+            const btn = document.querySelector(`.track-btn[data-track="${activeIdx}"]`);
+            if (btn) btn.classList.add(drumType ? 'type-drum' : 'type-voice');
+        }
+
+        // 2. Update Track Label & State Memory
+        const labelEl = document.getElementById(`inst-label-${activeIdx}`);
+        const instSelect = document.getElementById('instrumentPreset');
+        
+        if (drumType) {
+            if (labelEl) labelEl.textContent = 'DRUMS';
+        } else {
+            const newState = captureCurrentSynthState();
+            studio.trackSynthStates[activeIdx] = newState; // Update global track memory
+            
+            if (labelEl && instSelect && instSelect.selectedIndex >= 0) {
+                labelEl.textContent = instSelect.options[instSelect.selectedIndex].text;
+            }
+            
+            // 3. Retroactively update all existing notes on this track!
+            domainObj.tracks[localIdx].forEach(evt => {
+                if (evt.type === 'play') evt.synthState = newState;
+            });
+        }
+    }
+
+    function applySynthStateToUI(s) {
         if (!s) return;
         const presetEl = document.getElementById('instrumentPreset');
         if (presetEl) presetEl.value = s.instrumentPreset;
@@ -4801,18 +5734,17 @@ function applySynthStateToUI(s) {
             
             looper.isPlaying = false;
             arranger.isPlaying = false;
-        }
-        else {
+
+        } else {
             // Play (Syncs both engines)
-            const now = audioCtx.currentTime;
-            
+            const now = audioCtx.currentTime + 0.05; 
             arranger.isPlaying = true;
             arranger.startTime = now - arranger.pauseTime;
             lastArrangerPhase = arranger.pauseTime - 0.01;
-
+            
             looper.isPlaying = true;
-            looper.startTime = arranger.startTime; // Perfectly lock the Looper downbeat to the Arranger timeline!
-            looper.lastPhases.fill(0);
+            looper.startTime = arranger.startTime; 
+            looper.lastPhases.fill(-0.01); // THE FIX: Apply the safe catch-net to the Looper too!
 
             if (midiSyncMode === 'master' && midiOut) {
                 midiOut.send([250]);
@@ -4841,6 +5773,8 @@ function applySynthStateToUI(s) {
         activeNodes.forEach((nodeData, elementKey) => {
             if (elementKey && elementKey.isLooper) stopFrequencies(elementKey, true);
         });
+
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
     }
 
     document.getElementById('btnMasterRw')?.addEventListener('click', () => shiftGlobalTime(-(60 / currentArpBPM) * 4));
@@ -4859,6 +5793,12 @@ function applySynthStateToUI(s) {
             const bars = Math.floor(totalBeats / 4) + 1;
             const beats = Math.floor(totalBeats % 4) + 1;
             if (globalTimeDisplay) globalTimeDisplay.textContent = `${bars}.${beats}`;
+
+            // Temporarily update engine time so the Piano Roll tracks the drag live!
+            if (!arranger.isPlaying && !looper.isPlaying) {
+                arranger.pauseTime = newTime;
+                if (typeof drawPianoRoll === 'function') drawPianoRoll();
+            }
         }
     });
 
@@ -4960,8 +5900,15 @@ function applySynthStateToUI(s) {
             const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%';
             if (midiSyncMode === 'master' && midiOut) midiOut.send([252]);
         } else {
-            looper.isPlaying = true; looper.startTime = audioCtx ? audioCtx.currentTime : 0;
-            if (midiSyncMode === 'master' && midiOut) { midiOut.send([250]); nextMidiPulseTime = audioCtx.currentTime; }
+            looper.isPlaying = true;
+            // 50ms Pre-Roll Buffer!
+            const now = audioCtx ? audioCtx.currentTime + 0.05 : 0;
+            looper.startTime = now;
+            looper.lastPhases.fill(-0.01);
+            if (midiSyncMode === 'master' && midiOut) {
+                midiOut.send([250]);
+                nextMidiPulseTime = now;
+            }
         }
         updateStudioUI();
     });
@@ -4985,7 +5932,9 @@ function applySynthStateToUI(s) {
             arranger.pauseTime = audioCtx.currentTime - arranger.startTime;
         } else {
             arranger.isPlaying = true;
-            arranger.startTime = audioCtx ? audioCtx.currentTime - arranger.pauseTime : 0;
+            // 50ms Pre-Roll Buffer!
+            const now = audioCtx ? audioCtx.currentTime + 0.05 : 0;
+            arranger.startTime = now - arranger.pauseTime;
             lastArrangerPhase = arranger.pauseTime - 0.01; // Fixes Silent Playback
         }
         updateStudioUI();
@@ -5195,11 +6144,13 @@ function applySynthStateToUI(s) {
 
     // --- Dual Playback Engine ---
     let lastArrangerPhase = 0;
-
     function processStudioPlayback() {
         if (!audioCtx) return;
-        const now = audioCtx.currentTime;
-
+    
+        // Match the internal engine clock to the 50ms hardware pre-roll!
+        // This prevents the timeline from going negative, which stops wrap-around garbage notes!
+        const now = audioCtx.currentTime + 0.05; 
+    
         scheduleClickTrack(); // Keep the metronome ticking!
 
         // Detect if the browser has deep-slept the audio hardware
@@ -5252,6 +6203,17 @@ function applySynthStateToUI(s) {
                 if (looper.muted[idx]) return; // MUTE ALWAYS WINS
                 if (isLooperSoloActive && !looper.soloed[idx]) return; // SOLO FILTER
                 if (track.length === 0) return;
+
+                // --- REGION GATE ---
+                const regions = looper.regions[idx];
+                if (regions && regions.length > 0) {
+                    // Check if the current global time (nowOffset) is inside ANY region painted on this track
+                    const isInsideRegion = regions.some(r => nowOffset >= r.start && nowOffset < r.end);
+                    if (!isInsideRegion) {
+                        looper.lastPhases[idx] = -0.1; // Keep internal loop phase clean while muted
+                        return; // Gate is closed! Skip playing notes this frame.
+                    }
+                }
 
                 const trackLoopSec = looper.trackDurations[idx] || globalLoopSec;
                 let phase = nowOffset % trackLoopSec;
@@ -5323,12 +6285,28 @@ function applySynthStateToUI(s) {
         if (arranger.isPlaying || arranger.isRecording) {
             let phase = now - arranger.startTime;
 
-            // DAW AUTO-STOP LOGIC: If we pass the end of the recorded song, stop playing and rewind!
+            // --- DAW AUTO-STOP AT END OF SONG ---
             if (!arranger.isRecording && arranger.duration > 0 && phase >= arranger.duration) {
+                // 1. Force kill BOTH engines
                 arranger.isPlaying = false;
-                arranger.pauseTime = 0;
-                phase = 0;
+                looper.isPlaying = false;
+                
+                // 2. Lock the playhead and phase to the absolute end
+                arranger.pauseTime = arranger.duration;
+                phase = arranger.duration;
+                
+                // 3. Reset the Looper's last phase trackers so it doesn't "ghost play" notes
+                looper.lastPhases.fill(0);
+                
+                // 4. Update the Master LCD to show the final timestamp (e.g. 33.1)
+                const beatSecs = 60 / currentArpBPM;
+                const totalBeats = phase / beatSecs;
+                const bars = Math.floor(totalBeats / beatsPerBar) + 1;
+                const beats = Math.floor(totalBeats % beatsPerBar) + 1;
+                if (globalTimeDisplay) globalTimeDisplay.textContent = `${bars}.${beats}`;
+                
                 updateStudioUI();
+                return; // Exit immediately to prevent the looper logic below from running!
             }
 
             // Update Seeker UI (Only if the user isn't currently dragging it!)
@@ -6138,7 +7116,10 @@ function applySynthStateToUI(s) {
                     const voice = spawnVoice(freq, startTime, index, nodeData.freqs.length, false, nodeData.synthState, nodeData.destination); // NEW: Arps now use their parent track's synth state!
                     voice.midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
                     nodeData.voices.push(voice);
-                    if (nodeData.voices.length > 30) nodeData.voices.shift();
+                    if (nodeData.voices.length > 30) {
+                        const oldVoice = nodeData.voices.shift();
+                        beginRelease([oldVoice], false); // Safely fade out the audio node!
+                    }
                 }
                 nodeData.nextNoteTime += nodeData.stepDuration; nodeData.noteIndex++;
             }
@@ -6737,12 +7718,22 @@ function applySynthStateToUI(s) {
     function triggerManualDrum(type, velocity = 1) {
         initAudio();
         
-        // THE FIX: Route live drumming through the currently active mixer track!
         let activeDomain = studio.lastSelectedDomain;
         let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
         let destNode = activeDomain === 'looper' ? looperGainNodes[activeIdx] : linearGainNodes[activeIdx - 8];
         
         playDrum(type, audioCtx.currentTime, velocity, destNode);
+
+        // --- STEP ENTRY DRUM INTERCEPT ---
+        if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
+            handleStepEntry(null, null, type, velocity);
+            // Drums don't have a "release" state like keyboards, so we instantly auto-advance!
+            advanceStepCursor(); 
+            
+            const b = document.querySelector(`.manual-drum-btn[data-drum="${type}"]`);
+            if (b) { b.classList.add('active-btn'); setTimeout(() => b.classList.remove('active-btn'), 100); }
+            return; // Skip standard live-recording logic
+        }
 
         // Check if either engine is armed BEFORE processing
         let wasArmed = looper.isArmed || arranger.isArmed;
@@ -7018,6 +8009,13 @@ engineClockWorker.onmessage = function () {
         // --- RE-TRIGGER HEATMAP ON SCALE CHANGE ---
         if (typeof isHeatmapActive !== 'undefined' && isHeatmapActive) {
             updateHarmonicHeatmap();
+        }
+
+        // --- Dynamically hide/show the AI Scale Warning! ---
+        const scaleWarning = document.getElementById('genScaleWarning');
+        if (scaleWarning) {
+            const isChromatic = !currentScale || currentScale === 'all';
+            scaleWarning.style.display = isChromatic ? 'inline' : 'none';
         }
     }
 
@@ -7600,6 +8598,12 @@ engineClockWorker.onmessage = function () {
                 if (e.ctrlKey || e.metaKey) {
                     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
                     prZoomY = Math.max(20, Math.min(prZoomY * zoomFactor, 500));
+                    
+                    // Sync the UI slider if it exists
+                    const zSlider = document.getElementById('prZoomSlider');
+                    if (zSlider) zSlider.value = prZoomY; 
+                    
+                    if (typeof drawPianoRoll === 'function') drawPianoRoll(); // Force redraw on wheel zoom
                 }
                 else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
                     t_panX -= e.deltaX;
@@ -7636,6 +8640,9 @@ engineClockWorker.onmessage = function () {
             if (isPianoRollActive) {
                 wakeNav();
                 closeFabMenu();
+                requestAnimationFrame(() => {
+                    if (typeof drawPianoRoll === 'function') drawPianoRoll();
+                });
             }
         });
 
@@ -7661,6 +8668,11 @@ engineClockWorker.onmessage = function () {
 
         // --- TOOLBAR LISTENERS ---
 
+        document.getElementById('prZoomSlider')?.addEventListener('input', (e) => {
+            prZoomY = parseFloat(e.target.value);
+            if (typeof drawPianoRoll === 'function') drawPianoRoll();
+        });
+
         document.getElementById('btnPrAutoScroll')?.addEventListener('click', (e) => {
             isPrAutoScroll = !isPrAutoScroll;
             e.target.classList.toggle('active', isPrAutoScroll);
@@ -7670,14 +8682,21 @@ engineClockWorker.onmessage = function () {
             prSnapRes = parseFloat(e.target.value);
         });
 
-        const tools = ['Select', 'Draw', 'Erase'];
+        // --- Tool UI Toggling ---
+        const tools = ['Select', 'Copy', 'Draw', 'Erase', 'Region']; 
         tools.forEach(tool => {
-            document.getElementById(`prTool${tool}`)?.addEventListener('click', (e) => {
-                currentPrTool = tool.toLowerCase();
-                // Visually update active button
-                ['Select', 'Draw', 'Erase'].forEach(t => document.getElementById(`prTool${t}`)?.classList.remove('active'));
-                e.target.classList.add('active');
-            });
+            const btn = document.getElementById(`prTool${tool}`);
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    currentPrTool = tool.toLowerCase();
+                    tools.forEach(t => {
+                        const otherBtn = document.getElementById(`prTool${t}`);
+                        if (otherBtn) otherBtn.classList.remove('active');
+                    });
+                    
+                    e.target.classList.add('active');
+                });
+            }
         });
 
         // Re-engage Auto-Scroll whenever ANY play button is clicked
@@ -7688,6 +8707,105 @@ engineClockWorker.onmessage = function () {
             });
         });
     }
+
+    // --- STEP ENTRY LOGIC HANDLERS ---
+    function handleStepEntry(freqs, originalStArray, drumType = null, velocity = 1, timeOverride = null, durationOverride = null) {
+        let activeDomain = studio.lastSelectedDomain;
+        let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+        let domainObj = activeDomain === 'looper' ? looper : arranger;
+        let localIdx = activeDomain === 'looper' ? activeIdx : activeIdx - 8;
+
+        const beatSecs = 60 / currentArpBPM;
+        const defaultStepDur = prSnapRes > 0 ? (beatSecs * prSnapRes) : (beatSecs * 0.25);
+        
+        // Use overrides if provided by the AI, otherwise use manual step entry defaults
+        const targetTime = timeOverride !== null ? timeOverride : stepCursorTime;
+        const targetDur = durationOverride !== null ? durationOverride : defaultStepDur;
+        
+        // Parse velocity correctly (default 100 for synths if not specified)
+        const parsedVelocity = velocity !== 1 ? velocity : 100;
+
+        // Sync track metadata on first entry!
+        if (studio.trackTypes[activeIdx] === null) {
+            syncActiveTrackInstrument(drumType);
+        }
+
+        if (drumType) {
+            domainObj.tracks[localIdx].push({
+                // Note: Drums natively handle the 0-1 velocity range elsewhere, so we pass it raw if it's 1
+                id: Math.random(), timeOffset: targetTime, duration: targetDur, type: 'drum', drumType: drumType, velocity: velocity === 1 ? 1 : parsedVelocity
+            });
+        } else {
+            const synthState = captureCurrentSynthState();
+            
+            // Explode the chord! Drop every note individually.
+            freqs.forEach((f, i) => {
+                // Prevent duplicates: Check if this exact note already exists at the cursor
+                const exists = domainObj.tracks[localIdx].some(evt =>
+                    evt.type === 'play' &&
+                    Math.abs(evt.timeOffset - targetTime) < 0.001 &&
+                    evt.freqs && evt.freqs.some(existingF => Math.abs(existingF - f) < 0.1)
+                );
+
+                if (!exists) {
+                    const singleSt = originalStArray && originalStArray[i] !== undefined ? [originalStArray[i]] : null;
+                    domainObj.tracks[localIdx].push({
+                        id: Math.random(), freqs: [f], timeOffset: targetTime, 
+                        type: 'play', stArray: singleSt, 
+                        velocity: parsedVelocity, // THE FIX: Humanized AI velocity is applied here!
+                        duration: targetDur, synthState: synthState 
+                    });
+                }
+            });
+        }
+
+        if (activeDomain === 'looper' && targetTime + targetDur > (looper.trackDurations[localIdx] || 0)) {
+            looper.trackDurations[localIdx] = targetTime + targetDur;
+        } else if (activeDomain === 'arranger' && targetTime + targetDur > arranger.duration) {
+            arranger.duration = targetTime + targetDur;
+        }
+
+        // Only auto-scroll the Piano Roll if we are doing manual step entry (not AI batch generation)
+        if (timeOverride === null) {
+            prScrollTime = Math.max(0, targetTime - (prCanvas.height / (window.devicePixelRatio || 1) / prZoomY) * 0.25);
+        }
+        
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
+    }
+
+    function advanceStepCursor(multiplier = 1) {
+        if (!isStepEntryMode) return;
+        const beatSecs = 60 / currentArpBPM;
+        const stepDur = prSnapRes > 0 ? (beatSecs * prSnapRes) : (beatSecs * 0.25);
+        
+        stepCursorTime = Math.max(0, stepCursorTime + (stepDur * multiplier));
+        
+        prScrollTime = Math.max(0, stepCursorTime - (prCanvas.height / (window.devicePixelRatio || 1) / prZoomY) * 0.25);
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
+    }
+
+    document.getElementById('prToolStep')?.addEventListener('click', (e) => {
+        isStepEntryMode = !isStepEntryMode;
+        
+        if (isStepEntryMode) {
+            let activeDomain = studio.lastSelectedDomain;
+            stepCursorTime = activeDomain === 'arranger' ? arranger.pauseTime : 0;
+            stepCursorTime = snapTime(stepCursorTime);
+            stopMasterPlayback();
+        }
+
+        e.target.classList.toggle('active', isStepEntryMode);
+        const displayStyle = isStepEntryMode ? 'inline-block' : 'none';
+        const btnRest = document.getElementById('prStepRest');
+        const btnBack = document.getElementById('prStepBack');
+        if (btnRest) btnRest.style.display = displayStyle;
+        if (btnBack) btnBack.style.display = displayStyle;
+        
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
+    });
+
+    document.getElementById('prStepRest')?.addEventListener('click', () => advanceStepCursor(1));
+    document.getElementById('prStepBack')?.addEventListener('click', () => advanceStepCursor(-1));
 
     // ==========================================
     // INDEXED-DB SAMPLE MANAGER
