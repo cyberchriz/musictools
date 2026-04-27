@@ -12,31 +12,43 @@
 
 ---
 
-### **INSTALL:** Select the native installer for your OS under "Releases".
-### ... or run directly in the browser: [Tonnetz Pro Web](https://cyberchriz.github.io/musictools/ui/index.html)
-> ## **NOTE:** Firefox is strongly recommended for the browser version due to superior Web Audio API performance. The web build operates as an offline-capable PWA.
+
+### RECOMMENDED USE: no installation required; simply run directly in Firefox(!!!) browser (mobile or desktop): [Tonnetz Pro Web](https://cyberchriz.github.io/musictools/ui/index.html).
+Other browsers technically work and native installers are available (under "Releases"), but due to superior Web Audio API performance Firefox will still by far be the best experience.
 
 ---
 
 # Architecture & Features
 
-### 16-Track Recording Studio
-* **Hybrid Engine:** A 16-track recording environment divided into an 8-track cyclical Looper (L1-L8) and an 8-track linear Arranger timeline (A1-A8).
+### 16-Track Recording Studio & Mixer
+* **Hybrid Engine:** Featuring a 16-track recording environment (8-track cyclical Looper (L1-L8) + 8-track linear arranger (A1-A8)).
 * **Agnostic Recording:** Tracks automatically adapt to incoming data (voice/synthesizer data vs. drum machine triggers). 
-* **Preset Sync:** Recording while a drum preset is active automatically snaps to the next downbeat and commits the sequenced pattern to the active drum track.
-* **Master Bounce:** Real-time audio bouncing of the master output bus to downloadable WebM, MP4, MP3, or uncompressed WAV files.
+* **Smart Track Inheritance:** Recorded tracks instantly inherit the exact parameter snapshots of the active instrument. Drum tracks automatically inherit a pre-calibrated "Studio Room" acoustic space (center pan, subtle echo, and room reverb), while synth tracks inherit exact overtone, LFO, and envelope states.
+* **Live Input Monitoring:** Tapping the manual drum pads routes the audio directly through your actively selected mixer track, allowing you to hear track-specific FX in real-time while jamming.
+* **Professional Mix Bus:** A full mixer featuring per-track Volume, Panning, and dual Aux Sends (Echo & Reverb). Includes DAW-standard **Multi-Solo** and **Mute** toggles (with a strict "Mute-overrides-Solo" hierarchy).
+* **Preset Sync & Master Bounce:** Record drum presets quantized to the downbeat. Export your master output bus to downloadable WebM, MP4, MP3, or uncompressed WAV files.
+
+### The Vertical Piano Roll
+* **Geometric/Tracker Orientation:** A vertical timeline (with pitch on the X-axis, i.e. matching the piano keyboard orientation), complementing the geometric Tonnetz and piano keyboard.
+* **Full Note Articulation:** Draw, select, move, and dynamically resize the duration of individual notes using mouse or touch gestures. Supports group Marquee selection.
+* **Exploded Polyphony:** Chords played live on the Tonnetz are recorded and "exploded" into individual overlapping MIDI events, allowing for precise micro-editing of individual chord tones.
+* **Right-Side Velocity Lane:** A resizable, time-synced automation lane featuring DAW-standard "lollipop" graphs. Edit the exact impact velocities of overlapping drum hits or chord notes without visual clutter (the lane isolates and displays only the actively selected track).
 
 ### Geometric Interface & Navigation
-* **Tonal Mapping:** Perfect fifths mapped to the horizontal axis; major/minor thirds mapped to diagonals.
+* **Tonal Mapping ("the TONNETZ magic"):** Perfect fifths mapped to the horizontal axis; major/minor thirds mapped to diagonals.
 * **Triads & Extensions:** Upward triangles yield major triads; downward yield minor. Use the multi-touch grid and combine with physical keyboard shortcuts (keyboard rows QWERT / ASDFG / Y(Z)XCVB), or the left-docked Performance Pads to instantly inject complex jazz extensions (sus2, sus4, ♭5, ♯5, ♭9, ♯11, 13).
-* **Live Modifiers:** Hold Shift for Voice Leading (prioritizes minimal movement between chords), Space for 'Systain', L-Alt for 'Dampen' and 'Tab' for Legato (glide).
+* **Live Modifiers:**
+  * Hold Shift for Voice Leading (use chord inversions to prioritize minimal movement between chords)
+  * Space for 'Sustain'
+  * L-Alt for 'Dampen' 
+  * Tab for 'Legato' (glide).
 * **Arpeggiator:** Supports directional and randomized sequence arpeggiation with adjustable swing, subdivisions, and continuous looping.
-* **Responsive UI:** Smart FAB (Floating Action Button) menu and per-panel Auto-Hide toggles maximize screen real estate on mobile devices by dynamically hiding controls during active play.
+* **Responsive UI:** Smart FAB (Floating Action Button) menu and per-panel Auto-Hide toggles maximize screen real estate on mobile devices by dynamically sliding panels off-screen during active play.
 
 ### Drum Machine
-* **24 Pre-Programmed Kits:** chose from a diverse library of styles.
+* **24 Pre-Programmed Kits:** Choose from a diverse library of styles.
 * **Manual Triggers:** Use to play your own beat patterns or embellish the presets in real-time. Record everything into the looper or arranger.
-* **Auto-Embellishments:** let the drum AI automatically add fills and variations for a more "human" feel.
+* **Auto-Embellishments:** Let the drum AI automatically add fills and variations for a more "human" feel.
 
 ### Advanced Music Theory Tools
 * **Interactive Circle of Fifths:** A synchronized harmonic minimap that tracks and highlights active chord structures in real-time.
@@ -45,22 +57,20 @@
 * **Dynamic Labels:** Toggle node labels between absolute pitch, scale degrees, Roman numerals, or Solfege.
 
 ### Harmonic Heatmap + Local & Sequence Gravity Engine
-* **Real-time compositional assistant:** visualizes musical tension and predicts functional chord resolutions on the Tonnetz grid.
-* **Psychoacoustic Heatmap:** Colors nodes based on calculated dissonance against your active chord (Green / Yellow: Stable, consonant chord tones, Orange / Red: High tension and harsh dissonances (e.g., minor 2nds))
-* **Genre-weighted Tuning:** Select Classical, Pop/Rock or Jazz to shift the mathematical interval weights. (e.g., A Major 7th highlights as a tense red in Classical, but a stable green in Jazz).
-* **Gravity Beacons:** Visualizes where unstable chords (Dom7, Dim, Sus) and Jazz Tritone substitutions want to resolve using high-contrast hollow borders and glowing text outlines:
-    - Local Gravity (Cyber Blue): Isolated chord resolutions (e.g., a lone G7 targeting C)
-    - Sequence Gravity (Synthwave Pink): Grammatical progression endings.
-    - Tracks chord history and triggers on strong cadences (ii -> V, IV -> V, or chromatic walkdowns).
-* **BPM-Synced Harmonic Buffer:** Decouples harmonic analysis from raw keypresses using a rolling, tempo-synced memory.
-* **Arpeggio Support:** A 1.5-beat memory window aggregates individually fingerpicked/rolled notes into a single harmonic entity for accurate Heatmap evaluation.
-* **Passing Chord Immunity:** Remembers the last 3 macro-chords, ignoring quick melody notes and passing chords to accurately identify the underlying progression.
+* **Real-time Compositional Assistant:** Visualizes musical tension and predicts functional chord resolutions on the Tonnetz grid.
+* **Psychoacoustic Heatmap:** Colors nodes based on calculated dissonance against your active chord (Green/Yellow: Stable, consonant chord tones; Orange/Red: High tension and harsh dissonances).
+* **Genre-Weighted Tuning:** Select Classical, Pop/Rock, or Jazz to shift mathematical interval weights (e.g., A Major 7th highlights as a tense red in Classical, but a stable green in Jazz).
+* **Gravity Beacons:** Visualizes where unstable chords (Dom7, Dim, Sus) and Jazz Tritone substitutions want to resolve using glowing text outlines:
+    - *Local Gravity (Cyber Blue):* Isolated chord resolutions (e.g., a lone G7 targeting C).
+    - *Sequence Gravity (Synthwave Pink):* Grammatical progression endings (triggers on strong cadences like ii -> V -> I).
+* **BPM-Synced Harmonic Buffer:** Aggregates rolled/arpeggiated notes into single harmonic entities for accurate evaluation, ignoring quick passing notes to identify the true underlying progression.
 
 ### Audio Engine & Sampling
 * **Dual-Oscillator Synthesizer:** Procedural subtractive audio engine featuring 33 pre-calibrated acoustic and analog presets.
-* **Persistent User Samples:** Hardware-style sampler supporting custom `.wav` loading. Uploaded files are committed to the browser's native IndexedDB, ensuring custom sample libraries survive page reloads and operate entirely offline.
-* **Dynamics & Envelopes:** Visual ADSR envelope controls and a user-adjustable "De-Click" micro-fade engine (0-50ms) to prevent hardware zero-crossing pops during fast arpeggios.
-* **Modulation & Effects:** Multi-LFO system (routing to pitch, amplitude, and filter cutoff), dedicated sub/noise oscillators, and a global effects chain (distortion, chorus, delay, reverb).
+* **Master Bus Limiting:** Protect your speakers and your mix with a built-in Master Compressor and a selectable Master Limiter (Choose between aggressive Digital Brickwall clipping or warm Analog `tanh` soft-saturation).
+* **Persistent User Samples:** Hardware-style sampler supporting custom `.wav` loading. Uploaded files are committed to the browser's native IndexedDB, ensuring custom libraries survive page reloads and operate offline.
+* **Dynamics & Envelopes:** Visual ADSR envelope controls and a "De-Click" micro-fade engine to prevent hardware zero-crossing pops during fast arpeggios.
+* **Modulation & Effects:** Multi-LFO system, dedicated sub/noise oscillators, and a global effects chain (distortion, chorus, delay, convolver reverb).
 
 ### Hardware & MIDI Integration
 * **Duplex Web MIDI API:** Play the internal engine using USB MIDI controllers (SLAVE), or use Tonnetz Pro as a geometric MIDI controller to drive external DAW hardware (MASTER).
@@ -69,8 +79,7 @@
 ### DAW Interoperability (`.dawproject`)
 * **Project Export:** Generates an open-source `.dawproject` archive compatible with Bitwig Studio, Studio One, and Cubase. The export compiles high-quality WAV stems, raw binary MIDI performance files, an XML manifest, and the embedded native JSON state.
 * **Non-Destructive Recall:** Importing a native Tonnetz `.dawproject` restores the exact UI state, synthesizer parameters, and MIDI events.
-* **Foreign Project Import:** Uploading a `.dawproject` generated by an external DAW invokes an XML skimmer to extract track names, track colors, and BPM, safely dropping the foreign audio stems directly onto the Arranger timeline for playback.
-
+* **Foreign Project Import:** Uploading a `.dawproject` generated by an external DAW invokes an XML skimmer to extract track names, colors, and BPM, safely dropping foreign audio stems directly onto the Arranger timeline for playback.
 ---
 # UI Screenshots
 <p align="center">

@@ -2492,6 +2492,7 @@
             <button id="transportPlay" class="transport-btn" title="Play / Pause">&#x25B6;&#xFE0E;</button>
             <button id="transportRec" class="transport-btn" title="Global Record">&#x23FA;&#xFE0E;</button>
             <button id="btnMasterFf" class="transport-btn sm" title="Forward 1 Bar">&#x23E9;&#xFE0E;</button>
+            <button id="btnMetronome" class="transport-btn sm" title="Metronome: Off" style="margin-left: 8px; font-size: 1.1rem;">&#x23F1;&#xFE0E;</button>
         </div>
         <div class="transport-group">
             <div class="lcd-display sm" id="global-bpm-display" title="Current BPM">120 BPM</div>
@@ -2560,7 +2561,22 @@
 
                 <div class="control-row" style="border: none; padding: 0;">
                     <div class="control-group"><label id="lblArpBpm">Arp/Metron: 120 BPM</label><input type="range" id="arpBpm" min="40" max="240" step="1" value="120"></div>
-                    <div class="control-group"><label>Arp Rhythm</label><select id="arpRhythm"><option value="fast">Fast (16ths)</option><option value="slow" selected>Slow (8ths)</option></select></div>
+                    <div class="control-group">
+                        <label>Engine Timing (Meter & Arp)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="timeSignature" class="control-input" style="flex: 1;">
+                                <option value="3">3/4 Time</option>
+                                <option value="4" selected>4/4 Time</option>
+                                <option value="5">5/4 Time</option>
+                                <option value="6">6/8 Time</option>
+                                <option value="7">7/8 Time</option>
+                            </select>
+                            <select id="arpRhythm" class="control-input" style="flex: 1;">
+                                <option value="slow">8th Notes</option>
+                                <option value="fast">16th Notes</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="control-group"><label id="lblArpSwing">Swing Effect: 0%</label><input type="range" id="arpSwing" min="0" max="1" step="0.01" value="0"></div>
                     <div class="control-group"><label>Arp Loop</label><select id="arpLoop"><option value="false">Play Once</option><option value="true" selected>Continuous</option></select></div>
                 </div>
@@ -2889,35 +2905,71 @@
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; width: 100%;">
-                <button class="synth-btn drum-preset-btn" data-preset="click">CLICK</button>
-                <button class="synth-btn drum-preset-btn" data-preset="basic">BASIC</button>
-                <button class="synth-btn drum-preset-btn" data-preset="rock">ROCK</button>
-                <button class="synth-btn drum-preset-btn" data-preset="garage">GARAGE</button>
+                <button class="synth-btn drum-preset-btn" data-preset="click" data-meter="4">CLICK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="basic" data-meter="4">BASIC</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rock" data-meter="4">ROCK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="garage" data-meter="4">GARAGE</button>
 
-                <button class="synth-btn drum-preset-btn" data-preset="metal">METAL</button>
-                <button class="synth-btn drum-preset-btn" data-preset="punk">PUNK</button>
-                <button class="synth-btn drum-preset-btn" data-preset="synthwave">SYNTH</button>
-                <button class="synth-btn drum-preset-btn" data-preset="swing">SWING</button>
+                <button class="synth-btn drum-preset-btn" data-preset="metal" data-meter="4">METAL</button>
+                <button class="synth-btn drum-preset-btn" data-preset="punk" data-meter="4">PUNK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="synthwave" data-meter="4">SYNTH</button>
+                <button class="synth-btn drum-preset-btn" data-preset="swing" data-meter="4">SWING</button>
 
-                <button class="synth-btn drum-preset-btn" data-preset="house">HOUSE</button>
-                <button class="synth-btn drum-preset-btn" data-preset="disco">DISCO</button>
-                <button class="synth-btn drum-preset-btn" data-preset="techno">TECHNO</button>
-                <button class="synth-btn drum-preset-btn" data-preset="breakbeat">BREAKS</button>
+                <button class="synth-btn drum-preset-btn" data-preset="house" data-meter="4">HOUSE</button>
+                <button class="synth-btn drum-preset-btn" data-preset="disco" data-meter="4">DISCO</button>
+                <button class="synth-btn drum-preset-btn" data-preset="techno" data-meter="4">TECHNO</button>
+                <button class="synth-btn drum-preset-btn" data-preset="breakbeat" data-meter="4">BREAKS</button>
 
-                <button class="synth-btn drum-preset-btn" data-preset="dnb">DNB</button>
-                <button class="synth-btn drum-preset-btn" data-preset="drill">DRILL</button>
-                <button class="synth-btn drum-preset-btn" data-preset="reggae">REGGAE</button>
-                <button class="synth-btn drum-preset-btn" data-preset="reggaeton">REGGAETON</button>
+                <button class="synth-btn drum-preset-btn" data-preset="dnb" data-meter="4">DNB</button>
+                <button class="synth-btn drum-preset-btn" data-preset="drill" data-meter="4">DRILL</button>
+                <button class="synth-btn drum-preset-btn" data-preset="reggae" data-meter="4">REGGAE</button>
+                <button class="synth-btn drum-preset-btn" data-preset="reggaeton" data-meter="4">REGGAETON</button>
 
-                <button class="synth-btn drum-preset-btn" data-preset="trap">TRAP</button>
-                <button class="synth-btn drum-preset-btn" data-preset="lofi">LO-FI</button>
-                <button class="synth-btn drum-preset-btn" data-preset="bossa">BOSSA</button>
-                <button class="synth-btn drum-preset-btn" data-preset="funk">FUNK</button>
+                <button class="synth-btn drum-preset-btn" data-preset="trap" data-meter="4">TRAP</button>
+                <button class="synth-btn drum-preset-btn" data-preset="lofi" data-meter="4">LO-FI</button>
+                <button class="synth-btn drum-preset-btn" data-preset="bossa" data-meter="4">BOSSA</button>
+                <button class="synth-btn drum-preset-btn" data-preset="funk" data-meter="4">FUNK</button>
 
-                <button class="synth-btn drum-preset-btn" data-preset="afrobeat">AFROBEAT</button>
-                <button class="synth-btn drum-preset-btn" data-preset="hiphop">HIPHOP</button>
-                <button class="synth-btn drum-preset-btn" data-preset="rnb">R&B</button>
-                <button class="synth-btn drum-preset-btn" data-preset="latin">LATIN</button>
+                <button class="synth-btn drum-preset-btn" data-preset="afrobeat" data-meter="4">AFROBEAT</button>
+                <button class="synth-btn drum-preset-btn" data-preset="hiphop" data-meter="4">HIPHOP</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rnb" data-meter="4">R&B</button>
+                <button class="synth-btn drum-preset-btn" data-preset="latin" data-meter="4">LATIN</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="waltz" data-meter="3" style="display: none;">WALTZ</button>
+                <button class="synth-btn drum-preset-btn" data-preset="jazz34" data-meter="3" style="display: none;">JAZZ 3</button>
+                <button class="synth-btn drum-preset-btn" data-preset="pop34" data-meter="3" style="display: none;">POP 3</button>
+                <button class="synth-btn drum-preset-btn" data-preset="lofi34" data-meter="3" style="display: none;">LO-FI 3</button>
+                <button class="synth-btn drum-preset-btn" data-preset="minuet" data-meter="3" style="display: none;">MINUET</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rock34" data-meter="3" style="display: none;">ROCK 3</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rnb34" data-meter="3" style="display: none;">R&B 3</button>
+                <button class="synth-btn drum-preset-btn" data-preset="folk34" data-meter="3" style="display: none;">FOLK 3</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="blues68" data-meter="6" style="display: none;">BLUES 6</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rock68" data-meter="6" style="display: none;">ROCK 6</button>
+                <button class="synth-btn drum-preset-btn" data-preset="afro68" data-meter="6" style="display: none;">AFRO 6</button>
+                <button class="synth-btn drum-preset-btn" data-preset="rnb68" data-meter="6" style="display: none;">R&B 6</button>
+                <button class="synth-btn drum-preset-btn" data-preset="shanty" data-meter="6" style="display: none;">SHANTY</button>
+                <button class="synth-btn drum-preset-btn" data-preset="pop68" data-meter="6" style="display: none;">POP 6</button>
+                <button class="synth-btn drum-preset-btn" data-preset="trap68" data-meter="6" style="display: none;">TRAP 6</button>
+                <button class="synth-btn drum-preset-btn" data-preset="lofi68" data-meter="6" style="display: none;">LO-FI 6</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="take5" data-meter="5" style="display: none;">TAKE 5</button>
+                <button class="synth-btn drum-preset-btn" data-preset="prog54" data-meter="5" style="display: none;">PROG 5</button>
+                <button class="synth-btn drum-preset-btn" data-preset="pop54" data-meter="5" style="display: none;">POP 5</button>
+                <button class="synth-btn drum-preset-btn" data-preset="funk54" data-meter="5" style="display: none;">FUNK 5</button>
+                <button class="synth-btn drum-preset-btn" data-preset="mission" data-meter="5" style="display: none;">MISSION</button>
+                <button class="synth-btn drum-preset-btn" data-preset="lofi54" data-meter="5" style="display: none;">LO-FI 5</button>
+                <button class="synth-btn drum-preset-btn" data-preset="elec54" data-meter="5" style="display: none;">ELEC 5</button>
+                <button class="synth-btn drum-preset-btn" data-preset="afro54" data-meter="5" style="display: none;">AFRO 5</button>
+
+                <button class="synth-btn drum-preset-btn" data-preset="money78" data-meter="7" style="display: none;">MONEY 7</button>
+                <button class="synth-btn drum-preset-btn" data-preset="prog78" data-meter="7" style="display: none;">PROG 7</button>
+                <button class="synth-btn drum-preset-btn" data-preset="balkan78" data-meter="7" style="display: none;">BALKAN</button>
+                <button class="synth-btn drum-preset-btn" data-preset="fusion78" data-meter="7" style="display: none;">FUSION 7</button>
+                <button class="synth-btn drum-preset-btn" data-preset="funk78" data-meter="7" style="display: none;">FUNK 7</button>
+                <button class="synth-btn drum-preset-btn" data-preset="lofi78" data-meter="7" style="display: none;">LO-FI 7</button>
+                <button class="synth-btn drum-preset-btn" data-preset="elec78" data-meter="7" style="display: none;">ELEC 7</button>
+                <button class="synth-btn drum-preset-btn" data-preset="jazz78" data-meter="7" style="display: none;">JAZZ 7</button>
             </div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; align-items: center;">
                 <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; width: 100%; gap: 2px;">
@@ -3273,84 +3325,95 @@
                 <h2 style="margin:0; border:none; padding:0;">Tonnetz Pro: Manual</h2>
                 <button id="btnCloseInfo" class="close-btn-sm" title="Close">✕</button>
             </div>
-            <p>Welcome to Tonnetz Pro! What began as an isomorphic chord explorer is now a fully-featured, offline-capable, in-browser DAW (Digital Audio Workstation) with professional stem exporting.</p>
+            <p style="margin-top: 0;">Welcome to Tonnetz Pro! What began as an isomorphic chord explorer is now a fully-featured, offline-capable, in-browser DAW (Digital Audio Workstation) with professional stem exporting.</p>
 
-            <h3>1. Geometric Navigation & Chords</h3>
+            <h3 style="color: var(--accent); margin-top: 20px;">1. Geometric Navigation & Chords</h3>
             <p>This workstation uses Euler's Tonnetz (German for "tone network"), a geometric representation of tonal space where chords that sound mathematically pleasant together are physically touching on the grid.</p>
-            <ul>
+            <ul style="padding-left: 20px;">
                 <li><strong>Horizontal Axis:</strong> Moving left to right moves in perfect fifths (C -> G -> D).</li>
                 <li><strong>Diagonal Axes:</strong> Moving along diagonals steps in major and minor thirds.</li>
                 <li><strong>Triangles = Triads:</strong> Click any upward-facing triangle to play a Major chord. Click any downward-facing triangle to play a Minor chord.</li>
                 <li>Move (=pan) the grid by clicking and dragging on empty space (desktop), or use the on-screen <strong>D-Pad</strong>. Zoom with your scroll wheel or the <strong>+</strong> / <strong>-</strong> buttons.</li>
             </ul>
 
-            <h3>2. Performance Pads & Arpeggiator (🎛️)</h3>
+            <h3 style="color: var(--accent); margin-top: 20px;">2. Performance Pads & Arpeggiator (🎛️)</h3>
             <p>You don't need to stretch your mouse across the grid to play complex jazz chords. Use the Performance Pads (mapped to the left side of your physical keyboard) to instantly modify any note or triad you click:</p>
-            <ul>
+            <ul style="padding-left: 20px;">
                 <li><strong>Extensions & Alterations:</strong> Use the letter rows (<code>Q-T</code>, <code>A-G</code>, <code>Z-B</code>) to instantly inject lush Jazz tensions. You can alter 5ths (♭5, ♯5), suspend 3rds (sus2, sus4), or stack deep extensions (Maj7, 9, 11, 13, ♭9, ♯9, ♯11, ♭13). When <i>Show Ext. Highlights</i> is ON, safe 7th and 9th extensions light up with a green border.</li>
                 <li><strong>Octave Jumps:</strong> Hold <code>1</code> or <code>2</code> to drop or raise your playing by a full octave instantly.</li>
                 <li><strong>Arpeggiator:</strong> Hold <code>3</code> (Up), <code>4</code> (Down), or <code>5</code> (Random) to automatically step through the notes of the shapes you press. Control the speed and rhythm via the Arp/Metronome BPM slider.</li>
                 <li><strong>Foot Pedals:</strong> Hold the <code>Spacebar</code> to Sustain notes, or the <code>Left Alt</code> key to Dampen them (smoothly muffling actively sustaining voices like an 'una corda' piano pedal).</li>
             </ul>
 
-            <h3>3. Synthesizer & Persistent Samples</h3>
+            <h3 style="color: var(--accent); margin-top: 20px;">3. Synthesizer & Persistent Samples</h3>
             <p>Shape your sound deeply using the dual-oscillator synth engine, or pick from beautifully calibrated acoustic and retro analog presets.</p>
-            <ul>
-                <li><strong>Custom User Samples:</strong> Select "custom sample" from the instrument preset drop-down, then click "Load SAMPLE" to use your own <code>.wav</code> files as oscillator sources. Your uploaded files are now permanently saved to the browser's <strong>IndexedDB database</strong> and will survive page reloads!</li>
+            <ul style="padding-left: 20px;">
+                <li><strong>Custom User Samples:</strong> Select "custom sample" from the instrument preset drop-down, then click "Load SAMPLE" to use your own <code>.wav</code> files as oscillator sources. Your uploaded files are permanently saved to the browser's <strong>IndexedDB database</strong> and survive page reloads!</li>
                 <li><strong>ADSR Envelope:</strong> Visually sculpt your Attack, Decay, Sustain, and Release times to create anything from sharp rhythmic plucks to slowly swelling cinematic pads.</li>
-                <li><strong>De-Click Engine:</strong> Found in the Mixer panel, this applies a micro-fade (0-50ms) to the start and end of notes, preventing hardware speaker pops (especially useful on mobile or during fast arpeggios).</li>
-                <li><strong>Modulations:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch), <strong>Tremolo</strong> (Volume), and <strong>Sweep</strong> (Auto-Wah filter). Add sub-oscillators, noise generators, and stereo effects like Chorus, Echo, and Reverb.</li>
+                <li><strong>Master Bus Limiting:</strong> Protect your mix via the Synth panel. 'Brickwall' squares off digital clipping at an absolute 0dB ceiling. 'Analog' applies a mathematical <code>tanh</code> curve for warm, soft-saturated overdriven peaks.</li>
+                <li><strong>De-Click Engine:</strong> Applies a micro-fade (0-50ms) to the start and end of notes, preventing hardware speaker pops during fast arpeggios.</li>
+                <li><strong>Modulations:</strong> Dial in modulation across three parameters independently: <strong>Vibrato</strong> (Pitch), <strong>Tremolo</strong> (Volume), and <strong>Sweep</strong> (Auto-Wah filter). Add sub-oscillators, noise generators, and stereo FX.</li>
             </ul>
 
-            <h3>4. Drum Machine & Metronome (🥁)</h3>
-            <ul>
-                <li>Select from 16 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova.</li>
-                <li><strong>Auto-Embellish:</strong> Lets the drum machine intelligently add humanized ghost notes, fills and variations to make static presets sound organic.</li>
+            <h3 style="color: var(--accent); margin-top: 20px;">4. Drum Machine & Metronome (🥁)</h3>
+            <ul style="padding-left: 20px;">
+                <li>Select from 24 built-in rhythm presets ranging from Rock and Breakbeat to House and Bossa Nova.</li>
+                <li><strong>Auto-Embellish:</strong> Lets the drum machine intelligently add humanized ghost notes, fills, and variations to make static presets sound organic.</li>
                 <li><strong>Manual Triggers:</strong> Use the on-screen drum pads to finger-drum custom beats. You can adjust the vertical height of these buttons to fit your screen perfectly.</li>
             </ul>
 
-            <h3>5. The Multitrack Studio (🎙️)</h3>
-            <p>Tonnetz Pro features a 16-track recording environment divided into two distinct engines. Access them via the <strong>STUDIO</strong> panel.</p>
-            <ul>
+            <h3 style="color: var(--accent); margin-top: 20px;">5. The Multitrack Studio & Mixer (🎙️)</h3>
+            <p>Tonnetz Pro features a 16-track recording environment divided into two distinct engines.</p>
+            <ul style="padding-left: 20px;">
                 <li><strong>The Looper (L1-L8):</strong> 8 tracks dedicated to cyclical loop recording. Perfect for building drum beats and repetitive chord progressions.</li>
                 <li><strong>The Arranger (A1-A8):</strong> 8 linear tracks that stretch across a timeline. Perfect for recording evolving melodies over your loops, or catching imported audio stems.</li>
-                <li><strong>Recording:</strong> Select a track, choose Synth or Drums, hit the red Record button, and play! The engine is agnostic and will adapt to whatever instrument you are currently playing.</li>
-                <li><strong>Master Recording:</strong> Use the bottom of the Studio panel to bounce your entire jam session (synths, loops, and drums) to a downloadable WebM, MP4, MP3, or uncompressed WAV file.</li>
+                <li><strong>Live Input Monitoring:</strong> Select a track before playing. Manual drum hits and live synth notes route directly through that track's FX, Pan, and Volume sliders in real-time.</li>
+                <li><strong>Smart Inheritance:</strong> Tracks instantly snapshot your active UI state when recording starts. Drum tracks intelligently bypass your synth parameters to inherit a pre-calibrated "Studio Room" (Center Pan, 5% Echo, 25% Reverb).</li>
+                <li><strong>Mixer Sub-Groups:</strong> Isolate elements using <strong>Multi-Solo (S)</strong> and <strong>Mute (M)</strong>. The engine enforces a strict DAW hierarchy: Mute always overrides Solo.</li>
+                <li><strong>Master Bouncing:</strong> Bounce your entire jam session to a downloadable WebM, MP4, MP3, or uncompressed WAV file.</li>
             </ul>
 
-            <h3>6. Project Export & Import (.dawproject)</h3>
+            <h3 style="color: var(--accent); margin-top: 20px;">6. The Vertical Piano Roll</h3>
+            <p>A fully interactive sequencer interface uniquely oriented to match the Tonnetz. Time flows vertically (Y-axis), while Pitch remains horizontal (X-axis).</p>
+            <ul style="padding-left: 20px;">
+                <li><strong>Note Articulation:</strong> Click & drag note bodies to move them in time or pitch. Hover over the top edge of a note and drag vertically to dynamically resize its duration. Click and drag on empty space to Marquee-select groups of notes.</li>
+                <li><strong>Exploded Polyphony:</strong> Chords played on the Tonnetz are recorded as individual, overlapping note events, allowing for precise micro-editing of individual chord tones.</li>
+                <li><strong>Velocity Lane:</strong> A resizable automation lane on the right side uses DAW-standard "lollipop" graphs to control individual note impact. The lane automatically isolates its display to the actively selected track to prevent visual clutter.</li>
+            </ul>
+
+            <h3 style="color: var(--accent); margin-top: 20px;">7. Project Export & Import (.dawproject)</h3>
             <p>Tonnetz Pro is fully cross-compatible with professional DAWs like Bitwig Studio, Studio One, and Cubase via the open-source <code>.dawproject</code> format.</p>
-            <ul>
-                <li><strong>📦 OUT (Export):</strong> Clicking this will package your 16 tracks into a single <code>.dawproject</code> file. It automatically generates high-quality <strong>WAV Stems</strong>, raw binary <strong>MIDI files</strong> of your performances, and invisibly embeds your exact Tonnetz UI session state.</li>
+            <ul style="padding-left: 20px;">
+                <li><strong>📦 OUT (Export):</strong> Packages your 16 tracks into a single <code>.dawproject</code> file. Generates high-quality <strong>WAV Stems</strong>, raw binary <strong>MIDI files</strong>, and invisibly embeds your exact Tonnetz UI session state.</li>
                 <li>
                     <strong>📥 IN (Import):</strong> Upload any ZIP or DAWproject file here.
-                    <br><em>Native Recall:</em> Uploading a file exported from Tonnetz Pro will instantly restore your entire non-destructive session (synthesizer parameters, MIDI notes, and UI).
-                    <br><em>Foreign Import:</em> Uploading a DAWproject made in a program like Bitwig will extract the track names, colors, and BPM, and safely drop the first 8 audio stems directly onto your linear Arranger tracks for playback!
+                    <br><em>Native Recall:</em> Uploading a file exported from Tonnetz Pro instantly restores your entire non-destructive session (synthesizer parameters, MIDI notes, and UI).
+                    <br><em>Foreign Import:</em> Uploading a project made in Bitwig extracts track names, colors, and BPM, and safely drops the first 8 audio stems directly onto your linear Arranger tracks!
                 </li>
             </ul>
 
-            <h3>7. Harmonic Heatmap & Gravity Engine</h3>
+            <h3 style="color: var(--accent); margin-top: 20px;">8. Harmonic Heatmap & Gravity Engine</h3>
             <p>A real-time compositional assistant that visualizes musical tension and predicts functional chord resolutions directly on the grid.</p>
-            <ul>
-                <li><strong>Psychoacoustic Heatmap:</strong> Colors nodes based on calculated dissonance against your active chord. Green/Yellow indicates stable tones, while Orange/Red indicates high tension. Select a genre tuning (Classical, Pop/Rock, Jazz) in the Settings panel to shift the mathematical interval weights.</li>
+            <ul style="padding-left: 20px;">
+                <li><strong>Psychoacoustic Heatmap:</strong> Colors nodes based on calculated dissonance against your active chord. Green/Yellow indicates stable tones; Orange/Red indicates high tension. Select a genre tuning (Classical, Pop/Rock, Jazz) in Settings to shift mathematical interval weights.</li>
                 <li><strong>Gravity Beacons:</strong> Visualizes where unstable chords (Dom7, Dim, Sus) and substitutions want to resolve using high-contrast hollow borders and glowing text.</li>
-                <li><strong>   Local Gravity:</strong> Standard isolated chord resolutions, highlighted in light blue.</li>
-                <li><strong>   Sequence Gravity:</strong> Grammatical progression endings, highlighted in pink. The engine tracks your chord history to detect cadences (e.g., ii -> V, IV -> V) and chromatic walkdowns.</li>
-                <li><strong>BPM-Synced Buffer:</strong> A tempo-synced memory window aggregates arpeggios into single harmonic entities, allowing the engine to "look through" passing notes and identify the underlying progression accurately.</li>
+                <li><strong>  Local Gravity:</strong> Standard isolated chord resolutions, highlighted in light blue.</li>
+                <li><strong>  Sequence Gravity:</strong> Grammatical progression endings, highlighted in pink. The engine tracks your chord history to detect cadences (e.g., ii -> V, IV -> V) and chromatic walkdowns.</li>
+                <li><strong>BPM-Synced Buffer:</strong> A tempo-synced memory window aggregates arpeggios into single harmonic entities, allowing the engine to "look through" passing notes to accurately identify the underlying progression.</li>
             </ul>
 
-            <h3>8. Advanced Theory & UI Setup (⚙️)</h3>
-            <ul>
+            <h3 style="color: var(--accent); margin-top: 20px;">9. Advanced Theory & UI Setup (⚙️)</h3>
+            <ul style="padding-left: 20px;">
                 <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive minimap of the Circle of Fifths to guide your harmonic progressions.</li>
                 <li><strong>Snap to Scale:</strong> Locks the grid so that any note you press is forcefully snapped to the nearest valid note in your chosen Key and Mode (e.g., Dorian, Lydian Dominant).</li>
                 <li><strong>Tuning Systems:</strong> Switch from Equal Temperament to <strong>Just Intonation</strong> or <strong>Pythagorean Tuning</strong> to hear chords with mathematically perfect, beatless tuning ratios.</li>
-                <li><strong>Panel Auto-Hide (⏱):</strong> Every side panel has a small ⏱ toggle button in the top right corner. When activated (Blue), the panel will automatically vanish the moment you touch the Tonnetz grid to give you room to play, and instantly reappear when you release.</li>
+                <li><strong>Panel Auto-Hide (⏱):</strong> Every side panel has a small ⏱ toggle. When activated (Blue), the panel will automatically vanish the moment you touch the Tonnetz grid to give you room to play, and instantly reappear when you release.</li>
             </ul>
 
-            <h3>9. MIDI Connectivity</h3>
-            <ul>
+            <h3 style="color: var(--accent); margin-top: 20px;">10. MIDI Connectivity</h3>
+            <ul style="padding-left: 20px;">
                 <li><strong>MIDI IN:</strong> Connect any USB MIDI keyboard to play the Tonnetz Pro synthesizer using physical keys. The app responds dynamically to pitch, velocity, and sustain pedal events.</li>
-                <li><strong>MIDI OUT:</strong> Use Tonnetz Pro as an interactive geometric MIDI controller! The chords, arpeggios, and extensions you click on the Tonnetz will be sent out to your external hardware synthesizers or your favorite DAW. Toggle between "Browser + MIDI" or "MIDI Only" to save CPU when controlling external gear.</li>
+                <li><strong>MIDI OUT:</strong> Use Tonnetz Pro as an interactive geometric MIDI controller! The chords, arpeggios, and extensions you click on the Tonnetz will be sent out to your external hardware synthesizers or your favorite DAW. Toggle between "Browser + MIDI" or "MIDI Only" to save CPU.</li>
             </ul>
 
             <div style="text-align: center; margin-top: 30px;">
