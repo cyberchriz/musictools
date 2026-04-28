@@ -2982,6 +2982,66 @@
             [4, 5, 6, 1, 4, 5, 6, 3], // Outrun training montage
             [1, 6, 4, 5, 1, 6, 2, 5], // 80s teen movie anthem
             [6, 5, 4, 5, 6, 5, 2, 3]  // Cyberpunk tension loop
+        ],
+        edm: [
+            // 4-Chord Loops (High Energy)
+            [6, 4, 1, 5], // The classic "Festival/Big Room" anthem
+            [1, 6, 4, 5], // Trance builder
+            [4, 6, 5, 5], // Driving progressive house
+            [6, 5, 4, 5], // Tense drop buildup
+            // 8-Chord Phrases (Mainstage Narratives)
+            [4, 1, 5, 6, 4, 1, 5, 5], // 8-bar Mainstage progression (tension to release)
+            [6, 4, 1, 5, 6, 4, 5, 5], // Minor festival build, resting on dominant
+            [1, 5, 6, 4, 1, 5, 4, 5], // Uplifting vocal EDM verse
+            [6, 5, 4, 3, 6, 5, 4, 5]  // Phrygian/Dark descent to big rise
+        ],
+        house: [
+            // 4-Chord Loops (Groove & Soul)
+            [2, 5, 1, 6], // Deep House (Usually played with minor 7ths/9ths)
+            [1, 4, 1, 4], // 2-chord vamp (very common in tech house)
+            [4, 3, 2, 1], // Descending soulful house
+            [6, 7, 1, 2], // Ascending piano house progression
+            // 8-Chord Phrases (Extended Mix Grooves)
+            [2, 2, 3, 6, 2, 2, 4, 5], // Extended funky house progression
+            [4, 3, 2, 1, 4, 3, 6, 6], // Soulful house with a minor turnaround
+            [2, 5, 1, 6, 2, 5, 3, 6], // Deep house jazzy turnaround
+            [1, 4, 5, 4, 1, 4, 6, 5]  // Classic 90s piano house extended loop
+        ],
+        techno: [
+            // 4-Chord Loops (Hypnotic & Static)
+            [1, 1, 1, 1], // Pure pedal-point driving techno
+            [1, 1, 1, 7], // Detroit techno bump
+            [1, 2, 1, 7], // Dark minimal shift
+            [6, 6, 6, 5], // Minor underground loop
+            // 8-Chord Phrases (Slow Modulations)
+            [1, 1, 1, 1, 1, 1, 1, 7], // Long hypnotic drive with a 1-bar turnaround
+            [6, 6, 6, 6, 6, 6, 4, 5], // Melodic techno/Berlin build
+            [1, 2, 1, 2, 1, 2, 3, 4], // Acid techno climbing sequence
+            [1, 1, 4, 4, 1, 1, 5, 5]  // Tech-house blocky chord stabs
+        ],
+        pop_punk: [
+            // 4-Chord Loops (Fast & Power Chords)
+            [1, 5, 6, 4], // The Blink-182 classic
+            [6, 4, 1, 5], // The heavy emo chorus
+            [1, 4, 1, 5], // Fast drive
+            [4, 1, 6, 5], // Emotional bridge
+            // 8-Chord Phrases (Pop-Punk Verse/Chorus)
+            [1, 5, 6, 4, 1, 5, 4, 4], // Anthem chorus ending on subdominant
+            [6, 4, 1, 5, 6, 4, 5, 5], // Emo narrative holding tension
+            [1, 4, 6, 5, 1, 4, 2, 5], // Skate-punk driving verse
+            [4, 1, 5, 6, 4, 1, 5, 5]  // 2000s Pop-Rock buildup
+        ],
+        jazz_bossa: [ 
+            // 4-Chord Loops (Smooth & Syncopated)
+            [1, 6, 2, 5], // The standard turnaround
+            [2, 5, 3, 6], // Rising sequence
+            [1, 2, 3, 4], // Ascending "Girl from Ipanema" vibe
+            [3, 6, 2, 5], // Secondary dominant chain
+            // 8-Chord Phrases (Extended Cafe Grooves)
+            [4, 4, 3, 6, 2, 5, 1, 1], // 8-bar Bossa sequence
+            [1, 6, 2, 5, 3, 6, 2, 5], // Extended turnaround chain
+            [2, 5, 1, 6, 2, 5, 1, 1], // Lounge jazz resolution
+            [3, 6, 2, 5, 1, 4, 7, 3]  // "Autumn Leaves" full circle
         ]
     };
 
@@ -2994,7 +3054,11 @@
             engineObj.tracks.forEach((track, trackIdx) => {
                 // Skip the track we are currently generating onto!
                 if (isLooper === (activeDomain === 'looper') && trackIdx === targetTrackIdx) return;
-                if (studio.trackTypes[isLooper ? trackIdx : trackIdx + 8] !== 'voice') return; // Skip drums
+                
+                // THE FIX: Explicitly exclude 'drum', rather than exclusively requiring 'voice'.
+                // This ensures piano, synth, and unassigned tracks are still scanned for harmony!
+                const trackType = studio.trackTypes[isLooper ? trackIdx : trackIdx + 8];
+                if (trackType === 'drum') return; 
                 
                 track.forEach(evt => {
                     if (evt.type === 'play' && evt.freqs) {
@@ -3022,48 +3086,120 @@
 
     function generateAIProgression() {
         const mood = document.getElementById('genMood').value;
-        const complexity = parseInt(document.getElementById('genComplexity').value);
         const style = document.getElementById('genStyle').value;
+
+        const valLeaps = parseInt(document.getElementById('genMelodicLeaps')?.value || 20);
+        const valPassing = parseInt(document.getElementById('genPassingTones')?.value || 40);
+        const valTimingHum = parseInt(document.getElementById('genTimingHum')?.value || 30) / 100;
+        const valVelHum = parseInt(document.getElementById('genVelHum')?.value || 40) / 100;
+        const valBorrowed = parseInt(document.getElementById('genBorrowed')?.value || 15) / 100;
+        const valExtensions = parseInt(document.getElementById('genExtensions')?.value || 30) / 100;
+        const valContour = parseInt(document.getElementById('genContour')?.value || 80) / 100;
+        const valLegato = parseInt(document.getElementById('genLegato')?.value || 60) / 100;
+        const valMotif = parseInt(document.getElementById('genMotif')?.value || 75) / 100;
+        const valPhraseLength = parseInt(document.getElementById('genPhraseLength')?.value || 50) / 100;
+        const valMelodicRange = parseInt(document.getElementById('genMelodicRange')?.value || 50) / 100; // NEW!
+
         const startBar = parseInt(document.getElementById('genStartBar').value) - 1;
         const lengthBars = parseInt(document.getElementById('genLength').value);
-        
         const beatSecs = 60 / currentArpBPM;
         const barSecs = beatSecs * beatsPerBar;
+        const base16th = barSecs / 16; 
         let currentTime = startBar * barSecs;
 
-        // 1. Pick a random progression from the library
         const lib = progressionLibrary[mood];
         const romanBase = lib[Math.floor(Math.random() * lib.length)];
         
         let lastMidiChord = [];
-        let previousCenter = null; // Track Center of Gravity for smooth voice leading
+        let previousCenter = null; 
+
+        // --- THE MICRO-MOTIF ENGINE ---
+        let cellLibrary = [];
+
+        // 1. Define base rhythms (Pop, Dark, Epic, Classical, etc.)
+        let defaultSlow = [[16], [8, 8], [12, 4], [4, 12], [8, 4, 4], [4, 4, 8], [6, 2, 8]]; 
+        let defaultMed = [[4], [2, 2], [4, 4], [2, 2, 4], [4, 2, 2], [2, 4, 2], [3, 1, 4]]; 
+        let defaultFast = [[1, 1, 1, 1], [2, 1, 1], [1, 1, 2], [1, 2, 1], [2, 2]];
+
+        // 2. Genre-Specific Rhythmic Overrides!
+        if (mood === 'jazz_bossa' || mood === 'jazz') {
+            // Syncopated, off-beat focus (Clave/Tresillo feels)
+            defaultSlow = [[8, 8], [6, 2, 8], [8, 6, 2], [4, 12]];
+            defaultMed = [[3, 3, 2], [2, 3, 3], [3, 1, 4], [2, 4, 2]]; // 3-3-2 is classic Latin syncopation!
+            defaultFast = [[1, 2, 1], [2, 1, 1], [1, 1, 2], [3, 1]];
+        } 
+        else if (mood === 'house' || mood === 'techno' || mood === 'edm') {
+            // Driving, straight 16ths or classic 90s dance syncopations
+            defaultSlow = [[16], [8, 8], [4, 4, 8]];
+            defaultMed = [[2, 2, 2, 2], [3, 3, 2], [2, 2, 4], [4, 4]]; 
+            defaultFast = [[1, 1, 1, 1], [1, 1, 2], [2, 2]]; // Machine-like straight 16ths
+        } 
+        else if (mood === 'lofi' || mood === 'soul' || mood === 'rnb') {
+            // Sparse, laid-back, "dragging" feels with more space
+            defaultSlow = [[16], [12, 4], [8, 8]];
+            defaultMed = [[4, 4], [6, 2], [2, 6], [2, 4, 2]]; // Swinging / dragging 8ths
+            defaultFast = [[2, 2], [2, 1, 1], [4]]; // Fewer rapid 16ths, more 8th note spacing
+        }
+        else if (mood === 'pop_punk') {
+            // Urgent, driving, repetitive 8ths and 16ths
+            defaultSlow = [[8, 8], [4, 4, 8]];
+            defaultMed = [[2, 2, 2, 2], [4, 4], [2, 2, 4]];
+            defaultFast = [[1, 1, 1, 1], [2, 2]];
+        }
+
+        // 3. Assign the correct library based on the requested Melody Speed
+        if (style === 'melody_slow') cellLibrary = defaultSlow;
+        else if (style === 'melody_med') cellLibrary = defaultMed;
+        else cellLibrary = defaultFast;
+        
+        const primaryCell = cellLibrary[Math.floor(Math.random() * cellLibrary.length)];
+        const secondaryCell = cellLibrary[Math.floor(Math.random() * cellLibrary.length)];
+
+        const buildContour = (cell, leaps, contourProb) => {
+            let contour = [0];
+            let current = 0;
+            let dir = Math.random() > 0.5 ? 1 : -1;
+            for (let i = 1; i < cell.length; i++) {
+                if (Math.random() > contourProb) dir *= -1; 
+                let step = 1;
+                if (Math.random() < (leaps / 100)) step = 2; 
+                current += dir * step;
+                contour.push(current);
+            }
+            return contour;
+        };
+
+        let globalMelodyLick = []; 
+        let lastAnchorMidi = null;
+        let lastPlayedMelodyMidi = null;
+
+        let primaryContour = buildContour(primaryCell, valLeaps, valContour);
+        let secondaryContour = buildContour(secondaryCell, valLeaps, valContour);
 
         // 2. Iterate through bars
         for (let b = 0; b < lengthBars; b++) {
             const stepIndex = b % romanBase.length;
             let degree = romanBase[stepIndex];
             
-            // --- CREATIVITY: Borrowed Chords (Complexity > 75%) ---
-            if (complexity > 75 && Math.random() > 0.7) {
-                const overrides = { 4: 4, 1: 1, 5: 5 }; // Simple parallel minor swap
+            if (Math.random() < valBorrowed) {
+                const overrides = { 4: 4, 1: 1, 5: 5 }; 
                 if (overrides[degree]) degree = overrides[degree];
             }
 
-            // 3. Map Degree to Semitones (Diatonic to current scale)
             const mask = scaleMasks[currentScale] || scaleMasks['major'];
             const rootSt = mask[(degree - 1) % mask.length];
             
-            // Initial Anchor (Octave 3)
             let rootMidi = 48 + ((rootSt % 12 + 12) % 12);
             let midiArray = [rootMidi, rootMidi + 4, rootMidi + 7]; 
             if ([2, 3, 6].includes(degree)) midiArray = [rootMidi, rootMidi + 3, rootMidi + 7];
             if (degree === 7) midiArray = [rootMidi, rootMidi + 3, rootMidi + 6];
 
-            if (complexity > 40) midiArray.push(rootMidi + (complexity > 80 ? 14 : 10)); // 7ths/9ths
+            if (Math.random() < valExtensions) {
+                const addNinth = (valExtensions > 0.7) && (Math.random() < 0.5);
+                midiArray.push(rootMidi + (addNinth ? 14 : 10)); 
+            }
 
-            // --- PRO FEATURE 1: Center of Gravity Voice Leading ---
             if (previousCenter !== null) {
-                // Shift the whole chord up or down by octaves until it is closest to the previous center
                 let currentAvg = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
                 let bestDiff = Math.abs(currentAvg - previousCenter);
                 let bestShift = 0;
@@ -3077,42 +3213,30 @@
                 }
                 midiArray = midiArray.map(m => m + bestShift);
                 
-                // Then perform internal inversion (drop high notes or raise low notes)
                 const currentCenter = previousCenter; 
                 midiArray = midiArray.map(m => {
-                    if (m - currentCenter > 8) return m - 12; // Bring high notes down
-                    if (currentCenter - m > 8) return m + 12; // Bring low notes up
+                    if (m - currentCenter > 8) return m - 12; 
+                    if (currentCenter - m > 8) return m + 12; 
                     return m;
                 });
             }
             
-            // Update Center of Gravity for the next bar
             previousCenter = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
-
-            // Sort to ensure lowest pitch is first
             midiArray.sort((a, b) => a - b);
 
-            // --- Context-Aware Dissonance Filtering ---
             const isContextAware = document.getElementById('genContextAware')?.checked;
             if (isContextAware) {
                 const playingMidi = getActiveMidiNotesAtTime(currentTime);
                 if (playingMidi.length > 0) {
                     midiArray = midiArray.filter(m => {
-                        // Check for minor 2nd clashes (1 semitone difference)
                         const isClashing = playingMidi.some(pm => Math.abs((pm % 12) - (m % 12)) === 1);
-                        // If it clashes, omit it (creates a clean shell voicing) unless it's the root note
                         return !(isClashing && m !== midiArray[0]); 
                     });
                 }
             }
 
-            // Transform to Absolute Frequencies
             let targetFreqs = midiArray.map(midi => masterTune * Math.pow(2, (midi - 69) / 12));
-
-            // --- PRO FEATURE: Advanced Styles & Legato Melting ---
-            const isHuman = document.getElementById('genHumanize')?.checked;
             
-            // Extract the implicit rate from the new combined style names
             let rateDivisor = 8;
             if (style.includes('_4') || style === 'melody_slow') rateDivisor = 4;
             if (style.includes('_16') || style === 'arp_pattern1' || style === 'melody_fast') rateDivisor = 16;
@@ -3120,28 +3244,30 @@
             const stepDur = barSecs / rateDivisor;
             const steps = beatsPerBar * (rateDivisor / 4);
 
-            let barNotes = []; // Temporary buffer to hold notes for this bar so we can "melt" them
+            let barNotes = []; 
 
-            const bufferNote = (freqs, timeOffset, duration) => {
-                let t = timeOffset;
-                let vel = 100;
-                if (isHuman) {
-                    t += (Math.random() * 0.03) - 0.015; // +/- 15ms swing
-                    vel = 85 + Math.random() * 30; // 85 to 115 velocity
-                }
-                barNotes.push({ freqs, timeOffset: t, duration, velocity: vel });
+            const bufferNote = (freqs, tOffset, dur, isMelody = false) => {
+                const maxTimeShift = (base16th / 4) * valTimingHum; 
+                const humanTime = Math.max(currentTime, tOffset + ((Math.random() - 0.5) * 2 * maxTimeShift));
+                const humanVel = Math.floor(100 - (Math.random() * valVelHum * 40));
+
+                barNotes.push({
+                    timeOffset: humanTime,
+                    duration: dur,
+                    freqs: freqs,
+                    velocity: humanVel,
+                    isMelody: isMelody
+                });
             };
 
-            // 1. BLOCK CHORDS
-            if (style === 'block_4') {
+            if (style === 'block_1') {
                 bufferNote(targetFreqs, currentTime, barSecs);
             } 
-            // 2. GUITAR STRUMMING
             else if (style.startsWith('strum_')) {
-                let syncPattern = [1, 0, 1, 1, 0, 1, 1, 1]; // Classic pop strum
+                let syncPattern = [1, 0, 1, 1, 0, 1, 1, 1]; 
                 
                 for (let i = 0; i < steps; i++) {
-                    if (style === 'strum_sync_8' && syncPattern[i % 8] === 0) continue; // Rests in syncopated strum
+                    if (style === 'strum_sync_8' && syncPattern[i % 8] === 0) continue; 
                     
                     const isDown = style === 'strum_down_4' || (style.includes('updown') && i % 2 === 0) || (style === 'strum_sync_8' && [0, 2, 6].includes(i % 8));
                     let currentStrum = [...targetFreqs];
@@ -3153,114 +3279,204 @@
                     });
                 }
             } 
-            // 3. SOLO MELODIES
+            // SOLO MELODIES
             else if (style.startsWith('melody_')) {
                 let remainingTime = barSecs;
                 let t = currentTime;
                 const base16th = barSecs / 16;
                 
-                // Sort the chord tones low-to-high so we can step through them musically
-                let sortedChord = [...targetFreqs].sort((a, b) => a - b);
+                let chordMidis = targetFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69)).sort((a, b) => a - b);
+                const mask = scaleMasks[currentScale] || scaleMasks['all'];
+                const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
                 
-                // Start the melody in the middle of the available chord range
-                let lastIdx = Math.floor(sortedChord.length / 2); 
-                let isStrongBeat = true; // Beat 1 is always strong
+                let scaleArray = [];
+                for (let i = 36; i <= 108; i++) {
+                    if (activeScalePCs.has(((i % 12) + 12) % 12)) scaleArray.push(i);
+                }
 
                 while (remainingTime > 0.01) {
-                    let durChoices = [];
-                    if (style === 'melody_slow') durChoices = [4, 8, 8, 12]; // 1/4, 1/2, dotted 1/2
-                    else if (style === 'melody_med') durChoices = [2, 4, 4, 6]; // 1/8, 1/4, dotted 1/4
-                    else durChoices = [1, 2, 2, 4]; // 1/16, 1/8, 1/4
-                    
-                    let stepMult = durChoices[Math.floor(Math.random() * durChoices.length)];
-                    let noteDur = stepMult * base16th;
-                    if (noteDur > remainingTime) noteDur = remainingTime;
+                    // --- 1. GENERATE NEW LICK IF BUFFER IS EMPTY ---
+                    if (globalMelodyLick.length === 0) {
+                        let maxPhraseSecs = 0;
+                        if (style === 'melody_fast') maxPhraseSecs = barSecs * (0.5 + (valPhraseLength * 1.5));
+                        else if (style === 'melody_med') maxPhraseSecs = barSecs * (1 + (valPhraseLength * 3));
+                        else maxPhraseSecs = barSecs * (2 + (valPhraseLength * 6));
 
-                    // Melodies need space to breathe. Faster melodies have fewer rests.
-                    const restChance = style === 'melody_fast' ? 0.05 : 0.15;
-                    
-                    if (Math.random() > restChance) { 
-                        let note;
+                        // Connecting the Active Ratio directly to the Breathing slider!
+                        // Slider at 0% = ~30% playing, 70% resting (sparse, staccato)
+                        // Slider at 100% = ~90% playing, 10% resting (breathless, continuous)
+                        let baseRatio = 0.3 + (valPhraseLength * 0.6); 
                         
-                        // --- THE VOICE LEADING ENGINE ---
-                        // Creativity (0-100) dictates how far the melody is allowed to jump.
-                        // Low Creativity = Max jump of 1 index (Stepwise). High Creativity = Up to 3 indices (Leaps).
-                        let maxLeap = Math.max(1, Math.floor(complexity / 33)); 
-                        
-                        // Pick a direction: move up, move down, or repeat the note
-                        let step = Math.floor(Math.random() * (maxLeap * 2 + 1)) - maxLeap;
-                        
-                        // Strong beats (e.g., the 1 and 3) strongly prefer anchoring to stable chord tones.
-                        if (isStrongBeat && complexity < 70) {
-                            if (Math.random() > 0.4) step = 0; // 60% chance to anchor firmly
+                        // ELASTICITY: A +/- 15% human variance (30% total swing)
+                        // This means if the slider targets 70%, the AI might dynamically play 
+                        // a short 55% lick one bar, and a long 85% run the next, acting like a real soloist!
+                        let activeRatio = baseRatio + ((Math.random() * 0.3) - 0.15); 
+                        activeRatio = Math.max(0.2, Math.min(0.95, activeRatio)); // Clamp safely
+
+                        let targetActiveSecs = maxPhraseSecs * activeRatio;
+
+                        let lickDuration = 0;
+                        let phraseBuffer = [];
+                        let phraseStepOffset = 0; 
+                        let macroDir = Math.random() > 0.5 ? 1 : -1;
+                        let maxDrift = Math.floor(2 + (valMelodicRange * 10));
+
+                        // Build the solid phrase by tiling cells, but ONLY up to the active target limit!
+                        while (lickDuration < targetActiveSecs) {
+                            let isPrimary = Math.random() > 0.2; 
+                            let cell = isPrimary ? [...primaryCell] : [...secondaryCell];
+                            let contour = isPrimary ? [...primaryContour] : [...secondaryContour];
+                            
+                            for (let i = 0; i < cell.length; i++) {
+                                phraseBuffer.push({ 
+                                    length: cell[i], 
+                                    originalLength: cell[i], 
+                                    step: contour[i] + phraseStepOffset, 
+                                    isRest: false 
+                                });
+                                lickDuration += (cell[i] * base16th);
+                            }
+
+                            // --- THE HOVER FIX: Contour Stability ---
+                            // Don't force the melody to blindly walk up and down scales!
+                            // valContour dictates the probability that the motif stays at the exact same pitch level.
+                            let hoverChance = valContour; 
+                            
+                            if (Math.random() > hoverChance) {
+                                // The AI decided to step. Calculate direction based on Elastic Gravity.
+                                
+                                // Natural wandering pivot
+                                if (Math.random() > 0.7) macroDir *= -1; 
+                                
+                                // Harder boundaries if it drifts too far from its center
+                                if (phraseStepOffset >= maxDrift && Math.random() < 0.85) macroDir = -1;
+                                if (phraseStepOffset <= -maxDrift && Math.random() < 0.85) macroDir = 1;
+                                
+                                // Apply the step (1 or 2 notes)
+                                let sequenceJump = (Math.random() < (valLeaps / 100)) ? 2 : 1;
+                                phraseStepOffset += (macroDir * sequenceJump);
+                            }
                         }
 
-                        // Apply the step safely without going out of bounds
-                        lastIdx = Math.max(0, Math.min(sortedChord.length - 1, lastIdx + step));
-                        note = sortedChord[lastIdx];
+                        // THE BREATHING FIX: Fill the remaining phrase time with either a Rest or a Sustained Note!
+                        let remainingPhraseTime = maxPhraseSecs - lickDuration;
+                        if (remainingPhraseTime > 0.01) {
+                            let remainderTicks = remainingPhraseTime / base16th;
+                            // 50% chance to Rest, 50% chance to dramatically Hold the very last note
+                            if (Math.random() > 0.5 && phraseBuffer.length > 0) {
+                                phraseBuffer[phraseBuffer.length - 1].length += remainderTicks;
+                                phraseBuffer[phraseBuffer.length - 1].originalLength += remainderTicks;
+                            } else {
+                                phraseBuffer.push({ length: remainderTicks, originalLength: remainderTicks, step: null, isRest: true });
+                            }
+                        }
 
-                        // --- PRO FEATURE: GLOBAL HARMONY AWARENESS ---
-                        if (complexity > 50 && !isStrongBeat && Math.random() > 0.5) {
-                            const currentMidi = Math.round(12 * Math.log2(note / masterTune) + 69);
-                            
-                            // 1. Get the current scale structure
-                            const mask = scaleMasks[currentScale] || scaleMasks['all'];
-                            const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
-                            
-                            // 2. SCAN THE ENTIRE DAW FOR ACTIVE CHORDS AT THIS EXACT MILLISECOND!
-                            const activeDomain = studio.lastSelectedDomain;
-                            const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : (studio.activeArrangerTrack - 8);
-                            const globalActivePCs = getGlobalActivePitchClasses(t, activeDomain, targetTrackIdx);
+                        if (Math.random() > valMotif) {
+                            let variation = Math.random();
+                            if (variation < 0.33) phraseBuffer.forEach(n => { if (!n.isRest) n.step *= -1 }); 
+                            else if (variation < 0.66) phraseBuffer.reverse(); 
+                        }
 
-                            // 3. Decide direction (up or down)
-                            const direction = Math.random() > 0.5 ? 1 : -1;
-                            let testMidi = currentMidi + direction;
-                            let foundValidNote = false;
+                        globalMelodyLick.push(...phraseBuffer);
+                        
+                        // TELEPORTATION FIX: Start the new phrase exactly where the last one ended!
+                        if (!lastAnchorMidi) {
+                            lastAnchorMidi = chordMidis[Math.floor(chordMidis.length / 2)] || (currentKeyCenter + 60);
+                        } else if (typeof lastPlayedMelodyMidi !== 'undefined' && lastPlayedMelodyMidi !== null) {
+                            lastAnchorMidi = lastPlayedMelodyMidi;
+                        }
+                    }
 
-                            // 4. Search up to 4 semitones for a perfect, safe note
-                            for (let search = 0; search < 4; search++) {
-                                const pc = ((testMidi % 12) + 12) % 12; 
-                                
-                                // Condition A: It must be in the selected scale
-                                let isSafe = activeScalePCs.has(pc);
-                                
-                                // Condition B: It cannot be a minor 2nd (+/- 1) from our melody anchor
-                                if (Math.abs(testMidi - currentMidi) <= 1) isSafe = false;
+                    // --- 2. EXECUTE THE LICK FROM MEMORY ---
+                    let currentNote = globalMelodyLick[0];
+                    let sliceDur = currentNote.length * base16th;
+                    let isFirstStrike = (currentNote.length === currentNote.originalLength);
+                    
+                    if (sliceDur > remainingTime) {
+                        currentNote.length -= (remainingTime / base16th);
+                        sliceDur = remainingTime;
+                    } else {
+                        globalMelodyLick.shift(); 
+                    }
 
-                                // Condition C: THE GLOBAL VETO. It cannot clash (minor 2nd) with ANY note currently playing on ANY other track!
-                                if (isSafe && globalActivePCs.size > 0) {
-                                    const pcUp = (pc + 1) % 12;
-                                    const pcDown = ((pc - 1) + 12) % 12;
-                                    if (globalActivePCs.has(pcUp) || globalActivePCs.has(pcDown)) {
-                                        isSafe = false; // VETOED BY ANOTHER TRACK!
-                                    }
-                                }
+                    if (sliceDur <= 0.01) { remainingTime = 0; break; }
 
-                                if (isSafe) {
-                                    foundValidNote = true;
+                    if (!currentNote.isRest && isFirstStrike) {
+                        const activeDomain = typeof studio !== 'undefined' ? studio.lastSelectedDomain : 'arranger';
+                        const targetTrackIdx = activeDomain === 'looper' && typeof studio !== 'undefined' ? studio.activeLooperTrack : (typeof studio !== 'undefined' ? studio.activeArrangerTrack - 8 : 0);
+                        
+                        const globalPCs = getGlobalActivePitchClasses(t, activeDomain, targetTrackIdx);
+                        let anchorPCs = globalPCs.size > 0 ? Array.from(globalPCs) : chordMidis.map(m => ((m % 12) + 12) % 12);
+
+                        // Smooth Voice Leading Anchor Update
+                        let minDiff = 999;
+                        let bestAnchor = lastAnchorMidi;
+                        for (let pc of anchorPCs) {
+                            let diff = (pc - (lastAnchorMidi % 12));
+                            if (diff > 6) diff -= 12; 
+                            if (diff < -6) diff += 12;
+                            if (Math.abs(diff) < minDiff) { 
+                                minDiff = Math.abs(diff); 
+                                bestAnchor = lastAnchorMidi + diff; 
+                            }
+                        }
+                        
+                        // Prevent extreme sub-bass or dog-whistle ranges
+                        if (bestAnchor < 48) bestAnchor += 12;
+                        if (bestAnchor > 96) bestAnchor -= 12;
+                        lastAnchorMidi = bestAnchor;
+
+                        let tempScaleArray = [...scaleArray];
+                        if (!tempScaleArray.includes(lastAnchorMidi)) {
+                            tempScaleArray.push(lastAnchorMidi);
+                            tempScaleArray.sort((a, b) => a - b);
+                        }
+
+                        let currentAnchorIdx = tempScaleArray.indexOf(lastAnchorMidi);
+                        if (currentAnchorIdx === -1) currentAnchorIdx = Math.floor(tempScaleArray.length / 2);
+                        
+                        let noteIdx = currentAnchorIdx + currentNote.step;
+                        noteIdx = Math.max(0, Math.min(tempScaleArray.length - 1, noteIdx)); 
+                        let nextMidi = tempScaleArray[noteIdx];
+
+                        // MINOR 2ND FIX: Nudge notes safely along the scale array if they violently clash
+                        let isClashing = true;
+                        let attempts = 0;
+                        while (isClashing && attempts < 2) {
+                            isClashing = false;
+                            for (let pc of anchorPCs) {
+                                let diff = Math.abs((pc % 12) - (nextMidi % 12));
+                                if (diff === 1 || diff === 11) { 
+                                    noteIdx += (currentNote.step >= 0 ? 1 : -1); 
+                                    noteIdx = Math.max(0, Math.min(tempScaleArray.length - 1, noteIdx));
+                                    nextMidi = tempScaleArray[noteIdx];
+                                    isClashing = true;
                                     break;
                                 }
-                                testMidi += direction;
                             }
-
-                            if (foundValidNote) {
-                                note = masterTune * Math.pow(2, (testMidi - 69) / 12);
-                            }
+                            attempts++;
                         }
 
-                        bufferNote([note], t, noteDur * 0.9);
+                        // SPICY PASSING TONES
+                        const beatPos = (t - currentTime) / base16th;
+                        const isOffbeat = (Math.abs(beatPos % 2) > 0.01);
+                        if (isOffbeat && Math.random() < (valPassing / 100)) {
+                            nextMidi += (Math.random() > 0.5 ? 1 : -1);
+                        }
+
+                        lastPlayedMelodyMidi = nextMidi; // Save exact position for the next phrase!
+
+                        const freq = masterTune * Math.pow(2, (nextMidi - 69) / 12);
+                        const fullDur = currentNote.originalLength * base16th;
+                        // Increased from 0.9 to 0.96 to fix the staccato barcode look
+                        bufferNote([freq], t, fullDur * 0.96, true); 
                     }
-                    
-                    t += noteDur;
-                    remainingTime -= noteDur;
-                    
-                    // Toggle strong/weak beat for phrasing logic
-                    // If we land exactly on a 1/4 note division grid line, it is a "strong" downbeat.
-                    const beatPosition = (t - currentTime) / base16th;
-                    isStrongBeat = (Math.abs(beatPosition % 4) < 0.01); 
+
+                    t += sliceDur;
+                    remainingTime -= sliceDur;
                 }
             }
-            // 4. ARPEGGIATORS
+
             else if (style.startsWith('arp_') || style === 'travis') {
                 let sortedFreqs = [...targetFreqs];
                 let pattern = [];
@@ -3298,13 +3514,12 @@
                 });
             }
 
-            // --- THE LEGATO MELTING PASS ---
             if (barNotes.length > 0) {
                 barNotes.sort((a, b) => a.timeOffset - b.timeOffset);
                 let mergedBuffer = [];
                 let currentNote = barNotes[0];
 
-                const mergeChance = complexity / 100; // Creativity controls how often notes melt!
+                const mergeChance = valLegato; 
 
                 for (let i = 1; i < barNotes.length; i++) {
                     let nextNote = barNotes[i];
@@ -3312,8 +3527,7 @@
                         currentNote.freqs.every((f, idx) => Math.abs(f - nextNote.freqs[idx]) < 0.1);
                     const gap = nextNote.timeOffset - (currentNote.timeOffset + currentNote.duration);
                     
-                    // If pitches are identical, they touch (within 60ms tolerance), and RNG passes, MELT THEM!
-                    if (isSamePitch && gap < 0.06 && Math.random() < mergeChance && !style.startsWith('strum_')) {
+                    if (isSamePitch && gap < 0.06 && Math.random() < mergeChance && !currentNote.isMelody && !style.startsWith('strum_')) {
                         currentNote.duration = (nextNote.timeOffset + nextNote.duration) - currentNote.timeOffset;
                     } else {
                         mergedBuffer.push(currentNote);
@@ -3322,7 +3536,6 @@
                 }
                 mergedBuffer.push(currentNote);
 
-                // Write the final melted buffer to the timeline
                 mergedBuffer.forEach(n => {
                     handleStepEntry(n.freqs, null, null, n.velocity, n.timeOffset, n.duration);
                 });
@@ -3331,19 +3544,15 @@
             currentTime += barSecs;
         }
 
-    // --- Auto-advance the UI Start Bar! ---
-    const startBarInput = document.getElementById('genStartBar');
-    if (startBarInput) startBarInput.value = parseInt(startBarInput.value) + lengthBars;
+        const startBarInput = document.getElementById('genStartBar');
+        if (startBarInput) startBarInput.value = parseInt(startBarInput.value) + lengthBars;
 
-    if (typeof drawPianoRoll === 'function') drawPianoRoll();
-    showToast(`Generated ${lengthBars} bars of ${mood} harmony!`);
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
+        showToast(`Generated ${lengthBars} bars of ${mood} harmony!`);
     }
 
     // Wire up the Generator Execute button
     document.getElementById('btnExecuteGen')?.addEventListener('click', generateAIProgression);
-    document.getElementById('genComplexity')?.addEventListener('input', (e) => {
-        document.getElementById('lblGenComplexity').textContent = `Creativity: ${e.target.value}%`;
-    });
 
     // =====================================================================
     // PIANO ROLL EDITOR ENGINE
