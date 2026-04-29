@@ -608,41 +608,6 @@
             box-sizing: border-box;
         }
 
-        .looper-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            margin-bottom: 8px;
-        }
-
-        .looper-row {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .looper-row-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: bold;
-            padding-left: 2px;
-        }
-
-        .looper-tracks-row {
-            display: flex;
-            gap: 5px;
-            width: 100%;
-        }
-
-        .track-col {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1;
-            min-width: 0;
-        }
-
         .inst-label {
             font-size: 0.55rem;
             color: var(--text-muted);
@@ -1592,18 +1557,32 @@
         /* 11b. MIXER CONSOLE STYLES */
         .mixer-grid-4 {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 4px;
             width: 100%;
             margin-top: 4px;
         }
 
         .mixer-grid-8 {
             display: grid;
-            grid-template-columns: repeat(8, 1fr);
+            grid-template-columns: repeat(8, minmax(0, 1fr));
             gap: 4px;
             width: 100%;
             margin-top: 4px;
+        }
+            /* Also ensure the column wrapper itself is allowed to shrink below its content size */
+            .mixer-grid-8 > div {
+                min-width: 0;
+            }
+
+        /* Ensure track labels apply the ellipsis (...) properly */
+        .inst-label {
+            width: 100%;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
         }
 
         .mixer-channel {
@@ -1754,6 +1733,41 @@
                 margin-top: 4px;
             }
         }
+
+        /* --- TRACK SELECTORS: LONG-PRESS VISUAL FEEDBACK (=CLEAR TRACK) --- */
+        .track-btn {
+            position: relative;
+            overflow: hidden; /* Keeps the animation inside the button edges */
+            z-index: 1;
+        }
+
+            /* The red "fill" bar waiting in the background */
+            .track-btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background-color: rgba(244, 67, 54, 0.4); /* Faint Red */
+                transform: scaleX(0); /* Hidden by default */
+                transform-origin: left; /* Fills from left to right */
+                z-index: -1;
+                transition: transform 0s; /* Snaps back to zero instantly when released */
+            }
+
+            /* When the user is holding the button (triggered by JS) */
+            .track-btn.clearing::before {
+                transform: scaleX(1); /* Fills to 100% */
+                transition: transform 3s linear; /* Takes exactly 3 seconds */
+            }
+
+            /* The success flash when the track is deleted */
+            .track-btn.cleared-flash {
+                background-color: #f44336 !important; /* Solid Red */
+                color: white !important;
+                transition: background-color 0.1s ease-out;
+            }
 
         /* 11c. SVG Node Overlays */
         .highlight-overlay {
@@ -2078,7 +2092,7 @@
             right: var(--right-panel-w, 0px);
             bottom: var(--piano-h, clamp(80px, 16vh, 140px));
             height: var(--pr-height, 50vh);
-            min-height: 200px;
+            min-height: 40px;
             background: var(--panel-bg);
             border-top: 2px solid var(--border-color);
             border-left: 1px solid var(--border-color);
@@ -2163,6 +2177,44 @@
             touch-action: none;
         }
 
+        /* --- PIANO ROLL VERTICAL RESIZE HANDLE --- */
+        #pr-resize-handle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 14px; /* Generous hit-box for the mouse/finger */
+            background: transparent;
+            cursor: ns-resize; /* Triggers the up/down arrow cursor */
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 4px;
+            transform: translateY(-5px); /* Pushes the hit-box slightly above the border */
+        }
+
+            #pr-resize-handle:hover .resize-grip,
+            #pr-resize-handle:active .resize-grip {
+                background: var(--main-node);
+                box-shadow: 0 0 8px var(--theme-glow);
+            }
+
+        .resize-grip {
+            width: 40px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 2px;
+            transition: all 0.2s;
+            pointer-events: none; /* Prevents the grip from eating mouse events meant for the handle */
+        }
+
+        /* --- PIANO ROLL RESIZE SHIELD --- */
+        /* Prevents accidental notes from triggering while dragging the handle */
+        body.is-resizing-pr .svg-wrapper {
+            pointer-events: none !important;
+        }
+
         /* 16 Track Colors for the rendering engine */
         :root {
             --tk-0: #f44336;
@@ -2204,9 +2256,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: 12px;
+            padding: 0 16px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-            padding: 0 20px;
             transition: top 0.3s;
         }
 
@@ -2222,7 +2274,7 @@
         #master-transport .transport-group {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         #master-transport .transport-btn {
@@ -2245,15 +2297,15 @@
             }
 
             #master-transport .transport-btn.playing {
-                background: #4caf50;
-                color: white;
-                border-color: #4caf50;
+                background: #4caf50 !important;
+                color: white !important;
+                border-color: #4caf50 !important;
             }
 
             #master-transport .transport-btn.recording {
-                background: #f44336;
-                color: white;
-                border-color: #f44336;
+                background: #f44336 !important;
+                color: white !important;
+                border-color: #f44336 !important;
             }
 
             #master-transport .transport-btn.armed {
@@ -2279,8 +2331,9 @@
 
             #master-transport .lcd-display.sm {
                 font-size: 0.75rem;
-                min-width: 60px;
+                min-width: 48px;
                 color: #03a9f4;
+                padding: 4px 6px;
                 box-shadow: inset 0 0 5px rgba(3,169,244,0.2);
             }
 
@@ -2500,15 +2553,15 @@
             <button class="nav-btn" id="btnPanLeft" title="Pan Left">◀</button>
             <button class="nav-btn" id="btnHome" title="Center">🎯</button>
             <button class="nav-btn" id="btnPanRight" title="Pan Right">▶</button>
-            <button class="nav-btn" id="btnToggleSynth" title="Synth">🎺</button>
             <button class="nav-btn" id="btnTogglePads" title="Pads">🎛️</button>
+            <button class="nav-btn" id="btnToggleSynth" title="Synth">🎺</button>
             <button class="nav-btn" id="btnToggleMixer" title="Mixer">🎚️</button>
 
             <button class="nav-btn" id="btnQuickPanic" title="Panic / All Notes Off">🔇</button>
             <button class="nav-btn" id="btnPanDown" title="Pan Down">▼</button>
             <button class="nav-btn" id="btnTogglePiano" title="Piano">🎹</button>
+            <button class="nav-btn" id="btnToggleStudio" title="Master Import & Export">🎙️</button>
             <button class="nav-btn" id="btnToggleDrums" title="Drums">🥁</button>
-            <button class="nav-btn" id="btnToggleStudio" title="Studio">🎙️</button>
             <button class="nav-btn" id="btnTogglePianoRoll" title="Piano Roll">🎼</button>
         </div>
     </div>
@@ -2525,11 +2578,11 @@
             <button id="transportPlay" class="transport-btn" title="Play / Pause">&#x25B6;&#xFE0E;</button>
             <button id="transportRec" class="transport-btn" title="Global Record">&#x23FA;&#xFE0E;</button>
             <button id="btnMasterFf" class="transport-btn sm" title="Forward 1 Bar">&#x23E9;&#xFE0E;</button>
-            <button id="btnMetronome" class="transport-btn sm" title="Metronome: Off" style="margin-left: 8px; font-size: 1.1rem;">&#x23F1;&#xFE0E;</button>
+            <button id="btnMetronome" class="transport-btn sm" title="Metronome: Off" style="font-size: 1.1rem;">&#x23F1;&#xFE0E;</button>
         </div>
         <div class="transport-group">
             <div class="lcd-display sm" id="global-bpm-display" title="Current BPM">120 BPM</div>
-            <button id="btnFullscreen" class="transport-btn" title="Fullscreen" style="margin-left: 10px; font-size: 1rem;">⛶</button>
+            <button id="btnFullscreen" class="transport-btn" title="Fullscreen" style="font-size: 1rem;">⛶</button>
         </div>
     </div>
 
@@ -2545,7 +2598,7 @@
             </div>
 
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Theory & Engine Configuration</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: var(--bg-color); font-weight: bold;">Theory & Engine Configuration</div>
 
                 <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group">
@@ -2616,7 +2669,7 @@
             </div>
 
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Appearance & UI</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: var(--bg-color); font-weight: bold;">Appearance & UI</div>
                 <div class="control-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group"><label>UI Theme</label><button id="btnTheme" class="btn-sm">Dark Mode: OFF</button></div>
                     <div class="control-group"><label id="lblHideDelay">Auto-Hide: 700ms</label><input type="range" id="uiHideDelay" min="0" max="4000" step="100" value="700"></div>
@@ -2674,7 +2727,7 @@
             </div>
 
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">MIDI & Hardware Settings</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: var(--bg-color); font-weight: bold;">MIDI & Hardware Settings</div>
 
                 <div class="control-row" style="grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group"><label>Hardware</label><button id="btnMidi">Connect MIDI</button></div>
@@ -2878,7 +2931,7 @@
         <div class="pads-content-wrapper">
             <div class="pads-controls-col">
                 <div class="pad-header">
-                    <span style="font-size: 0.8rem; font-weight:bold; color: var(--text-muted);">PERFORMANCE PADS</span>
+                    <span style="font-size: 0.8rem; font-weight:bold; color: var(--text-muted);">LIVE-MODIFIERS (TOUCH-SCREEN)</span>
                     <div style="display:flex; align-items:center; gap: 8px;">
                         <input type="range" id="padHeightSlider" min="30" max="150" value="40" title="Adjust Pad Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
                         <button class="auto-hide-toggle" title="Auto-Hide Disabled">⏱</button>
@@ -3045,11 +3098,11 @@
         <div id="cof-container"></div>
     </div>
 
-    <!-- === OVERLAY: MULTITRACK STUDIO === -->
+    <!-- === OVERLAY: MASTER IMPORT & EXPORT === -->
     <div id="studio-overlay" class="overlay primary">
         <div class="controls-section">
             <div class="section-title">
-                <span>Multitrack Studio</span>
+                <span>Master Import & Export</span>
                 <div style="display:flex; align-items:center;">
                     <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
                     <button id="btnCloseStudio" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
@@ -3057,84 +3110,7 @@
             </div>
 
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); display: flex; justify-content: space-between;">
-                    <span>Live Looper (Cycles)</span>
-                    <span id="looper-status-text">STOPPED</span>
-                </div>
-                <div class="looper-grid">
-                    <div class="looper-row">
-                        <div class="looper-tracks-row">
-                            <div class="track-col"><div class="inst-label" id="inst-label-0">EMPTY</div><button class="track-btn active" data-track="0" data-domain="looper">L1</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="0" title="Mute">M</button><button class="mute-btn solo-btn" data-track="0" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-1">EMPTY</div><button class="track-btn" data-track="1" data-domain="looper">L2</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="1" title="Mute">M</button><button class="mute-btn solo-btn" data-track="1" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-2">EMPTY</div><button class="track-btn" data-track="2" data-domain="looper">L3</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="2" title="Mute">M</button><button class="mute-btn solo-btn" data-track="2" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-3">EMPTY</div><button class="track-btn" data-track="3" data-domain="looper">L4</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="3" title="Mute">M</button><button class="mute-btn solo-btn" data-track="3" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-4">EMPTY</div><button class="track-btn" data-track="4" data-domain="looper">L5</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="4" title="Mute">M</button><button class="mute-btn solo-btn" data-track="4" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-5">EMPTY</div><button class="track-btn" data-track="5" data-domain="looper">L6</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="5" title="Mute">M</button><button class="mute-btn solo-btn" data-track="5" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-6">EMPTY</div><button class="track-btn" data-track="6" data-domain="looper">L7</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="6" title="Mute">M</button><button class="mute-btn solo-btn" data-track="6" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-7">EMPTY</div><button class="track-btn" data-track="7" data-domain="looper">L8</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="7" title="Mute">M</button><button class="mute-btn solo-btn" data-track="7" title="Solo">S</button></div></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="looper-progress-bar" style="margin-top: 0px; margin-bottom: 0; height: 5px;"><div id="looper-progress-fill"></div></div>
-                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0; margin-top: 4px;">
-                    <button id="btnLooperRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">&#x23FA;&#xFE0E;</button>
-                    <div style="grid-column: span 1; pointer-events: none; visibility: hidden;"></div>
-                    <button id="btnLooperPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
-                    <div style="grid-column: span 1; pointer-events: none; visibility: hidden;"></div>
-                    <select id="looperLength" class="looper-btn" style="grid-column: span 2; text-align: center; appearance: none; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
-                        <option value="1">1 Bar</option>
-                        <option value="2">2 Bars</option>
-                        <option value="4" selected>4 Bars</option>
-                        <option value="8">8 Bars</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); display: flex; justify-content: space-between;">
-                    <span>Linear Arranger (Timeline)</span>
-                    <span id="arranger-status-text">STOPPED 0:00</span>
-                </div>
-                <div class="looper-grid">
-                    <div class="looper-row">
-                        <div class="looper-tracks-row">
-                            <div class="track-col"><div class="inst-label" id="inst-label-8">EMPTY</div><button class="track-btn" data-track="8" data-domain="arranger">A1</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="8" title="Mute">M</button><button class="mute-btn solo-btn" data-track="8" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-9">EMPTY</div><button class="track-btn" data-track="9" data-domain="arranger">A2</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="9" title="Mute">M</button><button class="mute-btn solo-btn" data-track="9" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-10">EMPTY</div><button class="track-btn" data-track="10" data-domain="arranger">A3</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="10" title="Mute">M</button><button class="mute-btn solo-btn" data-track="10" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-11">EMPTY</div><button class="track-btn" data-track="11" data-domain="arranger">A4</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="11" title="Mute">M</button><button class="mute-btn solo-btn" data-track="11" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-12">EMPTY</div><button class="track-btn" data-track="12" data-domain="arranger">A5</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="12" title="Mute">M</button><button class="mute-btn solo-btn" data-track="12" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-13">EMPTY</div><button class="track-btn" data-track="13" data-domain="arranger">A6</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="13" title="Mute">M</button><button class="mute-btn solo-btn" data-track="13" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-14">EMPTY</div><button class="track-btn" data-track="14" data-domain="arranger">A7</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="14" title="Mute">M</button><button class="mute-btn solo-btn" data-track="14" title="Solo">S</button></div></div>
-                            <div class="track-col"><div class="inst-label" id="inst-label-15">EMPTY</div><button class="track-btn" data-track="15" data-domain="arranger">A8</button><div style="display:flex; gap:2px;"><button class="mute-btn" data-track="15" title="Mute">M</button><button class="mute-btn solo-btn" data-track="15" title="Solo">S</button></div></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0; margin-top: 4px;">
-                    <button id="btnArrangerRec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record">&#x23FA;&#xFE0E;</button>
-                    <button id="btn-arranger-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">&#x23EA;&#xFE0E;</button>
-                    <button id="btnArrangerPlay" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
-                    <button id="btn-arranger-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
-                    <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
-                        <span id="arranger-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">0:00</span>
-                        <input type="range" id="arranger-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; accent-color: #2196f3; cursor: pointer;">
-                    </div>
-                </div>
-            </div>
-
-            <div class="control-well">
-                <div class="control-row" style="grid-template-columns: repeat(3, 1fr); gap: 4px; border: none; padding: 0;">
-                    <button id="btnGlobalClear" class="looper-btn" style="border-color:var(--text-main); color:var(--text-main);">🗑 Clear L1</button>
-                    <button id="btnLooperQuantize" class="looper-btn" style="border-color:var(--text-main); color:var(--text-main);">Input Snap: OFF</button>
-                    <select id="looperQuantizeRes" class="looper-btn" style="text-align: center; appearance: none; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
-                        <option value="8">Grid: 1/8</option>
-                        <option value="16" selected>Grid: 1/16</option>
-                        <option value="32">Grid: 1/32</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Import Backing Track</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold;">Import Backing Track</div>
                 <div class="control-row" style="grid-template-columns: 1fr; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <div class="control-group"><input type="file" id="import-audio-file" accept="audio/*" style="font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px; box-sizing: border-box; background: var(--bg-color); color: var(--text-main);"></div>
                 </div>
@@ -3144,7 +3120,7 @@
                     <button id="btn-import-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
                     <button id="btn-import-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
                     <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
-                        <span id="import-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">0:00 / 0:00</span>
+                        <span id="import-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-main); line-height: 1; margin-bottom: 2px;">0:00 / 0:00</span>
                         <input type="range" id="import-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
                     </div>
                 </div>
@@ -3152,15 +3128,15 @@
             </div>
 
             <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Output & Bouncing</div>
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold;">Master Output & Bouncing</div>
                 <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
-                    <select id="export-format" class="looper-btn" style="grid-column: span 2; text-align: center; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
+                    <select id="export-format" class="looper-btn" style="grid-column: span 2; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
                         <option value="audio/webm;codecs=opus">WebM</option>
                         <option value="audio/mp4">MP4</option>
                         <option value="audio/mpeg">MP3</option>
                         <option value="audio/wav">WAV</option>
                     </select>
-                    <select id="export-bitrate" class="looper-btn" style="grid-column: span 1; text-align: center; font-weight: bold; border-color:var(--text-main); color:var(--text-main);">
+                    <select id="export-bitrate" class="looper-btn" style="grid-column: span 1; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
                         <option value="32000">32k</option>
                         <option value="64000">64k</option>
                         <option value="128000">128k</option>
@@ -3180,7 +3156,7 @@
                     <button id="btn-rec-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" disabled title="Play/Pause">&#x25B6;&#xFE0E;</button>
                     <button id="btn-rec-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
                     <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
-                        <span id="lbl-rec-time" style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted); line-height: 1; margin-bottom: 2px;">00:00 / 00:00</span>
+                        <span id="lbl-rec-time" style="font-size: 0.6rem; font-weight: bold; color: var(--text-main); line-height: 1; margin-bottom: 2px;">00:00 / 00:00</span>
                         <input type="range" id="master-seeker" min="0" max="100" value="0" disabled style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
                     </div>
                 </div>
@@ -3192,10 +3168,12 @@
     <!-- === OVERLAY: PIANO KEYBOARD === -->
     <div id="piano-overlay" class="piano-overlay active"></div>
 
-    <!-- === OVERLAY: MIXER & EQ === -->
+    <!-- === MAIN OVERLAY: MIXER, EQ & TRACK CONTROLS === -->
     <div id="mixer-overlay" class="overlay primary">
         <div class="controls-section">
-            <div class="section-title">
+
+            <!-- Header -->
+            <div class="section-title" style="margin-bottom: 4px;">
                 <span>Mixer & Equalizer</span>
                 <div style="display:flex; align-items:center; gap: 8px;">
                     <input type="range" id="mixerHeightSlider" min="50" max="250" value="100" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
@@ -3204,97 +3182,224 @@
                 </div>
             </div>
 
+            <!-- The Global Control Bar (Dynamic Colors Fixed) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.1); padding: 4px 6px; border-radius: 4px; margin-bottom: 2px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label style="font-size: 0.65rem; color: var(--text-main);">Input Snap:</label>
+                    <select id="looperQuantizeRes" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.65rem; padding: 2px;">
+                        <option value="off">OFF</option>
+                        <option value="8">1/8</option>
+                        <option value="16" selected>1/16</option>
+                        <option value="32">1/32</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label style="font-size: 0.65rem; color: var(--text-main);">Looper Length:</label>
+                    <select id="looperLength" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.65rem; padding: 2px;">
+                        <option value="1">1 Bar</option>
+                        <option value="2">2 Bars</option>
+                        <option value="4" selected>4 Bars</option>
+                        <option value="8">8 Bars</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Looper Progress Bar -->
+            <div class="looper-progress-bar" style="margin-top: 0px; margin-bottom: 4px; height: 3px; background: rgba(128,128,128,0.2); border-radius: 2px; overflow: hidden;"><div id="looper-progress-fill" style="height: 100%; width: 0%; background: #4caf50;"></div></div>
+
             <!-- Section A: 4-Bus Sub-Mixer -->
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Sub-Mix Groups</div>
-                <div class="mixer-grid-4">
-                    <div class="mixer-channel">
-                        <label>Synth</label>
-                        <input type="range" orient="vertical" class="v-slider" id="synthVol" min="0" max="1.5" step="0.01" value="1.0">
-                        <div class="val-readout" id="valSynthVol">1.00</div>
+            <div class="control-well" style="padding: 4px; margin-bottom: 0;">
+                <div class="section-title" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;">Sub-Mix Groups</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="synthVol" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Synth</label><div class="val-readout" id="valSynthVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
                     </div>
-                    <div class="mixer-channel">
-                        <label>Drums</label>
-                        <input type="range" orient="vertical" class="v-slider" id="drumVol" min="0" max="1.5" step="0.01" value="1.0">
-                        <div class="val-readout" id="valDrumVol">1.00</div>
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="drumVol" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Drums</label><div class="val-readout" id="valDrumVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
                     </div>
-                    <div class="mixer-channel">
-                        <label>Looper</label>
-                        <input type="range" orient="vertical" class="v-slider" id="looperMasterVol" min="0" max="1.5" step="0.01" value="1.0">
-                        <div class="val-readout" id="valLooperMasterVol">1.00</div>
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="looperMasterVol" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Looper</label><div class="val-readout" id="valLooperMasterVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
                     </div>
-                    <div class="mixer-channel">
-                        <label>Import</label>
-                        <input type="range" orient="vertical" class="v-slider" id="mixerImportVol" min="0" max="1.5" step="0.01" value="0.7">
-                        <div class="val-readout" id="valMixerImportVol">0.70</div>
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="mixerImportVol" min="0" max="1.5" step="0.01" value="0.7" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Import</label><div class="val-readout" id="valMixerImportVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">0.70</div></div>
                     </div>
                 </div>
             </div>
 
             <!-- Section B: 16-Channel Mixer Grid -->
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">
+            <div class="control-well" style="padding: 4px; margin-bottom: 0;">
+                <div class="section-title" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;">
                     <span>Looper & Aux Sends</span>
                 </div>
                 <div class="mixer-grid-8">
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="0" min="-1" max="1" step="0.01" value="0"><label>L1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="1" min="-1" max="1" step="0.01" value="0"><label>L2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="2" min="-1" max="1" step="0.01" value="0"><label>L3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="3" min="-1" max="1" step="0.01" value="0"><label>L4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="4" min="-1" max="1" step="0.01" value="0"><label>L5</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="5" min="-1" max="1" step="0.01" value="0"><label>L6</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="6" min="-1" max="1" step="0.01" value="0"><label>L7</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="7" min="-1" max="1" step="0.01" value="0"><label>L8</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0"></div>
+                    <!-- LOOPER TRACKS (0-7) -->
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-0" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="0" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L1</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="0" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="0" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="0" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="0" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="0" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-1" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="1" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L2</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="1" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="1" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="1" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="1" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="1" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-2" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="2" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L3</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="2" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="2" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="2" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="2" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="2" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-3" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="3" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L4</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="3" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="3" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="3" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="3" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="3" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-4" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="4" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L5</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="4" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="4" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="4" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="4" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="4" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-5" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="5" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L6</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="5" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="5" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="5" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="5" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="5" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-6" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="6" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L7</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="6" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="6" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="6" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="6" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="6" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-7" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="7" data-domain="looper" style="width: 100%; margin: 0; padding: 4px 0;">L8</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="7" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="7" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="7" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="7" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="7" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="section-title" style="margin: 8px 0 6px 0; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">
-                    <span>Arranger Tracks (A1-A8)</span>
-                </div>
+                <div class="section-title" style="margin: 4px 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;"><span>Arranger Tracks (A1-A8)</span></div>
                 <div class="mixer-grid-8">
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="8" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="8" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="8" min="-1" max="1" step="0.01" value="0"><label>A1</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="8" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="9" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="9" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="9" min="-1" max="1" step="0.01" value="0"><label>A2</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="9" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="10" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="10" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="10" min="-1" max="1" step="0.01" value="0"><label>A3</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="10" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="11" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="11" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="11" min="-1" max="1" step="0.01" value="0"><label>A4</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="11" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="12" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="12" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="12" min="-1" max="1" step="0.01" value="0"><label>A5</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="12" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="13" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="13" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="13" min="-1" max="1" step="0.01" value="0"><label>A6</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="13" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="14" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="14" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="14" min="-1" max="1" step="0.01" value="0"><label>A7</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="14" min="0" max="1" step="0.01" value="1.0"></div>
-                    <div class="mixer-channel"><input type="range" class="aux-send echo-send" data-track="15" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="15" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="15" min="-1" max="1" step="0.01" value="0"><label>A8</label><input type="range" orient="vertical" class="v-slider track-vol" data-track="15" min="0" max="1" step="0.01" value="1.0"></div>
+                    <!-- ARRANGER TRACK 8 (A1) IS ACTIVE BY DEFAULT -->
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-8" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn active" data-track="8" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A1</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="8" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="8" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="8" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="8" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="8" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="8" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <!-- A2-A8 -->
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-9" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="9" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A2</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="9" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="9" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="9" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="9" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="9" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="9" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-10" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="10" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A3</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="10" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="10" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="10" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="10" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="10" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="10" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-11" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="11" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A4</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="11" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="11" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="11" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="11" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="11" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="11" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-12" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="12" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A5</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="12" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="12" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="12" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="12" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="12" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="12" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-13" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="13" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A6</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="13" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="13" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="13" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="13" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="13" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="13" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-14" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="14" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A7</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="14" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="14" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="14" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="14" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="14" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="14" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="inst-label" id="inst-label-15" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                        <button class="track-btn" data-track="15" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A8</button>
+                        <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                            <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;"><button class="mute-btn" data-track="15" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button><button class="mute-btn solo-btn" data-track="15" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button></div>
+                            <input type="range" class="aux-send echo-send" data-track="15" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send reverb-send" data-track="15" min="0" max="1" step="0.01" value="0"><input type="range" class="aux-send pan-slider" data-track="15" min="-1" max="1" step="0.01" value="0"><input type="range" orient="vertical" class="v-slider track-vol" data-track="15" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Section C: Master Bus, EQ, Peak Meter / Oscilloscope -->
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 4px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted);">Master Bus, EQ & Dynamics</div>
-
-                <div class="mixer-grid-4">
-                    <div class="mixer-channel">
-                        <label>Low</label>
-                        <input type="range" orient="vertical" class="v-slider" id="eqLow" min="-15" max="15" step="0.5" value="0">
-                        <div class="val-readout" id="valEqLow">0dB</div>
+            <div class="control-well" style="padding: 4px; margin-bottom: 0;">
+                <div class="section-title" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;">Master Bus, EQ & Dynamics</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 2px;">
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="eqLow" min="-15" max="15" step="0.5" value="0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Low</label><div class="val-readout" id="valEqLow" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">0dB</div></div>
                     </div>
-                    <div class="mixer-channel">
-                        <label>Mid</label>
-                        <input type="range" orient="vertical" class="v-slider" id="eqMid" min="-15" max="15" step="0.5" value="0">
-                        <div class="val-readout" id="valEqMid">0dB</div>
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="eqMid" min="-15" max="15" step="0.5" value="0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Mid</label><div class="val-readout" id="valEqMid" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">0dB</div></div>
                     </div>
-                    <div class="mixer-channel">
-                        <label>High</label>
-                        <input type="range" orient="vertical" class="v-slider" id="eqHigh" min="-15" max="15" step="0.5" value="0">
-                        <div class="val-readout" id="valEqHigh">0dB</div>
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
+                        <input type="range" id="eqHigh" min="-15" max="15" step="0.5" value="0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">High</label><div class="val-readout" id="valEqHigh" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">0dB</div></div>
                     </div>
-                    <div class="mixer-channel master-channel">
-                        <label style="color: #ff9800;">MASTER</label>
-                        <input type="range" orient="vertical" class="v-slider" id="masterVol" min="0" max="2" step="0.01" value="1.0">
-                        <div class="val-readout" id="valMasterVol" style="color: #ff9800; border-color: #ff9800;">1.00</div>
+                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid #ff980055;">
+                        <input type="range" id="masterVol" min="0" max="2" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: #ff9800; margin: 0; font-weight: bold; line-height: 1;">MASTER</label><div class="val-readout" id="valMasterVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; color: #ff9800; border-color: #ff9800; line-height: 1;">1.00</div></div>
                     </div>
                 </div>
-
-                <div class="control-row" style="grid-template-columns: 1fr 1fr 1fr; border: none; padding-top: 6px; padding-bottom: 4px;">
-                    <div class="control-group"><label id="lblBusComp">Bus Comp: 40%</label><input type="range" id="busComp" min="0" max="100" step="1" value="40"></div>
-                    <div class="control-group"><label id="lblDeclick">De-Click: 10ms</label><input type="range" id="declick" min="0" max="50" step="1" value="10" title="Micro-fade to prevent pops"></div>
+                <div class="control-row" style="grid-template-columns: 1fr 1fr 1fr; border: none; padding-top: 2px; padding-bottom: 2px; margin-bottom: 0;">
+                    <div class="control-group"><label id="lblBusComp" style="margin-bottom: 2px; color: var(--text-main);">Bus Comp: 40%</label><input type="range" id="busComp" min="0" max="100" step="1" value="40" style="margin-bottom: 0;"></div>
+                    <div class="control-group"><label id="lblDeclick" style="margin-bottom: 2px; color: var(--text-main);">De-Click: 10ms</label><input type="range" id="declick" min="0" max="50" step="1" value="10" title="Micro-fade to prevent pops" style="margin-bottom: 0;"></div>
                     <div class="control-group">
-                        <label>Master Limiter</label>
-                        <select id="limiterMode" class="ui-select">
+                        <label style="margin-bottom: 2px; color: var(--text-main);">Master Limiter</label>
+                        <select id="limiterMode" class="ui-select" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); padding: 1px 2px; height: auto;">
                             <option value="brickwall" selected>Brickwall</option>
                             <option value="soft">Soft (Analog)</option>
                             <option value="none">OFF (Clip)</option>
@@ -3308,6 +3413,11 @@
 
     <!-- === OVERLAY: PIANO ROLL === -->
     <div id="piano-roll-overlay">
+        
+        <div id="pr-resize-handle" title="Drag to resize">
+            <div class="resize-grip"></div>
+        </div>
+        
         <div class="pr-toolbar">
             <span style="font-weight:bold; font-size:0.8rem; color:var(--text-muted);">PIANO ROLL</span>
 
@@ -3341,10 +3451,9 @@
 
             <div class="pr-tool-group" style="flex-grow:1; border-right:none; justify-content: flex-end;">
                 <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll with Playhead" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↕️</button>
-                <input type="range" id="prZoomSlider" class="control-input" min="20" max="500" value="80" title="Zoom Time Axis" style="width: 80px; margin: 0 10px; vertical-align: middle;">
+                <input type="range" id="prZoomSlider" class="control-input" min="20" max="500" value="80" title="Zoom Time Axis (Ctrl-M.Wheel)" style="width: 80px; margin: 0 10px; vertical-align: middle;">
                 <button class="auto-hide-toggle" title="Auto-Hide Disabled" style="margin-right: 15px;">⏱</button>
                 <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Height:</label>
-                <input type="range" id="prHeightSlider" min="10" max="85" value="25" style="width: 100px;">
                 <button id="btnClosePianoRoll" class="close-btn-sm" title="Close" style="margin-left: 15px;">✕</button>
             </div>
         </div>

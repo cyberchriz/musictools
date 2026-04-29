@@ -3605,6 +3605,13 @@
     function drawPianoRoll() {
         if (!prCanvas || !prCtx || !isPianoRollActive) return;
 
+        // --- Render Culling Optimization ---
+        // If the panel is collapsed to just the toolbar (<= 45px), abort drawing entirely!
+        const overlay = document.getElementById('piano-roll-overlay');
+        if (overlay && overlay.offsetHeight <= 45) {
+            return; 
+        }
+
         // 1. High-DPI Canvas Scaling
         const dpr = window.devicePixelRatio || 1;
         
@@ -5678,7 +5685,7 @@ function initAudio() {
     const studio = {
         activeLooperTrack: 0,
         activeArrangerTrack: 8,
-        lastSelectedDomain: 'looper',
+        lastSelectedDomain: 'arranger',
         trackTypes: new Array(16).fill(null),
         trackSynthStates: new Array(16).fill(null),
         trackAudioBuffers: new Array(16).fill(null) // Stores the unzipped Stems
@@ -5881,29 +5888,106 @@ function initAudio() {
         }
     });
 
+    // --- UNIFIED TRACK BUTTONS: Selection & Long-Press to Clear ---
+    let holdTimer = null;
+    const HOLD_DURATION = 2000; // 2 seconds
+    let justCleared = false; // Prevents selection if the user was holding to clear
+
     document.querySelectorAll('.track-btn').forEach(btn => {
+        
+        // --- 1. LONG PRESS LOGIC (Clear Track) ---
+        const startHold = (e) => {
+            justCleared = false;
+            btn.classList.add('clearing'); // Triggers the red fill CSS animation
+            
+            holdTimer = setTimeout(() => {
+                justCleared = true; // Mark as cleared so the click event ignores it
+                const track = parseInt(btn.getAttribute('data-track'));
+                const domain = btn.getAttribute('data-domain');
+                
+                // --- INTEGRATED CLEAR LOGIC ---
+                const localIdx = domain === 'looper' ? track : track - 8;
+                const domainObj = domain === 'looper' ? looper : arranger;
+
+                // 1. Wipe the data
+                domainObj.tracks[localIdx] = [];
+                studio.trackAudioBuffers[track] = null; // Free up RAM
+                
+                if (domain === 'looper') {
+                    looper.trackDurations[localIdx] = 0;
+                    looper.lastPhases[localIdx] = 0;
+                }
+
+                // 2. Reset the UI & Types
+                btn.classList.remove('type-voice', 'type-drum');
+                studio.trackTypes[track] = null;
+                const el = document.getElementById(`inst-label-${track}`);
+                if (el) el.textContent = 'EMPTY';
+
+                // 3. Recalculate Arranger Duration
+                if (domain === 'arranger') {
+                    let maxDur = 0;
+                    arranger.tracks.forEach(t => t.forEach(evt => {
+                        if (evt.timeOffset + (evt.duration || 0.5) > maxDur) maxDur = evt.timeOffset + (evt.duration || 0.5);
+                    }));
+                    arranger.duration = maxDur;
+
+                    // Reset clock if we just cleared the whole song
+                    if (maxDur === 0) arranger.pauseTime = 0;
+
+                    // Update global master seeker if it exists
+                    const masterSeeker = document.getElementById('master-seeker');
+                    if (masterSeeker) masterSeeker.value = 0; 
+                }
+                console.log(`Successfully cleared ${domain} track ${track}`);
+                
+                // Visual success flash
+                btn.classList.remove('clearing');
+                btn.classList.add('cleared-flash');
+                setTimeout(() => btn.classList.remove('cleared-flash'), 300);
+                
+            }, HOLD_DURATION);
+        };
+
+        const cancelHold = () => {
+            if (holdTimer) clearTimeout(holdTimer);
+            btn.classList.remove('clearing'); // Resets the red fill animation
+        };
+
+        // Bind Hold Events (Mouse + Touch)
+        btn.addEventListener('mousedown', startHold);
+        btn.addEventListener('mouseup', cancelHold);
+        btn.addEventListener('mouseleave', cancelHold);
+        btn.addEventListener('touchstart', startHold, { passive: true });
+        btn.addEventListener('touchend', cancelHold);
+        btn.addEventListener('touchcancel', cancelHold);
+
+
+        // --- 2. SHORT CLICK LOGIC (Select Track) ---
         btn.addEventListener('click', e => {
-            const track = parseInt(e.target.dataset.track);
-            const domain = e.target.dataset.domain;
+            if (justCleared) return; // Abort if they just finished a 3-second clear hold
+
+            const track = parseInt(btn.dataset.track);
+            const domain = btn.dataset.domain;
 
             studio.lastSelectedDomain = domain;
-            const clearBtn = document.getElementById('btnGlobalClear');
-            const labelPrefix = domain === 'looper' ? 'L' : 'A';
-            const localTrackNum = domain === 'looper' ? track + 1 : track - 7;
-            if (clearBtn) clearBtn.innerHTML = `🗑 Clear ${labelPrefix}${localTrackNum}`;
 
+            // Save the state of the previously active track BEFORE switching
             if (domain === 'looper') {
                 studio.trackSynthStates[studio.activeLooperTrack] = captureCurrentSynthState();
                 studio.activeLooperTrack = track;
-                document.querySelectorAll('.track-btn[data-domain="looper"]').forEach(b => b.classList.remove('active'));
             } else {
                 studio.trackSynthStates[studio.activeArrangerTrack] = captureCurrentSynthState();
                 studio.activeArrangerTrack = track;
-                document.querySelectorAll('.track-btn[data-domain="arranger"]').forEach(b => b.classList.remove('active'));
             }
 
-            e.target.classList.add('active');
+            // GLOBAL EXCLUSIVITY: Remove 'active' class from ALL track buttons across both panels
+            document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
 
+            // Highlight the newly selected track
+            btn.classList.add('active');
+
+            // Apply the new track's synth state to the UI dials/sliders
             if (studio.trackTypes[track] !== 'drum' && studio.trackSynthStates[track]) {
                 applySynthStateToUI(studio.trackSynthStates[track]);
             }
@@ -6218,12 +6302,22 @@ function initAudio() {
         }
     });
 
-    document.getElementById('btnLooperQuantize')?.addEventListener('click', e => {
-        looperQuantize = !looperQuantize;
-        e.target.textContent = `Input Snap: ${looperQuantize ? 'ON' : 'OFF'}`;
-        e.target.classList.toggle('active-btn', looperQuantize);
+    // --- INPUT SNAP (Grid Quantization) ---
+    document.getElementById('looperQuantizeRes')?.addEventListener('change', e => {
+        const val = e.target.value;
+    
+        if (val === 'off') {
+            looperQuantize = false;
+            // Optional: Dim the select box slightly when OFF to visually confirm it's inactive
+            e.target.style.opacity = '0.6'; 
+        } else {
+            looperQuantize = true;
+            looperQuantizeRes = parseInt(val);
+            e.target.style.opacity = '1.0';
+        }
     });
-    document.getElementById('looperQuantizeRes')?.addEventListener('change', e => looperQuantizeRes = parseInt(e.target.value));
+    // Run it once on startup to set the initial opacity/state based on your default HTML
+    document.getElementById('looperQuantizeRes')?.dispatchEvent(new Event('change'));
 
     function recordStudioEvent(freqs, type, originalStArray, drumType = null, velocity = 1, exactTime = null) {
         if (!audioCtx) return null;
@@ -8832,13 +8926,84 @@ engineClockWorker.onmessage = function () {
             }, { passive: false });
         }
 
+        // =========================================================================
+        // PIANO ROLL VERTICAL RESIZING
+        // =========================================================================
+        const prResizeHandle = document.getElementById('pr-resize-handle');
+        const prOverlay = document.getElementById('piano-roll-overlay');
+
+        let isResizingPR = false;
+        let prStartY = 0;
+        let prStartHeight = 0;
+
+        const startResizePR = (e) => {
+            isResizingPR = true;
+            prStartY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            prStartHeight = prOverlay.getBoundingClientRect().height;
+        
+            // 1. Prevent text highlighting
+            document.body.style.userSelect = 'none';
+        
+            // 2. APPLY THE SHIELD: Prevents Tonnetz from playing accidental notes
+            document.body.classList.add('is-resizing-pr');
+        };
+
+        const doResizePR = (e) => {
+            if (!isResizingPR) return;
+        
+            const currentY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            const deltaY = prStartY - currentY; 
+            let newHeight = prStartHeight + deltaY;
+        
+            // 3. COLLAPSE LIMIT: 40px perfectly fits just the toolbar!
+            const minHeight = 40; 
+            const maxHeight = window.innerHeight * 0.85; 
+        
+            if (newHeight < minHeight) newHeight = minHeight;
+            if (newHeight > maxHeight) newHeight = maxHeight;
+
+            // Write directly to your global CSS variables
+            document.documentElement.style.setProperty('--pr-height', `${newHeight}px`);
+            document.documentElement.style.setProperty('--pr-actual-h', `${newHeight}px`);
+        
+            // Force the background Tonnetz grid to yield to the new height
+            if (typeof updateOverlayCSSVars === 'function') {
+                updateOverlayCSSVars(); 
+            }
+
+            // Force canvas to resize gracefully (if applicable)
+            if (typeof resizePianoRollCanvas === 'function') {
+                resizePianoRollCanvas();
+            }
+        };
+
+        const stopResizePR = () => {
+            if (isResizingPR) {
+                isResizingPR = false;
+                // 4. REMOVE THE SHIELD: Tonnetz is playable again
+                document.body.classList.remove('is-resizing-pr');
+                document.body.style.userSelect = ''; 
+            }
+        };
+
+        if (prResizeHandle) {
+            prResizeHandle.addEventListener('mousedown', startResizePR);
+            prResizeHandle.addEventListener('touchstart', startResizePR, { passive: false });
+        }
+
+        window.addEventListener('mousemove', doResizePR);
+        window.addEventListener('mouseup', stopResizePR);
+        window.addEventListener('touchmove', doResizePR, { passive: false });
+        window.addEventListener('touchend', stopResizePR);
+
+        // --- OPEN PIANO ROLL ---
         document.getElementById('btnTogglePianoRoll')?.addEventListener('click', (e) => {
             isPianoRollActive = !isPianoRollActive;
             document.body.classList.toggle('pr-open', isPianoRollActive);
 
-            // --- Broadcast height and update panning engine ---
-            document.documentElement.style.setProperty('--pr-actual-h', isPianoRollActive ? 'var(--pr-height, 25vh)' : '0px');
-            updateOverlayCSSVars();
+            // CHANGED: Using 300px as the fallback instead of 25vh
+            document.documentElement.style.setProperty('--pr-actual-h', isPianoRollActive ? 'var(--pr-height, 300px)' : '0px');
+            if (typeof updateOverlayCSSVars === 'function') updateOverlayCSSVars();
 
             const overlay = document.getElementById('piano-roll-overlay');
             if (overlay) overlay.classList.toggle('active', isPianoRollActive);
@@ -8847,32 +9012,24 @@ engineClockWorker.onmessage = function () {
             if (btn) btn.classList.toggle('toggled', isPianoRollActive);
 
             if (isPianoRollActive) {
-                wakeNav();
-                closeFabMenu();
+                if (typeof wakeNav === 'function') wakeNav();
+                if (typeof closeFabMenu === 'function') closeFabMenu();
                 requestAnimationFrame(() => {
                     if (typeof drawPianoRoll === 'function') drawPianoRoll();
                 });
             }
         });
 
+        // --- CLOSE PIANO ROLL ---
         document.getElementById('btnClosePianoRoll')?.addEventListener('click', () => {
             isPianoRollActive = false;
             document.body.classList.remove('pr-open');
 
-            // --- Reset height and update panning engine ---
             document.documentElement.style.setProperty('--pr-actual-h', '0px');
-            updateOverlayCSSVars();
+            if (typeof updateOverlayCSSVars === 'function') updateOverlayCSSVars();
 
             document.getElementById('piano-roll-overlay')?.classList.remove('active');
             document.getElementById('btnTogglePianoRoll')?.classList.remove('toggled');
-        });
-
-        document.getElementById('prHeightSlider')?.addEventListener('change', (e) => {
-            document.documentElement.style.setProperty('--pr-height', `${e.target.value}vh`);
-            if (isPianoRollActive) {
-                document.documentElement.style.setProperty('--pr-actual-h', `${e.target.value}vh`);
-                updateOverlayCSSVars(); // Re-center the grid while dragging the height slider!
-            }
         });
 
         // --- TOOLBAR LISTENERS ---
