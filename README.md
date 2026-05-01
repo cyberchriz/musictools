@@ -121,6 +121,7 @@ Tonnetz Pro utilizes the following open-source library, which is distributed und
 * **[JSZip](https://github.com/Stuk/jszip)** (Dual-licensed under MIT / GPLv3)
   Used under the **MIT License**.
   Copyright (c) 2009-2016 Stuart Knightley, David Duponchel, Franz Buchinger, António Afonso.
+* **[@tonejs/midi](https://github.com/Tonejs/Midi)** - Used for encoding and decoding binary MIDI files natively in the browser. (MIT License)
 ---
 # License
 

@@ -1203,7 +1203,17 @@
         }
 
         @media (max-width: 1024px) {
-            /* 1. Restore the Beautiful Animated FAB */
+            /* 1. Move the invisible container to the bottom right */
+            .canvas-controls {
+                top: auto !important;
+                bottom: calc(15px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px)) !important;
+                left: auto !important;
+                right: 15px !important;
+                transform: none !important;
+                align-items: flex-end !important;
+            }
+
+            /* 2. Restore the Beautiful Animated FAB */
             #btnNavToggle {
                 display: flex !important;
                 width: 56px !important;
@@ -1221,7 +1231,7 @@
                 position: relative !important;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
                 margin-bottom: 10px !important;
-                pointer-events: auto !important; /* FIX: Make FAB clickable inside invisible container */
+                pointer-events: auto !important;
             }
 
                 #btnNavToggle::after {
@@ -1237,34 +1247,27 @@
                     pointer-events: none;
                 }
 
-                #btnNavToggle:active {
-                    transform: scale(0.9) !important;
-                }
-
-            .dark-theme #btnNavToggle {
-                border-color: #2a2a2a !important;
-            }
-
-            /* 2. Hide Grid by Default, Drop it beneath the FAB */
+            /* 3. Hide Grid by Default, Anchor it ABOVE the FAB */
             #main-nav-grid {
                 position: absolute !important;
-                top: 65px !important;
-                left: 50% !important;
-                transform-origin: top center !important;
-                transform: translateX(-50%) scale(0.8) !important;
+                top: auto !important;
+                bottom: 65px !important; /* Pushes UP above the FAB */
+                left: auto !important;
+                right: 0 !important; /* Keeps it inside the screen */
+                transform-origin: bottom right !important; /* Animates growing OUT of the FAB */
+                transform: scale(0.8) !important;
                 opacity: 0 !important;
                 pointer-events: none !important;
                 transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) !important;
             }
 
-            /* 3. Reveal Grid on Menu Open */
+            /* 4. Reveal & Transform on Menu Open */
             .canvas-controls.menu-open #main-nav-grid {
-                transform: translateX(-50%) scale(1) !important;
+                transform: scale(1) !important;
                 opacity: 1 !important;
                 pointer-events: auto !important;
             }
 
-            /* 4. Transform FAB on Menu Open */
             .canvas-controls.menu-open #btnNavToggle {
                 background: #f44336 !important;
                 border-color: transparent !important;
@@ -2088,17 +2091,14 @@
            ========================================================= */
         #piano-roll-overlay {
             position: absolute;
-            left: var(--active-overlay-width, 0px);
-            right: var(--right-panel-w, 0px);
+            left: 0;
+            right: 0;
             bottom: var(--piano-h, clamp(80px, 16vh, 140px));
             height: var(--pr-height, 50vh);
             min-height: 40px;
             background: var(--panel-bg);
             border-top: 2px solid var(--border-color);
-            border-left: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-            border-radius: 12px 12px 0 0;
-            z-index: 10;
+            z-index: 25; /* Puts it safely above Macros and Piano */
             display: flex;
             flex-direction: column;
             transform: translate3d(0, 100%, 0);
@@ -2410,89 +2410,30 @@
             pointer-events: none !important;
         }
 
+        /* Standard Side Panels slide Left */
         body.ui-hidden .overlay.auto-hides {
             opacity: 0 !important;
             pointer-events: none !important;
-            transform: translate3d(-105%, 0, 0) !important; /* Slide Left */
+            transform: translate3d(-105%, 0, 0) !important;
         }
 
-        body.ui-hidden #studio-overlay.auto-hides {
-            transform: translate3d(105%, 0, 0) !important; /* Slide Right */
-        }
-
+        /* Portrait Mode: Side Panels slide Up instead */
         @media (orientation: portrait), (max-width: 768px) {
-            body.ui-hidden .overlay.auto-hides,
-            body.ui-hidden #studio-overlay.auto-hides {
-                transform: translate3d(0, -105%, 0) !important; /* Slide Up */
+            body.ui-hidden .overlay.auto-hides {
+                transform: translate3d(0, -105%, 0) !important;
             }
         }
 
-        body.ui-hidden #piano-roll-overlay.auto-hides {
+        /* Horizontal Bottom Panels (Piano Roll, Macros) ALWAYS drop down */
+        body.ui-hidden #piano-roll-overlay.auto-hides,
+        body.ui-hidden #macro-overlay.auto-hides {
             transform: translateY(100%) !important;
             opacity: 0 !important;
             pointer-events: none !important;
         }
 
-        #piano-roll-overlay {
-            left: 0 !important;
-            right: 0 !important;
-            bottom: var(--piano-h, clamp(80px, 16vh, 140px)) !important;
-            border-radius: 0 !important;
-            border-left: none !important;
-            border-right: none !important;
-            z-index: 90 !important;
-        }
-
         /* =========================================================
-           17. MOBILE FAB POPUP ARCHITECTURE
-           ========================================================= */
-        @media (max-width: 1024px) and (pointer: coarse) {
-            .canvas-controls {
-                top: auto !important;
-                bottom: calc(15px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px)) !important;
-                right: 15px !important;
-                left: auto !important;
-                transform: none !important;
-                align-items: flex-end !important;
-            }
-
-            .fab-menu-btn {
-                display: flex !important;
-                pointer-events: auto !important;
-            }
-
-            /* Pop UP from the bottom, anchor to the right */
-            .nav-grid {
-                position: absolute !important;
-                bottom: 65px !important; /* Pushes it UP above the FAB */
-                top: auto !important; /* Overrides the old 'top: 65px' */
-                right: 0 !important; /* Keeps it safely inside the right edge of the screen */
-                left: auto !important; /* Overrides the old 'left: 50%' */
-                transform-origin: bottom right !important; /* Animates growing out of the FAB */
-                transform: scale(0.8) !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-                transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1) !important;
-                background: var(--panel-bg) !important;
-            }
-
-            .canvas-controls.menu-open .nav-grid {
-                transform: scale(1) !important;
-                opacity: 1 !important;
-                pointer-events: auto !important;
-            }
-
-            .canvas-controls.menu-open .fab-menu-btn {
-                background: #f44336 !important;
-                border-color: transparent !important;
-                transform: rotate(90deg) !important;
-                animation: none !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
-            }
-        }
-
-        /* =========================================================
-           18. AI GENERATOR PANEL
+           17. AI GENERATOR PANEL
            ========================================================= */
         #gen-overlay {
             position: absolute;
@@ -2522,6 +2463,193 @@
             opacity: 1;
             pointer-events: auto;
             transform: translateY(0);
+        }
+
+        /* =========================================================
+           18. MACRO DASHBOARD
+           ========================================================= */
+        :root {
+            --macro-height: 0px;
+            --left-panel-w: 0px; /* NEW: Broadcasts the left-dock collision width */
+        }
+
+        #macro-overlay {
+            position: absolute;
+            right: 0;
+            left: auto;
+            /* DYNAMIC WIDTH: Shrink to perfectly fit the 8 knobs */
+            width: max-content;
+            max-width: calc(100vw - var(--left-panel-w, 0px)); /* Yields to left panel */
+
+            bottom: calc(var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px));
+            height: clamp(60px, 10vh, 90px);
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+            border-top-left-radius: 12px;
+            z-index: 12;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* AESTHETIC SPACING */
+            gap: 12px;
+            padding: 5px 35px 5px 15px; /* 35px on the right shields the ⏱ button */
+
+            box-sizing: border-box;
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+
+            #macro-overlay.active {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+        /* If the screen isn't massive (tablets/small laptops), stretch it out nicely */
+        @media (max-width: 1200px) {
+            #macro-overlay {
+                width: calc(100vw - var(--left-panel-w, 0px));
+                justify-content: space-evenly;
+                gap: 5px;
+            }
+        }
+
+        /* The Auto-Hide Animation */
+        body.ui-hidden #macro-overlay.auto-hides {
+            transform: translateY(100%) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .macro-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            max-width: 80px;
+            gap: 4px;
+        }
+
+            /* Dim and lock the knob if its target slider is disabled */
+            .macro-cell.disabled {
+                opacity: 0.3;
+                pointer-events: none;
+                filter: grayscale(100%);
+            }
+
+        .knob-container {
+            position: relative;
+            width: clamp(40px, 6vh, 60px);
+            height: clamp(40px, 6vh, 60px);
+            cursor: ns-resize;
+            border-radius: 50%;
+            touch-action: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1);
+            background: radial-gradient(circle at 30% 30%, #444, #111);
+        }
+
+            .knob-container:active {
+                filter: brightness(1.2);
+                box-shadow: 0 0 15px var(--theme-glow);
+            }
+
+            .knob-container svg {
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+            }
+
+        .knob-bg {
+            fill: transparent;
+        }
+
+        .knob-track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 10;
+            stroke-linecap: round;
+        }
+
+        .knob-value {
+            fill: none;
+            stroke: var(--main-node);
+            stroke-width: 10;
+            stroke-linecap: round;
+            stroke-dasharray: 213;
+            stroke-dashoffset: 213;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .knob-pointer {
+            stroke: #fff;
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
+
+        .knob-readout {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: monospace;
+            font-size: clamp(0.5rem, 1.5vh, 0.7rem);
+            font-weight: bold;
+            color: #fff;
+            pointer-events: none;
+            text-shadow: 0 1px 3px #000;
+        }
+
+        /* Borderless Dropdown */
+        .macro-select {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: clamp(0.55rem, 1.2vh, 0.7rem);
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            cursor: pointer;
+            outline: none;
+            padding: 0;
+            appearance: none; /* Hides default dropdown arrow */
+            -webkit-appearance: none;
+        }
+
+            .macro-select:hover {
+                color: var(--text-main);
+            }
+
+        /* --- THE PORTRAIT CONSTRAINT --- */
+        @media (orientation: portrait), (max-width: 768px) {
+            /* 1. Override the landscape dynamic width/borders */
+            #macro-overlay {
+                min-width: 100%;
+                max-width: 100%;
+                border-radius: 0;
+                border-left: none;
+                /* 2. Wrap into a 2-row layout if 8 knobs don't fit */
+                flex-wrap: wrap;
+                height: auto;
+                padding: 10px 5px;
+            }
+
+            .macro-cell {
+                width: 24%; /* Forces a 4x2 grid */
+            }
+
+            /* 3. Ensure top-docked panels yield to the new Macro Shelf (Obsolete studio-overlay removed) */
+            #settings-overlay, #synth-overlay, #pads-overlay,
+            #drums-overlay, #mixer-overlay, #info-overlay {
+                max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
+            }
         }
     </style>
 </head>
@@ -2553,14 +2681,14 @@
             <button class="nav-btn" id="btnPanLeft" title="Pan Left">◀</button>
             <button class="nav-btn" id="btnHome" title="Center">🎯</button>
             <button class="nav-btn" id="btnPanRight" title="Pan Right">▶</button>
-            <button class="nav-btn" id="btnTogglePads" title="Pads">🎛️</button>
+            <button class="nav-btn" id="btnTogglePads" title="Pads">🔳</button>
             <button class="nav-btn" id="btnToggleSynth" title="Synth">🎺</button>
             <button class="nav-btn" id="btnToggleMixer" title="Mixer">🎚️</button>
 
             <button class="nav-btn" id="btnQuickPanic" title="Panic / All Notes Off">🔇</button>
             <button class="nav-btn" id="btnPanDown" title="Pan Down">▼</button>
             <button class="nav-btn" id="btnTogglePiano" title="Piano">🎹</button>
-            <button class="nav-btn" id="btnToggleStudio" title="Master Import & Export">🎙️</button>
+            <button class="nav-btn" id="btnToggleMacros" title="Master Macros">🎛️</button>
             <button class="nav-btn" id="btnToggleDrums" title="Drums">🥁</button>
             <button class="nav-btn" id="btnTogglePianoRoll" title="Piano Roll">🎼</button>
         </div>
@@ -2676,12 +2804,12 @@
                     <div class="control-group">
                         <label>Reactive BG</label>
                         <select id="bgEffectMode" class="ui-select">
-                            <option value="off">Off (Save Battery)</option>
-                            <option value="pulse" selected>Subtle Pulse</option>
+                            <option value="off" selected>Off (Save Battery)</option>
+                            <option value="pulse">Subtle Pulse</option>
                             <option value="glow">Deep Glow</option>
                         </select>
                     </div>
-                    <div class="control-group"><label id="lblBgIntensity">BG Intensity: 5%</label><input type="range" id="bgIntensity" min="0" max="1" step="0.01" value="0.05"></div>
+                    <div class="control-group"><label id="lblBgIntensity">BG Intensity: 60%</label><input type="range" id="bgIntensity" min="0" max="1" step="0.01" value="0.60"></div>
                 </div>
                 <div class="control-row" style="border: none; padding: 0;">
 
@@ -3098,73 +3226,6 @@
         <div id="cof-container"></div>
     </div>
 
-    <!-- === OVERLAY: MASTER IMPORT & EXPORT === -->
-    <div id="studio-overlay" class="overlay primary">
-        <div class="controls-section">
-            <div class="section-title">
-                <span>Master Import & Export</span>
-                <div style="display:flex; align-items:center;">
-                    <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
-                    <button id="btnCloseStudio" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
-                </div>
-            </div>
-
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold;">Import Backing Track</div>
-                <div class="control-row" style="grid-template-columns: 1fr; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
-                    <div class="control-group"><input type="file" id="import-audio-file" accept="audio/*" style="font-size: 0.75rem; width: 100%; border: 1px solid var(--border-color); border-radius: 4px; padding: 2px; box-sizing: border-box; background: var(--bg-color); color: var(--text-main);"></div>
-                </div>
-                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0;">
-                    <button id="btn-import-mix-master" class="looper-btn active-btn" style="grid-column: span 1; padding:0; font-size: 0.6rem; border-color:var(--main-node);" title="Master Mix">MIX: ON</button>
-                    <button id="btn-import-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Rewind 5s">&#x23EA;&#xFE0E;</button>
-                    <button id="btn-import-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" title="Play/Pause">&#x25B6;&#xFE0E;</button>
-                    <button id="btn-import-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
-                    <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
-                        <span id="import-time-display" style="font-size: 0.6rem; font-weight: bold; color: var(--text-main); line-height: 1; margin-bottom: 2px;">0:00 / 0:00</span>
-                        <input type="range" id="import-seeker" min="0" max="100" value="0" style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
-                    </div>
-                </div>
-                <audio id="imported-audio-element" style="display:none;"></audio>
-            </div>
-
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold;">Master Output & Bouncing</div>
-                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
-                    <select id="export-format" class="looper-btn" style="grid-column: span 2; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
-                        <option value="audio/webm;codecs=opus">WebM</option>
-                        <option value="audio/mp4">MP4</option>
-                        <option value="audio/mpeg">MP3</option>
-                        <option value="audio/wav">WAV</option>
-                    </select>
-                    <select id="export-bitrate" class="looper-btn" style="grid-column: span 1; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
-                        <option value="32000">32k</option>
-                        <option value="64000">64k</option>
-                        <option value="128000">128k</option>
-                        <option value="256000" selected>256k</option>
-                        <option value="320000">320k</option>
-                    </select>
-                    <div style="grid-column: span 3; display: flex; gap: 4px;">
-                        <button id="btn-master-save" disabled class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: var(--text-muted); color: var(--text-main);" title="Save Master Mix">💾 MIX</button>
-                        <button id="btn-export-stems" class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: #ff9800; color: #ff9800;" title="Export Project ZIP (.dawproject)">📦 OUT</button>
-                        <button id="btn-import-stems" class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: #2196f3; color: #2196f3;" title="Recall Project ZIP (.dawproject)">📥 IN</button>
-                        <input type="file" id="import-zip-input" accept=".zip,.dawproject" style="display:none;">
-                    </div>
-                </div>
-                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border: none; padding: 0;">
-                    <button id="btn-master-rec" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#f44336; color:#f44336;" title="Record Master">&#x23FA;&#xFE0E;</button>
-                    <button id="btn-rec-rw" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Rewind 5s">&#x23EA;&#xFE0E;</button>
-                    <button id="btn-rec-play" class="looper-btn" style="grid-column: span 1; padding:0; border-color:#4caf50; color:#4caf50;" disabled title="Play/Pause">&#x25B6;&#xFE0E;</button>
-                    <button id="btn-rec-ff" class="looper-btn" style="grid-column: span 1; padding:0; border-color:var(--text-muted); color:var(--text-main);" disabled title="Fast Forward 5s">&#x23E9;&#xFE0E;</button>
-                    <div style="grid-column: span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid var(--grid-line); border-radius: 4px; padding: 2px 4px; background: transparent;">
-                        <span id="lbl-rec-time" style="font-size: 0.6rem; font-weight: bold; color: var(--text-main); line-height: 1; margin-bottom: 2px;">00:00 / 00:00</span>
-                        <input type="range" id="master-seeker" min="0" max="100" value="0" disabled style="width: 100%; height: 12px; margin: 0; cursor: pointer; accent-color: #2196f3;">
-                    </div>
-                </div>
-                <audio id="masterAudioPlayer" style="display: none;"></audio>
-            </div>
-        </div>
-    </div>
-
     <!-- === OVERLAY: PIANO KEYBOARD === -->
     <div id="piano-overlay" class="piano-overlay active"></div>
 
@@ -3408,19 +3469,150 @@
                 </div>
                 <canvas id="oscilloscope" style="width: 100%; height: 50px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); display: block; margin-top: 2px;"></canvas>
             </div>
+            <div class="control-well">
+                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold;">Master Output & Bouncing</div>
+                <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
+                    <select id="export-format" class="looper-btn" style="grid-column: span 2; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
+                        <option value="audio/webm;codecs=opus">WebM</option>
+                        <option value="audio/mp4">MP4</option>
+                        <option value="audio/mpeg">MP3</option>
+                        <option value="audio/wav">WAV</option>
+                    </select>
+                    <select id="export-bitrate" class="looper-btn" style="grid-column: span 1; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
+                        <option value="32000">32k</option>
+                        <option value="64000">64k</option>
+                        <option value="128000">128k</option>
+                        <option value="256000" selected>256k</option>
+                        <option value="320000">320k</option>
+                    </select>
+                    <div style="grid-column: span 3; display: flex; gap: 4px;">
+                        <button id="btn-master-save" disabled class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: var(--text-muted); color: var(--text-main);" title="Save Master Mix">💾 MIX</button>
+                        <button id="btn-export-stems" class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: #ff9800; color: #ff9800;" title="Export Project ZIP (.dawproject)">📦 OUT</button>
+                        <button id="btn-import-stems" class="looper-btn" style="flex: 1; padding: 0; font-size: 0.65rem; border-color: #2196f3; color: #2196f3;" title="Recall Project ZIP (.dawproject)">📥 IN</button>
+                        <input type="file" id="import-zip-input" accept=".zip,.dawproject,.wav,.mp3,.flac,.mid,.midi" multiple style="display:none;">
+                    </div>
+                </div>
+                <audio id="masterAudioPlayer" style="display: none;"></audio>
+            </div>
+        </div>
+    </div>
+
+    <!-- === OVERLAY: MACRO DASHBOARD === -->
+    <div id="macro-overlay" class="auto-hides">
+        <button class="auto-hide-toggle active" title="Auto-Hide Enabled" style="position: absolute; top: 4px; right: 6px; width: 22px; height: 22px; font-size: 0.8rem; z-index: 20; padding: 0; border-radius: 4px;">⏱</button>
+        <!-- Knob 1 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-1">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-1" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-1" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-1">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-1"></select>
+        </div>
+        <!-- Knob 2 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-2">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-2" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-2" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-2">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-2"></select>
+        </div>
+        <!-- Knob 3 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-3">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-3" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-3" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-3">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-3"></select>
+        </div>
+        <!-- Knob 4 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-4">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-4" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-4" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-4">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-4"></select>
+        </div>
+        <!-- Knob 5 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-5">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-5" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-5" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-5">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-5"></select>
+        </div>
+        <!-- Knob 6 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-6">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-6" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-6" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-6">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-6"></select>
+        </div>
+        <!-- Knob 7 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-7">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-7" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-7" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-7">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-7"></select>
+        </div>
+        <!-- Knob 8 -->
+        <div class="macro-cell">
+            <div class="knob-container" id="macro-knob-8">
+                <svg viewBox="0 0 100 100">
+                    <circle class="knob-bg" cx="50" cy="50" r="45"></circle>
+                    <path class="knob-track" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <path class="knob-value" id="macro-val-8" d="M 18.18 81.82 A 45 45 0 1 1 81.82 81.82"></path>
+                    <line class="knob-pointer" id="macro-ptr-8" x1="50" y1="50" x2="18.18" y2="81.82"></line>
+                </svg>
+                <div class="knob-readout" id="macro-text-8">0%</div>
+            </div>
+            <select class="macro-select" id="macro-sel-8"></select>
         </div>
     </div>
 
     <!-- === OVERLAY: PIANO ROLL === -->
-    <div id="piano-roll-overlay">
-        
+    <div id="piano-roll-overlay" class="auto-hides">
         <div id="pr-resize-handle" title="Drag to resize">
             <div class="resize-grip"></div>
         </div>
-        
         <div class="pr-toolbar">
             <span style="font-weight:bold; font-size:0.8rem; color:var(--text-muted);">PIANO ROLL</span>
-
             <div class="pr-tool-group">
                 <button id="prToolSelect" class="pr-tool-btn active" title="Select / Move">👆</button>
                 <button id="prToolCopy" class="pr-tool-btn" title="Marquee Copy / Duplicate">⎘</button>
@@ -3432,7 +3624,6 @@
                 <button id="prToolRegion" class="pr-tool-btn" title="Draw Loop Regions (Global Timeline)">🧱</button>
                 <button id="btnToggleGenPr" class="pr-tool-btn" title="AI Chord Generator" style="margin-left: 15px; color: #ff007f; border-color: #ff007f;">AI</button>
             </div>
-
             <div class="pr-tool-group">
                 <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Snap:</label>
                 <select id="prSnapGrid" style="width: auto;">
@@ -3448,7 +3639,6 @@
                     <option value="4">1/1 (Whole)</option>
                 </select>
             </div>
-
             <div class="pr-tool-group" style="flex-grow:1; border-right:none; justify-content: flex-end;">
                 <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll with Playhead" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↕️</button>
                 <input type="range" id="prZoomSlider" class="control-input" min="20" max="500" value="80" title="Zoom Time Axis (Ctrl-M.Wheel)" style="width: 80px; margin: 0 10px; vertical-align: middle;">
@@ -3460,12 +3650,13 @@
         <div class="pr-canvas-container" id="pr-container" style="display: flex; flex-direction: row;">
             <div id="pr-main-wrapper" style="flex: 1; position: relative; overflow: hidden; min-width: 50px;">
                 <canvas id="pr-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none;"></canvas>
+                <div id="pr-track-label" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: bold; z-index: 10; pointer-events: none; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 5px rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+                    A1 - EMPTY
+                </div>
             </div>
-
             <div id="pr-vel-divider" title="Drag to resize Velocity Lane" style="width: 8px; background: var(--panel-bg); border-left: 1px solid var(--grid-line); border-right: 1px solid var(--grid-line); cursor: ew-resize; display: flex; justify-content: center; align-items: center; flex-shrink: 0; z-index: 5;">
                 <div style="height: 40px; width: 2px; background: var(--text-muted); border-radius: 1px;"></div>
             </div>
-
             <div id="pr-vel-wrapper" style="width: 80px; min-width: 20px; position: relative; background: #111; overflow: hidden;">
                 <canvas id="pr-vel-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none;"></canvas>
             </div>
@@ -3721,6 +3912,7 @@
 
     <!-- === EXTERNAL SCRIPTS === -->
     <script src="./jszip.min.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: jszip.min.js failed to load!</div>'"></script>
+    <script src="./tone-midi.min.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: tone.js failed to load!</div>'"></script>
     <script src="./app.js" onerror="document.getElementById('boot-status').innerHTML = '<div style=\'background:red; color:white; padding:15px; border-radius:8px;\'>❌ ERROR: app.js failed to load!<br>Tauri blocked it (CSP) or the file is missing.</div>'"></script>
 
 </body>
