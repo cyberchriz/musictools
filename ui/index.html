@@ -2360,13 +2360,14 @@
             transition: bottom 0.3s cubic-bezier(0.1, 0.8, 0.3, 1), top 0.3s, transform 0.3s, opacity 0.2s !important;
         }
 
-        /* LANDSCAPE: Panels float alongside the Transport Pill */
+        /* LANDSCAPE: Panels sit flush at the top left */
         #settings-overlay, #synth-overlay, #pads-overlay,
         #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
-            top: 15px !important;
+            top: 0 !important;
+            border-top: none !important;
             height: max-content !important;
             min-height: 10vh;
-            max-height: calc(100vh - (15px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
+            max-height: calc(100vh - (var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
             bottom: auto !important;
             overflow-y: auto;
         }
@@ -2394,11 +2395,6 @@
                 border-top-right-radius: 0 !important;
                 border-top: none !important;
                 max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
-            }
-
-            /* D-Pad drops exactly below the active panel dynamically! */
-            .canvas-controls {
-                top: calc(65px + var(--active-overlay-height, 0px)) !important;
             }
         }
 
@@ -2437,8 +2433,8 @@
            ========================================================= */
         #gen-overlay {
             position: absolute;
-            /* Magically floats right above the dynamic piano roll height! */
-            bottom: calc(var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + 15px);
+            /* Anchors securely to the top of the piano keyboard, overlapping the Piano Roll */
+            bottom: calc(var(--piano-h, clamp(80px, 16vh, 140px)) + 15px);
             right: 15px;
             width: clamp(280px, 25vw, 340px);
             background: var(--panel-bg);
@@ -2649,6 +2645,46 @@
             #settings-overlay, #synth-overlay, #pads-overlay,
             #drums-overlay, #mixer-overlay, #info-overlay {
                 max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
+            }
+        }
+
+        /* =========================================================
+           ULTRA-COMPACT SMARTPHONE HEADER (Master Transporter)
+           ========================================================= */
+        @media (max-width: 650px) {
+            #canvas-controls {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                padding: 6px 10px 4px 10px !important;
+                gap: 6px !important;
+                /* Drop the pill shape to reclaim left/right edge space */
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+                border-top: none !important;
+                width: 100% !important;
+                left: 0 !important;
+                top: 0 !important;
+                height: auto !important;
+            }
+
+                /* Shrink text and button padding slightly */
+                #canvas-controls button,
+                #canvas-controls select {
+                    font-size: 0.75rem !important;
+                    padding: 4px 8px !important;
+                    margin: 0 !important;
+                }
+
+            #globalTimeDisplay {
+                font-size: 0.9rem !important;
+                margin: 0 5px !important;
+            }
+
+            /* THE FIX: Force the Seeker Slider onto its own ultra-thin bottom row */
+            #globalSeeker {
+                flex: 1 1 100% !important; /* Forces it to span 100% width */
+                margin: 4px 0 0 0 !important;
             }
         }
     </style>
@@ -3721,9 +3757,10 @@
             <h3 style="color: var(--accent); margin-top: 20px;">6. The Vertical Piano Roll</h3>
             <p>A fully interactive sequencer interface uniquely oriented to match the Tonnetz. Time flows vertically (Y-axis), while Pitch remains horizontal (X-axis).</p>
             <ul style="padding-left: 20px;">
-                <li><strong>Note Articulation:</strong> Click & drag note bodies to move them in time or pitch. Hover over the top edge of a note and drag vertically to dynamically resize its duration. Click and drag on empty space to Marquee-select groups of notes.</li>
-                <li><strong>Exploded Polyphony:</strong> Chords played on the Tonnetz are recorded as individual, overlapping note events, allowing for precise micro-editing of individual chord tones.</li>
-                <li><strong>Velocity Lane:</strong> A resizable automation lane on the right side uses DAW-standard "lollipop" graphs to control individual note impact. The lane automatically isolates its display to the actively selected track to prevent visual clutter.</li>
+                <li><strong>Note Articulation & Velocity:</strong> Click & drag note bodies to move them in time or pitch. Hover over the top edge of a note and drag vertically to dynamically resize its duration. Draw sweeping dynamics directly in the dedicated Velocity Lane on the right.</li>
+                <li><strong>Smart Playhead & Tools:</strong> The toolbar features mutually exclusive modes (Select, Copy, Draw, Erase, Region, Step). Hold <code>Shift + Click</code> anywhere on the grid to instantly teleport the playhead without switching tools.</li>
+                <li><strong>Step Entry Mode (👣):</strong> Program notes using the Tonnetz or MIDI keyboard without real-time recording. With "Snap" ON, held notes are mathematically rounded to the grid. With "Snap" OFF, the cursor acts like a tape head, advancing precisely by the raw millisecond duration of your physical key presses.</li>
+                <li><strong>Cross-Track Clipboard:</strong> Use the Select tool to Marquee-highlight notes, press <code>Ctrl+C</code> to copy, switch to any other track, and press <code>Ctrl+V</code> to paste. The clipboard automatically anchors to your current playhead or step cursor!</li>
             </ul>
 
             <h3 style="color: var(--accent); margin-top: 20px;">7. Project Export & Import (.dawproject)</h3>
@@ -3747,8 +3784,9 @@
                 <li><strong>BPM-Synced Buffer:</strong> A tempo-synced memory window aggregates arpeggios into single harmonic entities, allowing the engine to "look through" passing notes to accurately identify the underlying progression.</li>
             </ul>
 
-            <h3 style="color: var(--accent); margin-top: 20px;">9. Advanced Theory & UI Setup (⚙️)</h3>
+            <h3 style="color: var(--accent); margin-top: 20px;">9. Macros, Theory & UI Setup (⚙️)</h3>
             <ul style="padding-left: 20px;">
+                <li><strong>Master Macro Dashboard:</strong> Click the 🎛️ button to reveal a floating, 8-knob dashboard. Assign any synth parameter to a knob using the dropdowns. You can click & drag or use your <strong>Mouse Wheel</strong> to scroll values. The dashboard automatically syncs and inherits locked states when switching to <code>.wav</code> sampler presets!</li>
                 <li><strong>Circle of Fifths:</strong> Toggle the <code>⭕</code> button to view a floating, interactive minimap of the Circle of Fifths to guide your harmonic progressions.</li>
                 <li><strong>Snap to Scale:</strong> Locks the grid so that any note you press is forcefully snapped to the nearest valid note in your chosen Key and Mode (e.g., Dorian, Lydian Dominant).</li>
                 <li><strong>Tuning Systems:</strong> Switch from Equal Temperament to <strong>Just Intonation</strong> or <strong>Pythagorean Tuning</strong> to hear chords with mathematically perfect, beatless tuning ratios.</li>

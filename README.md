@@ -1,5 +1,5 @@
 <div>
-  <img align="center" src="ui_screenshot.png" alt="Tonnetz Pro GUI screenshot" width=auto height=auto style="margin-left: auto; margin-right: auto; display: block;"/>
+  <img align="center" src="media/ui_overview.png" alt="Tonnetz Pro GUI screenshot" width=auto height=auto style="margin-left: auto; margin-right: auto; display: block;"/>
 </div>
 <div>
   <img align="right" src="src-tauri/icons/Square310x310Logo.png" alt="Tonnetz Pro Logo" width="180" height="180" style="margin-left: 20px; margin-bottom: 15px;"/>
@@ -30,9 +30,12 @@ Other browsers technically work and native installers are available (under "Rele
 
 ### The Vertical Piano Roll
 * **Geometric/Tracker Orientation:** A vertical timeline (with pitch on the X-axis, i.e. matching the piano keyboard orientation), complementing the geometric Tonnetz and piano keyboard.
+* **Dynamic Time Signatures:** The background grid dynamically redraws bar lines to reflect complex meters (e.g., 3/4, 5/4, 7/8) in real-time.
 * **Full Note Articulation:** Draw, select, move, and dynamically resize the duration of individual notes using mouse or touch gestures. Supports group Marquee selection.
+* **Cross-Track Clipboard:** Highlight note blocks and use `Ctrl+C` / `Ctrl+V` to seamlessly copy and paste across tracks. The clipboard features "domain safety" (preventing melodic synths from pasting onto drum tracks) and smartly anchors to the playhead or step cursor.
+* **Smart Playhead & Step Entry:** Mutually exclusive toolbars prevent editing conflicts. Hold `Shift + Click` to instantly teleport the playhead without dropping your current tool. Step Entry features both "Snapped" (rounds physical key-hold duration to the grid multiplier) and "Free" modes (advances by exact raw millisecond duration).
 * **Exploded Polyphony:** Chords played live on the Tonnetz are recorded and "exploded" into individual overlapping MIDI events, allowing for precise micro-editing of individual chord tones.
-* **Right-Side Velocity Lane:** A resizable, time-synced automation lane featuring DAW-standard "lollipop" graphs. Edit the exact impact velocities of overlapping drum hits or chord notes without visual clutter (the lane isolates and displays only the actively selected track).
+* **Right-Side Velocity Lane:** A resizable, time-synced automation lane featuring DAW-standard "lollipop" graphs. Draw sweeping curves to edit the exact impact velocities of overlapping drum hits or chord notes without visual clutter (the lane isolates and displays only the actively selected track).
 
 ### Geometric Interface & Navigation
 * **Tonal Mapping ("the TONNETZ magic"):** Perfect fifths mapped to the horizontal axis; major/minor thirds mapped to diagonals.
@@ -67,6 +70,7 @@ Other browsers technically work and native installers are available (under "Rele
 
 ### Audio Engine & Sampling
 * **Dual-Oscillator Synthesizer:** Procedural subtractive audio engine featuring 33 pre-calibrated acoustic and analog presets.
+* **Master Macro Dashboard:** A floating, dynamic 8-knob interface for real-time performance tweaking. Assign any synth parameter via dropdowns. Features two-way synchronization, precise mouse-wheel scrolling, and automatically disables/grays out parameters that are acoustically inactive for `.wav` sampler presets.
 * **Master Bus Limiting:** Protect your speakers and your mix with a built-in Master Compressor and a selectable Master Limiter (Choose between aggressive Digital Brickwall clipping or warm Analog `tanh` soft-saturation).
 * **Persistent User Samples:** Hardware-style sampler supporting custom `.wav` loading. Uploaded files are committed to the browser's native IndexedDB, ensuring custom libraries survive page reloads and operate offline.
 * **Dynamics & Envelopes:** Visual ADSR envelope controls and a "De-Click" micro-fade engine to prevent hardware zero-crossing pops during fast arpeggios.
@@ -83,18 +87,16 @@ Other browsers technically work and native installers are available (under "Rele
 ---
 # UI Screenshots
 <p align="center">
-  <img src="media/overview.png" alt="UI_overview" align=top width="99%" />
-  <br>
   <img src="media/general_settings.png" alt="General Settings" align=top width="32%" />
   <img src="media/synth_engine.png" alt="Synth Engine" align=top width="32%" />
-  <img src="media/drum_machine.png" alt="Drum Machine" align=top width="32%" />
+  <img src="media/mixer.png" alt="MixEQ" align=top width="32%" />
   <br>
   <img src="media/performance_pads.png" alt="Performance Pads" align=top width="32%" />
-  <img src="media/mixer.png" alt="MixEQ" align=top width="32%" />
-  <img src="media/multitrack_studio.png" alt="Studio" align=top width="32%" />
-  <br>
-  <img src="media/heatmap.png" alt="HeatMap" align=top width="65%" />
+  <img src="media/drum_machine.png" alt="Drum Machine" align=top width="32%" />
   <img src="media/CoF.png" alt="CoF" align=top width="32%" />
+  <br>
+  <img src="media/heatmap.png" alt="HeatMap" align=top width="66%" />
+  <img src="media/ai_gen.png" alt="AI Chord Progression Generator" align=top width="32%" />
 </p>
 
 ___

@@ -202,6 +202,14 @@
     let activeOverlay = 'settings';
     let lastSafeOffsetX = 0, lastSafeOffsetY = 0;
 
+    let prClipboard = []; // Global Midi Clipboard
+
+    const CHORD_BUFFER_MAX = 8; // Max notes in the rolling queue for chord/harmony analysis
+
+    const MAX_BPM_STRETCH_RATIO = 0.15; // 15% threshold for time-stretching
+    let audioClips = []; // Stores objects: { id, trackId, buffer, startBeat, durationBeats, sourceNode }
+    let globalAudioClipCounter = 0;
+
     function showToast(msg) {
         let toast = document.getElementById('toast-container');
         if (toast) { toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2500); }
@@ -1247,16 +1255,17 @@
     document.getElementById('timeSignature')?.addEventListener('change', (e) => {
         beatsPerBar = parseInt(e.target.value);
         
-        // THE FIX: Use '' instead of 'inline-block' so the CSS Grid keeps its perfect spacing!
         document.querySelectorAll('.drum-preset-btn').forEach(btn => {
             btn.style.display = parseInt(btn.dataset.meter) === beatsPerBar ? '' : 'none';
         });
 
-        // If the current preset doesn't match the new time signature, turn it off!
         const activeBtn = document.querySelector(`.drum-preset-btn[data-preset="${currentDrumPreset}"]`);
         if (activeBtn && parseInt(activeBtn.dataset.meter) !== beatsPerBar) {
             updateDrumUI('none');
         }
+        
+        // THE FIX: Instantly redraw the grid lines to match the new meter!
+        if (typeof drawPianoRoll === 'function') drawPianoRoll();
     });
 
     const updateDrumUI = (val) => {
@@ -3653,6 +3662,7 @@
         const whiteKeys = [0, 2, 4, 5, 7, 9, 11];
         for (let note = currentPianoMin; note <= currentPianoMax; note++) {
             const { x, w: noteW, isBlack } = getNoteXAndWidth(note, w);
+            
             if (isBlack) {
                 prCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                 prCtx.fillRect(x, 0, noteW, h);
@@ -3663,6 +3673,18 @@
                 prCtx.moveTo(x, 0);
                 prCtx.lineTo(x, h);
                 prCtx.stroke();
+            }
+
+            // --- NEW: OCTAVE MARKERS (Labels on every 'C' note) ---
+            if (note % 12 === 0) {
+                const octave = Math.floor(note / 12) - 1; // MIDI math: Note 60 is C4
+                prCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // Faint white text
+                prCtx.font = `bold ${10 * dpr}px sans-serif`;
+                prCtx.textAlign = 'center';
+                
+                // Draw it near the top AND bottom of the screen so it's always visible
+                prCtx.fillText(`C${octave}`, x + (noteW / 2), 15 * dpr);
+                prCtx.fillText(`C${octave}`, x + (noteW / 2), h - (5 * dpr));
             }
         }
 
@@ -3678,7 +3700,7 @@
         while (currentBeatTime <= endTime) {
             if (currentBeatTime >= startTime) {
                 const y = h - ((currentBeatTime - prScrollTime) * prZoomY);
-                const isBar = currentBeat % 4 === 0;
+                const isBar = currentBeat % beatsPerBar === 0;
 
                 prCtx.strokeStyle = isBar ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)';
                 prCtx.lineWidth = isBar ? 2 : 1;
@@ -3686,6 +3708,21 @@
                 prCtx.moveTo(0, y);
                 prCtx.lineTo(w, y);
                 prCtx.stroke();
+
+                // --- NEW: BAR NUMBERS (Left Edge Ruler) ---
+                if (isBar) {
+                    const barNumber = Math.floor(currentBeat / beatsPerBar) + 1;
+                    
+                    // Draw a subtle dark background pill for readability against notes
+                    prCtx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                    prCtx.fillRect(0, y - (16 * dpr), 40 * dpr, 16 * dpr);
+                    
+                    // Draw the Bar Text
+                    prCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    prCtx.font = `bold ${10 * dpr}px sans-serif`;
+                    prCtx.textAlign = 'left';
+                    prCtx.fillText(`Bar ${barNumber}`, 4 * dpr, y - (4 * dpr));
+                }
             }
             currentBeat++;
             currentBeatTime += beatSecs;
@@ -3714,11 +3751,95 @@
         }
 
         // 5. Draw the Notes!
-        const drawTrackNotes = (trackEvents, trackIdx, isActiveTrack) => {
+        const drawTrackNotes =(trackEvents, trackIdx, isActiveTrack) => {
             const color = trackColors[trackIdx];
 
             trackEvents.forEach(evt => {
                 const isSelected = typeof prSelectedNotes !== 'undefined' && prSelectedNotes.has(evt);
+                
+                const yBottom = h - ((evt.timeOffset - prScrollTime) * prZoomY);
+                const yTop = h - (((evt.timeOffset + (evt.duration || 0.5)) - prScrollTime) * prZoomY);
+                const noteH = yBottom - yTop;
+
+                if (yBottom < 0 || yTop > h) return;
+
+                // --- RENDER AUDIO STEMS WITH WAVEFORMS ---
+                if (evt.type === 'stem') {
+                    // 1. Draw the container box
+                    prCtx.fillStyle = isSelected ? 'rgba(255, 235, 59, 0.15)' : color + '22';
+                    prCtx.strokeStyle = isSelected ? '#ffeb3b' : color;
+                    prCtx.lineWidth = 2;
+                    prCtx.fillRect(0, yTop, w, noteH);
+                    prCtx.strokeRect(0, yTop, w, noteH);
+
+                    // 2. Draw the Waveform (if peaks exist)
+                    if (evt.peaks) {
+                        // THE FIX: Clamp the max width so it doesn't look ridiculous on big screens
+                        const maxWaveW = Math.min(w * 0.85, 160 * dpr); 
+                        const centerX = w / 2;
+                        const numPeaks = evt.peaks.length;
+                        const sliceH = noteH / numPeaks;
+
+                        prCtx.fillStyle = isSelected ? 'rgba(255, 235, 59, 0.7)' : color + 'aa';
+                        prCtx.beginPath();
+
+                        // Draw UP the right side of the waveform
+                        prCtx.moveTo(centerX, yBottom);
+                        for (let i = 0; i < numPeaks; i++) {
+                            const y = yBottom - (i * sliceH); // Time goes UP
+                            const ampX = (evt.peaks[i] * maxWaveW) / 2;
+                            prCtx.lineTo(centerX + ampX, y);
+                        }
+                        
+                        // Draw DOWN the left side of the waveform
+                        for (let i = numPeaks - 1; i >= 0; i--) {
+                            const y = yBottom - (i * sliceH);
+                            const ampX = (evt.peaks[i] * maxWaveW) / 2;
+                            prCtx.lineTo(centerX - ampX, y);
+                        }
+                        
+                        prCtx.closePath();
+                        prCtx.fill();
+                    }
+
+                    // 3. Draw the Label (ACTIVE TRACK ONLY)
+                    if (isActiveTrack) {
+                        prCtx.fillStyle = isSelected ? '#ffeb3b' : '#ffffff';
+                        prCtx.font = `bold ${11 * dpr}px sans-serif`;
+                        
+                        // Compile our text string
+                        const clipName = evt.name ? evt.name : 'AUDIO STEM';
+                        let extraInfo = [];
+                        
+                        // Add Channel Count
+                        if (evt.buffer) {
+                            extraInfo.push(evt.buffer.numberOfChannels === 2 ? 'Stereo' : 'Mono');
+                        }
+                        // Add Warp Status
+                        if (evt.stretchRatio && evt.stretchRatio !== 1.0) {
+                            extraInfo.push(`Warp: ${Math.round(evt.stretchRatio * 100)}%`);
+                        }
+                        
+                        const labelText = extraInfo.length > 0 
+                            ? `${clipName} [${extraInfo.join(' | ')}]` 
+                            : clipName;
+
+                        // Draw at the Bottom (Start of the clip)
+                        prCtx.fillText(labelText, 10, yBottom - 10 * dpr);
+
+                        // MATH: Calculate if duration is >= 4 bars
+                        const beatSecs = 60 / currentArpBPM;
+                        const barSecs = beatSecs * beatsPerBar;
+                        
+                        if (evt.duration >= 4 * barSecs) {
+                            // Draw at the Top (End of the clip)
+                            // We push it down by 20px so it sits inside the upper bound
+                            prCtx.fillText(labelText, 10, yTop + 20 * dpr);
+                        }
+                    }
+                    
+                    return; // Skip standard MIDI rendering
+                }
 
                 prCtx.fillStyle = isSelected ? '#ffffff' : (isActiveTrack ? color : color + '40');
                 prCtx.strokeStyle = isSelected ? '#ffeb3b' : (isActiveTrack ? '#ffffff' : 'transparent');
@@ -3731,12 +3852,6 @@
                     const drumMap = { 'kick': 36, 'snare': 38, 'hihat': 42, 'clap': 39, 'cymbal': 49, 'tom1': 45, 'tom2': 47, 'tom3': 43, 'cowbell': 56, 'ride': 51, 'rimshot': 37, 'click': 76 };
                     midiNotes = [drumMap[evt.drumType] || 36];
                 }
-
-                const yBottom = h - ((evt.timeOffset - prScrollTime) * prZoomY);
-                const yTop = h - (((evt.timeOffset + (evt.duration || 0.5)) - prScrollTime) * prZoomY);
-                const noteH = yBottom - yTop;
-
-                if (yBottom < 0 || yTop > h) return;
 
                 midiNotes.forEach(note => {
                     const { x, w: noteW } = getNoteXAndWidth(note, w);
@@ -3759,6 +3874,40 @@
             const isFocus = activeDomain === 'arranger' && activeIdx === (localIdx + 8);
             drawTrackNotes(track, localIdx + 8, isFocus);
         });
+
+        // --- DRAW GROUP RESIZE BOUNDING BOX ---
+        if (prSelectedNotes.size > 1) {
+            const bounds = getSelectionBounds();
+            if (bounds) {
+                const yBottom = h - ((bounds.minT - prScrollTime) * prZoomY);
+                const yTop = h - ((bounds.maxT - prScrollTime) * prZoomY);
+                
+                const startXInfo = getNoteXAndWidth(bounds.minN, w);
+                const endXInfo = getNoteXAndWidth(bounds.maxN, w);
+                
+                const boxX = startXInfo.x - 4;
+                const boxW = (endXInfo.x + endXInfo.w) - boxX + 8;
+                const boxH = Math.max(2, yBottom - yTop);
+
+                // Ensure it's somewhat visible on screen
+                if (yBottom > 0 && yTop < h) {
+                    // Draw dashed border
+                    prCtx.strokeStyle = '#00d2ff';
+                    prCtx.lineWidth = 1;
+                    prCtx.setLineDash([4, 4]);
+                    prCtx.strokeRect(boxX, yTop, boxW, boxH);
+                    prCtx.setLineDash([]);
+
+                    // --- THE FIX: Only draw handles if the Select Tool is active ---
+                    if (currentPrTool === 'select') {
+                        prCtx.fillStyle = '#00d2ff';
+                        const handleW = Math.min(boxW, 40 * dpr); // Max 40px wide
+                        prCtx.fillRect(boxX + (boxW / 2) - (handleW / 2), yTop - (4 * dpr), handleW, 8 * dpr); // Top
+                        prCtx.fillRect(boxX + (boxW / 2) - (handleW / 2), yBottom - (4 * dpr), handleW, 8 * dpr); // Bottom
+                    }
+                }
+            }
+        }
 
         // 6. Draw Playhead & Handle Auto-Scroll
         let playheadTime = null;
@@ -3930,7 +4079,11 @@
     let prDragState = {
         isDragging: false,
         isMarquee: false,
-        isResizing: false, // NEW
+        isResizing: false, 
+        isGroupResizing: false,
+        groupResizeHandle: null, // 'top' or 'bottom'
+        groupOrigStart: 0,
+        groupOrigEnd: 0,
         tool: null,
         noteRef: null,
         originalTimeOffset: 0,
@@ -3942,6 +4095,26 @@
         auditionVoices: []
     };
 
+    function getSelectionBounds() {
+        if (prSelectedNotes.size === 0) return null;
+        let minT = Infinity, maxT = -Infinity, minN = Infinity, maxN = -Infinity;
+        
+        prSelectedNotes.forEach(evt => {
+            const start = evt.timeOffset !== undefined ? evt.timeOffset : evt.start;
+            const dur = evt.duration !== undefined ? evt.duration : (evt.end - evt.start);
+            if (start < minT) minT = start;
+            if (start + dur > maxT) maxT = start + dur;
+
+            let notes = [];
+            if (evt.type === 'play' && evt.freqs) notes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
+            else if (evt.type === 'drum') notes = [Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36];
+            else if (evt.type === 'stem') { minN = 0; maxN = 127; } // Stems span the whole track
+            
+            notes.forEach(n => { if (n < minN) minN = n; if (n > maxN) maxN = n; });
+        });
+        return { minT, maxT, minN, maxN };
+    }
+
     const reverseDrumMap = { 36: 'kick', 38: 'snare', 42: 'hihat', 39: 'clap', 49: 'cymbal', 45: 'tom1', 47: 'tom2', 43: 'tom3', 56: 'cowbell', 51: 'ride', 37: 'rimshot', 76: 'click' };
 
     function eraseNoteAt(time, note, track) {
@@ -3950,14 +4123,21 @@
             const evt = track[i];
             const end = evt.timeOffset + (evt.duration || 0.5);
             if (time >= evt.timeOffset && time <= end) {
-                if (evt.type === 'play' && evt.freqs) {
+                
+                if (evt.type === 'stem') {
+                    prSelectedNotes.delete(evt);
+                    track.splice(i, 1);
+                    break;
+                }
+                else if (evt.type === 'play' && evt.freqs) {
                     const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
                     if (evtNotes.includes(note)) {
                         prSelectedNotes.delete(evt);
                         track.splice(i, 1);
                         break;
                     }
-                } else if (evt.type === 'drum' && evt.drumType === targetDrum) {
+                }
+                else if (evt.type === 'drum' && evt.drumType === targetDrum) {
                     prSelectedNotes.delete(evt);
                     track.splice(i, 1);
                     break;
@@ -3973,6 +4153,12 @@
             const evt = track[i];
             const end = evt.timeOffset + (evt.duration || 0.5);
             if (time >= evt.timeOffset && time <= end) {
+                
+                // --- NEW: Stems span the whole X-axis, so if the time matches, it's a hit! ---
+                if (evt.type === 'stem') {
+                    return { evt, originalNote: note }; 
+                }
+                
                 if (evt.type === 'play' && evt.freqs) {
                     const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
                     if (evtNotes.includes(note)) return { evt, originalNote: note };
@@ -3993,6 +4179,29 @@
             const clickTime = getPrTimeFromY(e.offsetY);
             const clickNote = getPrNoteFromX(e.offsetX);
             const snappedTime = snapTime(clickTime);
+
+            // --- SHIFT-CLICK PLAYHEAD PLACEMENT ---
+            if (e.shiftKey) {
+                prDragState.isDragging = false; // Abort all standard tool logic
+                
+                if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
+                    stepCursorTime = Math.max(0, snappedTime);
+                } else {
+                    const activeDomain = studio.lastSelectedDomain;
+                    if (activeDomain === 'arranger') {
+                        if (arranger.isPlaying) arranger.startTime = audioCtx.currentTime - snappedTime;
+                        else arranger.pauseTime = Math.max(0, snappedTime);
+                        lastArrangerPhase = snappedTime - 0.01;
+                    } else if (activeDomain === 'looper') {
+                        const activeIdx = studio.activeLooperTrack;
+                        looper.lastPhases[activeIdx] = Math.max(0, snappedTime);
+                        if (looper.isPlaying) looper.startTime = audioCtx.currentTime - snappedTime;
+                    }
+                    syncTransportToTime(snappedTime); // Update LCD!
+                }
+                if (typeof drawPianoRoll === 'function') drawPianoRoll();
+                return; 
+            }
 
             // --- STEP ENTRY CURSOR TELEPORT ---
             if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
@@ -4035,6 +4244,39 @@
 
             // --- SELECT TOOL ---
             if (currentPrTool === 'select') {
+
+                // --- NEW: CHECK GROUP RESIZE HANDLES FIRST ---
+                if (prSelectedNotes.size > 1) {
+                    const bounds = getSelectionBounds();
+                    if (bounds) {
+                        const yBottom = (prCanvas.height / (window.devicePixelRatio || 1)) - ((bounds.minT - prScrollTime) * prZoomY);
+                        const yTop = (prCanvas.height / (window.devicePixelRatio || 1)) - ((bounds.maxT - prScrollTime) * prZoomY);
+                        
+                        // Give the handles a generous 12px hit margin. 
+                        // Because we only check Y, clicking the middle of the box passes right through to the notes!
+                        if (Math.abs(e.offsetY - yTop) < 12) {
+                            prDragState.isGroupResizing = true;
+                            prDragState.groupResizeHandle = 'top';
+                        } else if (Math.abs(e.offsetY - yBottom) < 12) {
+                            prDragState.isGroupResizing = true;
+                            prDragState.groupResizeHandle = 'bottom';
+                        }
+
+                        if (prDragState.isGroupResizing) {
+                            prDragState.groupOrigStart = bounds.minT;
+                            prDragState.groupOrigEnd = bounds.maxT;
+                            prDragState.moveCache.clear();
+                            prSelectedNotes.forEach(evt => {
+                                prDragState.moveCache.set(evt, { 
+                                    timeOffset: evt.timeOffset !== undefined ? evt.timeOffset : evt.start, 
+                                    duration: evt.duration !== undefined ? evt.duration : (evt.end - evt.start) 
+                                });
+                            });
+                            return; // Stop here! We grabbed a group handle.
+                        }
+                    }
+                }
+
                 const hit = getEventAtCursor(clickTime, clickNote, activeTrack);
 
                 if (hit) {
@@ -4217,7 +4459,7 @@
                 prSelectedNotes.clear(); // Clear selection when drawing
                 const noteFreq = masterTune * Math.pow(2, (clickNote - 69) / 12);
                 const beatSecs = 60 / currentArpBPM;
-                const defaultDur = prSnapRes > 0 ? (beatSecs * prSnapRes * 4) : (beatSecs * 0.25);
+                const defaultDur = prSnapRes > 0 ? (beatSecs * prSnapRes) : (beatSecs * 0.25);
                 const drumType = isDrumTrack ? reverseDrumMap[clickNote] : null;
 
                 if (isDrumTrack && !drumType) return;
@@ -4337,6 +4579,54 @@
                         }
                     });
                 }
+                else if (prDragState.isGroupResizing) {
+                    const origStart = prDragState.groupOrigStart;
+                    const origEnd = prDragState.groupOrigEnd;
+                    const origDur = origEnd - origStart;
+                    
+                    let newStart = origStart;
+                    let newEnd = origEnd;
+                    const minDur = prSnapRes > 0 ? snapTime(0.01) || 0.05 : 0.05;
+
+                    if (prDragState.groupResizeHandle === 'top') {
+                        // Dragging the Top Handle changes the End Time!
+                        newEnd = Math.max(origStart + minDur, snappedCurrent);
+                    } else {
+                        // Dragging the Bottom Handle changes the Start Time!
+                        newStart = Math.min(origEnd - minDur, Math.max(0, snappedCurrent));
+                    }
+                    
+                    const newDur = newEnd - newStart;
+                    const ratio = origDur > 0 ? (newDur / origDur) : 1;
+
+                    let draggedMaxTime = 0;
+
+                    prSelectedNotes.forEach(evt => {
+                        const original = prDragState.moveCache.get(evt);
+                        if (original) {
+                            const relativeStart = original.timeOffset - origStart;
+                            
+                            // The Elastic Math!
+                            const newTimeOffset = newStart + (relativeStart * ratio);
+                            const newEventDur = original.duration * ratio;
+                            
+                            if (evt.start !== undefined) { 
+                                evt.start = newTimeOffset;
+                                evt.end = newTimeOffset + newEventDur;
+                                if (evt.end > draggedMaxTime) draggedMaxTime = evt.end;
+                            } else { 
+                                evt.timeOffset = newTimeOffset;
+                                evt.duration = newEventDur;
+                                if (evt.timeOffset + evt.duration > draggedMaxTime) draggedMaxTime = evt.timeOffset + evt.duration;
+                            }
+                        }
+                    });
+
+                    // Instantly expand the global timeline if stretched past the end!
+                    if (draggedMaxTime > arranger.duration) {
+                        arranger.duration = draggedMaxTime;
+                    }
+                }
                 else if (prDragState.moveCache.size > 0) {
                     const deltaTime = snappedCurrent - prDragState.moveAnchor.time;
                     const deltaNote = currentNote - prDragState.moveAnchor.note;
@@ -4424,6 +4714,32 @@
     window.addEventListener('mouseup', () => {
         if (prDragState.isDragging) {
             
+            // --- MARQUEE ABORT (CLICK-TO-PLACE PLAYHEAD) ---
+            if (prDragState.isMarquee) {
+                const timeDiff = Math.abs(prDragState.marqueeStart.time - prDragState.marqueeCurrent.time);
+                const noteDiff = Math.abs(prDragState.marqueeStart.note - prDragState.marqueeCurrent.note);
+
+                // If the mouse barely moved, treat it as a click on empty space!
+                if (timeDiff < 0.05 && noteDiff < 1) {
+                    const snappedTime = snapTime(prDragState.marqueeStart.time);
+                    const activeDomain = studio.lastSelectedDomain;
+                    
+                    if (activeDomain === 'arranger') {
+                        if (arranger.isPlaying) arranger.startTime = audioCtx.currentTime - snappedTime;
+                        else arranger.pauseTime = Math.max(0, snappedTime);
+                        lastArrangerPhase = snappedTime - 0.01;
+                    } else if (activeDomain === 'looper') {
+                        const activeIdx = studio.activeLooperTrack;
+                        looper.lastPhases[activeIdx] = Math.max(0, snappedTime);
+                        if (looper.isPlaying) looper.startTime = audioCtx.currentTime - snappedTime;
+                    }
+                    
+                    syncTransportToTime(snappedTime); // Update LCD!
+                    prDragState.isMarquee = false; // Abort marquee selection loop!
+                    if (typeof drawPianoRoll === 'function') drawPianoRoll();
+                }
+            }
+
             // --- MARQUEE ERASE ---
             if (prDragState.isMarquee && prDragState.tool === 'erase') {
                 const minT = Math.min(prDragState.marqueeStart.time, prDragState.marqueeCurrent.time);
@@ -4441,10 +4757,14 @@
                     const endT = evt.timeOffset + (evt.duration || 0.5);
                     let noteMatch = false;
 
-                    if (evt.type === 'play' && evt.freqs) {
+                    if (evt.type === 'stem') {
+                        noteMatch = true; 
+                    }
+                    else if (evt.type === 'play' && evt.freqs) {
                         const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
                         noteMatch = evtNotes.some(n => n >= minN && n <= maxN);
-                    } else if (evt.type === 'drum') {
+                    }
+                    else if (evt.type === 'drum') {
                         const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
                         noteMatch = drumPitch >= minN && drumPitch <= maxN;
                     }
@@ -4469,7 +4789,9 @@
 
             prDragState.isDragging = false;
             prDragState.isMarquee = false;
-            prDragState.isResizing = false; // Clear resize flag
+            prDragState.isResizing = false;
+            prDragState.isGroupResizing = false;
+            prDragState.groupResizeHandle = null;
             prDragState.noteRef = null;
             prDragState.moveCache.clear();
 
@@ -4930,7 +5252,7 @@ function initAudio() {
     let cachedGridNodes = null; // RAM Cache for Chrome
     let cachedTextNodes = null;
 
-    function updateHighlights() {
+function updateHighlights() {
         if (highlightUpdatePending) return;
         highlightUpdatePending = true;
 
@@ -4940,42 +5262,28 @@ function initAudio() {
             pianoExtensionNotes.clear();
             const now = audioCtx ? audioCtx.currentTime : 0;
 
+            let isStemPlaying = false;
             activeNodes.forEach((nodeData) => {
-                if (nodeData.type === 'arp') { nodeData.voices.forEach(v => { if (now >= v.startTime && now < v.startTime + nodeData.stepDuration) { playingMidiNotes.add(v.midiNote); } }); }
+                if (nodeData.type === 'stem') { 
+                    isStemPlaying = true;
+                }
+                else if (nodeData.type === 'arp') { nodeData.voices.forEach(v => { if (now >= v.startTime && now < v.startTime + nodeData.stepDuration) { playingMidiNotes.add(v.midiNote); } }); }
                 else if (nodeData.voices) { nodeData.voices.forEach(v => playingMidiNotes.add(v.midiNote)); }
-                else if (nodeData.freqs) { nodeData.freqs.forEach(freq => playingMidiNotes.add(Math.round(12 * Math.log2(freq / masterTune) + 69))); }
-            });
-            midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
-
-            // ==========================================
-            // --- THE HARMONIC BUFFER (BPM SYNC) ---
-            // ==========================================
-
-            // 1. Refresh memory for currently held physical/looper notes
-            playingMidiNotes.forEach(note => {
-                noteMemoryMap.set(note, now);
-            });
-
-            // 2. Build the aggregated "Contextual Harmony" Set
-            const activeHarmonicNotes = new Set();
-
-            // Calculate 1.5 beats of memory based on the current live BPM!
-            // At 120 BPM = 0.75 seconds of memory. At 60 BPM = 1.5 seconds.
-            const memoryWindowSecs = (60 / currentArpBPM) * 1.5;
-
-            noteMemoryMap.forEach((lastTime, note) => {
-                // Keep it if it's currently physically held, OR if it's within the BPM memory window
-                if (playingMidiNotes.has(note) || (now - lastTime <= memoryWindowSecs)) {
-                    activeHarmonicNotes.add(note);
-                } else {
-                    noteMemoryMap.delete(note); // Purge expired notes
+                else if (nodeData.freqs && nodeData.freqs.length > 0) { 
+                    nodeData.freqs.forEach(freq => playingMidiNotes.add(Math.round(12 * Math.log2(freq / masterTune) + 69))); 
                 }
             });
 
-            // 1. ALWAYS UPDATE PIANO (Physical Feedback)
+            midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
+
+            if (typeof updateHarmonicEngine === 'function') {
+                updateHarmonicEngine();
+            }
+
+            // ALWAYS UPDATE PIANO (Physical Feedback)
             updatePianoVisuals();
 
-            // 2. THE USER'S FIX: Skip the heavy Tonnetz grid math during fast slides!
+            // Skip the heavy Tonnetz grid math during fast slides!
             if (isGlissando) return;
 
             // --- HEAVY TONNETZ LOGIC BELOW ---
@@ -4991,7 +5299,7 @@ function initAudio() {
             const extensionsToHighlight = new Set();
             const extensionPitchClasses = new Set();
 
-            // THE CHROME FIX: Fetch from RAM instead of querying the DOM
+            // CHROME FIX: Fetch from RAM instead of querying the DOM
             if (!cachedGridNodes) cachedGridNodes = document.querySelectorAll('.highlightable:not(.piano-key)');
 
             for (let i = 0; i < cachedGridNodes.length; i++) {
@@ -5035,17 +5343,15 @@ function initAudio() {
                 }
             }
 
-            // Pass the BUFFERED harmony to the Chord Display engine
-            updateChordDisplay(activeHarmonicNotes);
-
             updatePianoVisuals(); // Final sweep to render any missed extensions
 
             // --- HARMONIC HEATMAP TRIGGER ---
             if (isHeatmapActive) {
-                // Evaluate the BUFFERED harmony so rolled chords are processed as a single entity!
-                const currentNotesStr = Array.from(activeHarmonicNotes).sort().join(',');
+                // The active notes are now pulled safely from the engine's globals!
+                const activeEngineNotes = Array.from(noteMemoryMap.keys()).sort();
+                const currentNotesStr = activeEngineNotes.join(',');
                 if (heatmapBaseNotes.join(',') !== currentNotesStr) {
-                    heatmapBaseNotes = Array.from(activeHarmonicNotes).sort();
+                    heatmapBaseNotes = activeEngineNotes;
                     setTimeout(updateHarmonicHeatmap, 0);
                 }
             }
@@ -5102,78 +5408,157 @@ function initAudio() {
         '0,6': '(b5, no3)'  // Tritone dyad
     };
 
-    function updateChordDisplay(harmonicSet) {
+    // ==========================================
+    // --- STAGE 3: THE "DUMB" UI RENDERER ---
+    // ==========================================
+    function updateChordDisplayUI(chordString, opacity) {
         const display = document.getElementById('chord-display');
         if (!display) return;
-        currentGravityTargets = [];
+        
+        display.textContent = chordString;
+        display.style.opacity = opacity.toString();
+    }
 
-        if (!harmonicSet || harmonicSet.size === 0) { display.style.opacity = '0'; return; }
+    // ==========================================
+    // --- STAGE 1 & 2: THE HARMONIC ENGINE ---
+    // ==========================================
+    function updateHarmonicEngine() {
+        const now = audioCtx ? audioCtx.currentTime : performance.now() / 1000;
+        const memoryWindowSecs = (60 / currentArpBPM) * 1.5; 
+        const sustainActive = typeof isSustainOn === 'function' ? isSustainOn() : false;
 
-        let minNote = Math.min(...Array.from(harmonicSet));
-        if (minNote === Infinity) return;
-
-        let bassPC = minNote % 12;
-
-        if (harmonicSet.size === 1) {
-            let octave = Math.floor(minNote / 12) - 1;
-            display.textContent = `${labelAbsoluteSharp[bassPC]}${octave}`;
-            display.style.opacity = '1';
-            currentIdentifiedRootPC = bassPC;
-            return;
+        // --- 1. MEMORY: Sync & Leaky Bucket ---
+        if (typeof playingMidiNotes !== 'undefined') {
+            playingMidiNotes.forEach(note => {
+                if (!noteMemoryMap.has(note)) {
+                    noteMemoryMap.set(note, { addedTime: now, isHeld: true, releaseTime: null });
+                } else {
+                    let data = noteMemoryMap.get(note);
+                    data.isHeld = true;
+                    data.releaseTime = null;
+                }
+            });
         }
 
-        let pitchClasses = Array.from(new Set(Array.from(harmonicSet).map(n => n % 12)));
+        // Calculate dynamic passing tone threshold: 80% of a 16th note
+        // 1 beat = 60/BPM. 1/16th note = 15/BPM. 
+        // Clamped between 40ms (fast finger flick) and 110ms (safe staccato length)
+        const passingToneThreshold = Math.max(0.04, Math.min(0.11, (15 / currentArpBPM) * 0.8));
 
-        if (pitchClasses.length === 1 && harmonicSet.size > 1) {
-            display.textContent = `${labelAbsoluteSharp[bassPC]} Octaves`;
-            display.style.opacity = '1';
-            currentIdentifiedRootPC = bassPC;
-            return;
-        }
+        for (let [note, data] of noteMemoryMap.entries()) {
+            // Flag released physical notes
+            if (typeof playingMidiNotes !== 'undefined' && !playingMidiNotes.has(note) && data.isHeld) {
+                data.isHeld = false;
+                data.releaseTime = now;
 
-        let bestMatch = null;
-        let bestRoot = null;
-        let bestScore = -1;
-
-        for (let rootPC of pitchClasses) {
-            let intervals = pitchClasses.map(pc => (pc - rootPC + 12) % 12).sort((a, b) => a - b);
-            let iStr = intervals.join(',');
-
-            if (chordDict[iStr] !== undefined) {
-                let score = intervals.length;
-                if (rootPC === bassPC) score += 10;
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMatch = chordDict[iStr];
-                    bestRoot = rootPC;
+                // If the note was held for less than our threshold, it was a passing flick.
+                // Instantly delete it so it DOES NOT get the 1.5 beat Leaky Bucket TTL.
+                if ((data.releaseTime - data.addedTime) < passingToneThreshold) {
+                    noteMemoryMap.delete(note);
+                    continue; // Skip the rest of the loop for this deleted note
+                }
+            }
+            
+            // Purge expired notes (if sustain is off)
+            if (!data.isHeld && !sustainActive && data.releaseTime) {
+                if (now - data.releaseTime > memoryWindowSecs) {
+                    noteMemoryMap.delete(note);
                 }
             }
         }
 
-        if (bestMatch !== null) {
-            // --- UPGRADED CHORD HISTORY TRACKER (Arpeggio Safe!) ---
-            // Only push to history if we've landed on a genuinely NEW full chord!
-            // This completely ignores single passing notes and incomplete dyads.
-            if (rootHistory.length === 0 || rootHistory[0] !== bestRoot) {
-                rootHistory.unshift(bestRoot);
-                if (rootHistory.length > 5) rootHistory.pop(); // Keep history memory clean
-            }
-
-            currentIdentifiedRootPC = bestRoot;
-            let chordName = labelAbsoluteSharp[bestRoot] + bestMatch;
-            if (bestRoot !== bassPC) {
-                chordName += `/${labelAbsoluteSharp[bassPC]}`;
-            }
-            display.textContent = chordName;
-
-            // ==========================================
-            // --- FUNCTIONAL GRAVITY ENGINE V3 ---
-            // ==========================================
+        const activeNotes = Array.from(noteMemoryMap.keys());
+        if (activeNotes.length === 0) {
             currentGravityTargets = [];
             isStrongSequence = false;
+            if (typeof isStemPlaying !== 'undefined' && isStemPlaying) {
+                updateChordDisplayUI("(NON-MIDI)", 0.5);
+            } else {
+                updateChordDisplayUI("", 0);
+            }
+            return;
+        }
 
-            // 1. Identify the internal structure of the current chord
+        // --- 2. THEORY: Pre-Evaluate Root & Bass ---
+        let minNote = Math.min(...activeNotes);
+        let bassPC = minNote % 12;
+        let pitchClasses = Array.from(new Set(activeNotes.map(n => n % 12)));
+        
+        let bestMatch = null;
+        let bestRoot = bassPC;
+        let bestScore = -1;
+
+        if (pitchClasses.length > 1) {
+            for (let rootPC of pitchClasses) {
+                let intervals = pitchClasses.map(pc => (pc - rootPC + 12) % 12).sort((a, b) => a - b);
+                let iStr = intervals.join(',');
+                if (chordDict[iStr] !== undefined) {
+                    let score = intervals.length;
+                    if (rootPC === bassPC) score += 10;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMatch = chordDict[iStr];
+                        bestRoot = rootPC;
+                    }
+                }
+            }
+        }
+        currentIdentifiedRootPC = bestRoot;
+
+        // --- 3. MEMORY: FIFO Purge (With Bass/Root Immunity) ---
+        while (noteMemoryMap.size > CHORD_BUFFER_MAX) {
+            let oldestNote = null;
+            let oldestTime = Infinity;
+
+            for (let [note, data] of noteMemoryMap.entries()) {
+                const isBass = (note === minNote);
+                const isRoot = (note % 12 === bestRoot);
+                
+                if (!isBass && !isRoot && data.addedTime < oldestTime) {
+                    oldestTime = data.addedTime;
+                    oldestNote = note;
+                }
+            }
+
+            // Absolute Fallback if somehow all notes are immune
+            if (oldestNote === null) {
+                for (let [note, data] of noteMemoryMap.entries()) {
+                    if (data.addedTime < oldestTime) {
+                        oldestTime = data.addedTime;
+                        oldestNote = note;
+                    }
+                }
+            }
+
+            if (oldestNote !== null) {
+                noteMemoryMap.delete(oldestNote);
+                let idx = activeNotes.indexOf(oldestNote);
+                if (idx > -1) activeNotes.splice(idx, 1);
+            } else {
+                break; 
+            }
+        }
+
+        // --- 4. THEORY: History & Gravity ---
+        let chordNameStr = "";
+        currentGravityTargets = [];
+        isStrongSequence = false;
+
+        if (activeNotes.length === 1) {
+            let octave = Math.floor(minNote / 12) - 1;
+            chordNameStr = `${labelAbsoluteSharp[bassPC]}${octave}`;
+        } else if (pitchClasses.length === 1 && activeNotes.length > 1) {
+            chordNameStr = `${labelAbsoluteSharp[bassPC]} Octaves`;
+        } else if (bestMatch !== null) {
+            if (rootHistory.length === 0 || rootHistory[0] !== bestRoot) {
+                rootHistory.unshift(bestRoot);
+                if (rootHistory.length > 5) rootHistory.pop();
+            }
+
+            chordNameStr = labelAbsoluteSharp[bestRoot] + bestMatch;
+            if (bestRoot !== bassPC) chordNameStr += `/${labelAbsoluteSharp[bassPC]}`;
+
+            // Functional Gravity Engine
             const isMajor = bestMatch === '' || bestMatch === 'maj' || bestMatch === '6' || bestMatch.includes('add');
             const isMinor = bestMatch.startsWith('-');
             const isDominant = (bestMatch.includes('7') || bestMatch.includes('9') || bestMatch.includes('13'))
@@ -5182,10 +5567,8 @@ function initAudio() {
             const isAugmented = bestMatch.includes('aug');
             const isSus = bestMatch.includes('sus');
 
-            // 2. LOCAL GRAVITY: Chords with inherent acoustic tension
             if (isDominant) {
-                currentGravityTargets.push((bestRoot - 7 + 12) % 12);
-                currentGravityTargets.push((bestRoot - 1 + 12) % 12);
+                currentGravityTargets.push((bestRoot - 7 + 12) % 12, (bestRoot - 1 + 12) % 12);
             } else if (isDiminished) {
                 currentGravityTargets.push((bestRoot + 1) % 12);
             } else if (isAugmented) {
@@ -5194,70 +5577,42 @@ function initAudio() {
                 currentGravityTargets.push(bestRoot);
             }
 
-            // 3. SEQUENCE GRAVITY: Contextual progressions
-            // Because we just unshifted the CURRENT chord to rootHistory[0], 
-            // the PREVIOUS chord is now safely preserved at rootHistory[1]!
             if (rootHistory.length > 1) {
-
-                // We check the last 2 valid chords to elegantly "look through" passing chords!
                 const recentRoots = [rootHistory[1]];
                 if (rootHistory.length > 2) recentRoots.push(rootHistory[2]);
 
                 recentRoots.forEach(prevRoot => {
-                    // PATTERN A: Authentic Cadence (ii -> V -> I) or (IV -> V -> I)
                     if (isMajor || isDominant) {
                         const targetI = (bestRoot - 7 + 12) % 12;
-                        const isTwo = prevRoot === (targetI + 2) % 12;
-                        const isFour = prevRoot === (targetI + 5) % 12;
-                        const isSix = prevRoot === (targetI + 9) % 12;
-                        const isFlatSix = prevRoot === (targetI + 8) % 12;
-
-                        if (isTwo || isFour || isSix || isFlatSix) {
+                        if ([2, 5, 9, 8].map(int => (targetI + int) % 12).includes(prevRoot)) {
                             if (!currentGravityTargets.includes(targetI)) currentGravityTargets.push(targetI);
                             isStrongSequence = true;
-
-                            // The Deceptive Fake-out (vi)
                             const targetVi = (targetI + 9) % 12;
                             if (!currentGravityTargets.includes(targetVi)) currentGravityTargets.push(targetVi);
                         }
-                    }
-
-                    // PATTERN B: Plagal & Minor Plagal (IV -> I) or (iv -> I)
-                    if (isMajor || isMinor) {
-                        const targetI = (bestRoot - 5 + 12) % 12;
-                        const isOne = prevRoot === targetI;
-                        const isFive = prevRoot === (targetI + 7) % 12;
-                        const isFlatSeven = prevRoot === (targetI + 10) % 12;
-
-                        if (isOne || isFive || isFlatSeven) {
-                            if (!currentGravityTargets.includes(targetI)) currentGravityTargets.push(targetI);
+                        const targetI_Backdoor = (bestRoot + 2) % 12;
+                        if (prevRoot === (bestRoot - 2 + 12) % 12) {
+                            if (!currentGravityTargets.includes(targetI_Backdoor)) currentGravityTargets.push(targetI_Backdoor);
                             isStrongSequence = true;
                         }
                     }
-
-                    // PATTERN C: The Epic/Backdoor Cadence (bVI -> bVII -> I)
-                    if (isMajor || isDominant) {
-                        const targetI = (bestRoot + 2) % 12;
-                        const isFlatSix = prevRoot === (bestRoot - 2 + 12) % 12;
-
-                        if (isFlatSix) {
+                    if (isMajor || isMinor) {
+                        const targetI = (bestRoot - 5 + 12) % 12;
+                        if ([0, 7, 10].map(int => (targetI + int) % 12).includes(prevRoot)) {
                             if (!currentGravityTargets.includes(targetI)) currentGravityTargets.push(targetI);
                             isStrongSequence = true;
                         }
                     }
                 });
             }
-
         } else {
-            // ==========================================
-            // --- FALLBACK BLOCK ---
-            // ==========================================
-            currentIdentifiedRootPC = bassPC;
+            // Fallback for unknown clusters
             let intervals = pitchClasses.map(pc => (pc - bassPC + 12) % 12).sort((a, b) => a - b);
-            display.textContent = `${labelAbsoluteSharp[bassPC]} (${intervals.length})`;
+            chordNameStr = `${labelAbsoluteSharp[bassPC]} (${intervals.length})`;
         }
 
-        display.style.opacity = '1';
+        // --- 5. RENDER ---
+        updateChordDisplayUI(chordNameStr, 1);
     }
 
     function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null, destination = null) {
@@ -5671,47 +6026,60 @@ function initAudio() {
         const nodeData = activeNodes.get(element);
         activeNodes.delete(element);
 
+        let finalNoteDuration = 0; // NEW: Track the exact duration for the Step Cursor
+
+        // --- THE DYNAMIC DURATION FIX ---
+        const isLiveRecording = (looper.isRecording || arranger.isRecording) && !element.isLooper;
+        const isStepEntry = (typeof isStepEntryMode !== 'undefined' && isStepEntryMode);
+
+        if (isLiveRecording || isStepEntry) {
+            if (nodeData && nodeData.looperEvt) {
+                let dur = Math.max(0.05, audioCtx.currentTime - nodeData.startTime);
+                
+                // THE FIX: Parse prSnapRes to ensure it's a number!
+                const currentSnap = parseFloat(prSnapRes);
+
+                if (isStepEntry && currentSnap > 0) {
+                    const beatSecs = 60 / currentArpBPM;
+                    const snapSecs = beatSecs * currentSnap;
+                    // Ensures quick taps are at least 1 unit long, while holds round to the grid multiplier
+                    dur = Math.max(snapSecs, Math.round(dur / snapSecs) * snapSecs);
+                }
+
+                if (Array.isArray(nodeData.looperEvt)) {
+                    nodeData.looperEvt.forEach(e => e.duration = dur);
+                } else {
+                    nodeData.looperEvt.duration = dur;
+                }
+                
+                finalNoteDuration = dur; // Save for the cursor jump!
+                if (typeof drawPianoRoll === 'function') drawPianoRoll(); 
+            }
+        }
+
         if (!element.isLooper) {
             activeUserNotes = Math.max(0, activeUserNotes - 1);
             
             // --- THE FIX: SMART MIDI ROLLING DEBOUNCE ---
-            if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode && activeUserNotes === 0) {
+            if (isStepEntry && activeUserNotes === 0) {
                 clearTimeout(stepAdvanceTimeout);
                 stepAdvanceTimeout = setTimeout(() => {
                     // Only advance if the user hasn't pressed another key within the 40ms grace period!
                     if (activeUserNotes === 0 && isStepEntryMode) {
-                        advanceStepCursor();
+                        if (typeof advanceStepCursor === 'function') {
+                            // Pass the exact calculated note duration directly to the cursor!
+                            advanceStepCursor(finalNoteDuration);
+                        }
                     }
                 }, 40); 
             }
 
             if (activeUserNotes === 0) {
                 clearTimeout(navFadeTimeout);
-                // THE FIX: Call wakeNav after the delay so the panels reappear!
                 if (uiHideDelay > 0) navFadeTimeout = setTimeout(wakeNav, uiHideDelay); else wakeNav();
             }
         }
 
-        // --- THE DYNAMIC DURATION FIX ---
-        // Applies to both Live Recording AND "Free Length" Step Entry!
-        const isLiveRecording = (looper.isRecording || arranger.isRecording) && !element.isLooper;
-        const isFreeStepEntry = (typeof isStepEntryMode !== 'undefined' && isStepEntryMode && prSnapRes === 0);
-
-        if (isLiveRecording || isFreeStepEntry) {
-            if (nodeData && nodeData.looperEvt) {
-                const dur = Math.max(0.05, audioCtx.currentTime - nodeData.startTime);
-                
-                if (Array.isArray(nodeData.looperEvt)) {
-                    nodeData.looperEvt.forEach(e => e.duration = dur);
-                } else {
-                    nodeData.looperEvt.duration = dur;
-                }
-                // Force Piano Roll to redraw the new "Free Length" note bodies
-                if (typeof drawPianoRoll === 'function') drawPianoRoll(); 
-            }
-        }
-
-        // Flag if this was a fast glissando swipe (held less than 80ms)
         const timeHeld = audioCtx ? (audioCtx.currentTime - nodeData.startTime) : 0;
         const isFastSwipe = timeHeld < 0.08;
 
@@ -6599,7 +6967,8 @@ function initAudio() {
                                 gain.gain.value = 1.0;
 
                                 source.connect(gain);
-                                if (looperPanners[idx]) gain.connect(looperPanners[idx]); // <--- Looper panners
+
+                                if (looperGainNodes[idx]) gain.connect(looperGainNodes[idx]);
 
                                 let exactTime = now + (evt.timeOffset - phase);
                                 let bufferOffset = 0;
@@ -6702,7 +7071,7 @@ function initAudio() {
                                     gain.gain.value = 1.0;
 
                                     source.connect(gain);
-                                    if (linearPanners[localIdx]) gain.connect(linearPanners[localIdx]); // <--- Arranger panners
+                                    if (linearGainNodes[localIdx]) gain.connect(linearGainNodes[localIdx]);
 
                                     let exactTime = now + (evt.timeOffset - phase);
                                     let bufferOffset = 0;
@@ -8551,6 +8920,32 @@ engineClockWorker.onmessage = function () {
         document.getElementById('import-zip-input').click();
     });
 
+    // --- AUDIO STEM PEAK CACHER ---
+    function extractAudioPeaks(audioBuffer) {
+        // Dynamic resolution based on Hardware Tier
+        let numBuckets = 250; 
+        if (perfProfile.tier === 'mid') numBuckets = 750;
+        if (perfProfile.tier === 'high') numBuckets = 2000;
+
+        if (!audioBuffer) return new Float32Array(numBuckets);
+        
+        const rawData = audioBuffer.getChannelData(0); // Just use left channel for UI
+        const peaks = new Float32Array(numBuckets);
+        const blockSize = Math.floor(rawData.length / numBuckets);
+
+        for (let i = 0; i < numBuckets; i++) {
+            let max = 0;
+            const start = i * blockSize;
+            // Skipping by 10 optimizes the loop without losing visual transients
+            for (let j = 0; j < blockSize; j += 10) {
+                const abs = Math.abs(rawData[start + j]);
+                if (abs > max) max = abs;
+            }
+            peaks[i] = max;
+        }
+        return peaks;
+    }
+
     document.getElementById('import-zip-input')?.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
@@ -8565,7 +8960,7 @@ engineClockWorker.onmessage = function () {
         let mode = 'add'; // Default to Add so we never ruin the user's UI selection!
 
         if (!isProjectEmpty) {
-            if (confirm("⚠️ Active project detected!\n\nClick [OK] to REPLACE current tracks (unsaved data lost).\nClick [Cancel] to ADD to empty tracks.")) {
+            if (confirm("⚠️ Active project detected!\n\nClick [OK] to REPLACE current tracks (unsaved data lost).\nClick [Cancel] to ADD to tracks.")) {
                 mode = 'replace';
             }
         }
@@ -8595,7 +8990,6 @@ engineClockWorker.onmessage = function () {
         }
 
         // --- HARDCORE TEMPO UPDATER ---
-        // Forces all UI sliders, labels, and Time-Stretch anchors to sync instantly!
         const applyImportedBPM = (newBpm) => {
             const bpm = Math.round(newBpm);
             if (!isNaN(bpm) && bpm >= 40 && bpm <= 240) {
@@ -8619,7 +9013,7 @@ engineClockWorker.onmessage = function () {
             }
         };
 
-        // --- UPGRADED HELPER: Data-Driven Empty Track Hunter ---
+        // --- UPGRADED HELPER: Data-Driven Empty Track Hunter (Preserved for ZIP Extraction) ---
         const getNextFreeTrack = (preferLooper = false) => {
             const activeDomain = studio.lastSelectedDomain;
             const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
@@ -8651,12 +9045,13 @@ engineClockWorker.onmessage = function () {
             const ext = file.name.split('.').pop().toLowerCase();
 
             // ==============================================================
-            // A. ZIP / DAWPROJECT EXTRACION
+            // A. ZIP / DAWPROJECT EXTRACTION
             // ==============================================================
             if (ext === 'zip' || ext === 'dawproject') {
                 try {
                     const zip = await JSZip.loadAsync(file);
                     const sessionFile = zip.file("tonnetz_session.json");
+                    let stretchRatio = 1.0;
 
                     if (sessionFile && mode === 'replace') {
                         showToast("Native Session found! Restoring non-destructive MIDI...");
@@ -8681,33 +9076,41 @@ engineClockWorker.onmessage = function () {
                                     labelEl.textContent = type === 'drum' ? 'DRUMS' : (studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
                                 }
                             }
-
                             const isLooper = i < 8;
                             const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
                             if (muteBtn) muteBtn.classList.toggle('muted', isLooper ? looper.muted[i] : arranger.muted[i - 8]);
                         }
-
                         applySynthStateToUI(studio.trackSynthStates[studio.activeLooperTrack]);
                         document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('active');
-
                     } 
                     else {
                         if (sessionFile) showToast("Native Session found. Extracting stems to merge...");
                         else showToast("Foreign DAWproject detected. Scanning for metadata...");
 
                         let trackMetadata = {}; 
-
                         const xmlFile = zip.file("project.xml");
+                        
+                        // BPM EVALUATION BLOCK
                         if (xmlFile) {
                             try {
                                 const xmlText = await xmlFile.async("string");
                                 const parser = new DOMParser();
                                 const xmlDoc = parser.parseFromString(xmlText, "text/xml");
 
-                                if (mode === 'replace' || isProjectEmpty) {
-                                    const transportNode = xmlDoc.querySelector("transport");
-                                    if (transportNode && transportNode.getAttribute("tempo")) {
-                                        applyImportedBPM(parseFloat(transportNode.getAttribute("tempo")));
+                                const transportNode = xmlDoc.querySelector("transport");
+                                if (transportNode && transportNode.getAttribute("tempo")) {
+                                    const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
+                                    
+                                    if (mode === 'replace' || isProjectEmpty) {
+                                        applyImportedBPM(importedBpm);
+                                    } else {
+                                        const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
+                                        if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
+                                            stretchRatio = currentArpBPM / importedBpm;
+                                            showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
+                                        } else {
+                                            showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
+                                        }
                                     }
                                 }
 
@@ -8718,10 +9121,7 @@ engineClockWorker.onmessage = function () {
                                         let path = audioFileNode.getAttribute("path");
                                         if (path) {
                                             if (path.startsWith("./")) path = path.substring(2);
-                                            trackMetadata[path] = {
-                                                name: track.getAttribute("name"),
-                                                color: track.getAttribute("color")
-                                            };
+                                            trackMetadata[path] = { name: track.getAttribute("name"), color: track.getAttribute("color") };
                                         }
                                     }
                                 });
@@ -8735,6 +9135,7 @@ engineClockWorker.onmessage = function () {
                                 const parts = filename.split('_');
                                 if (parts.length >= 4 && parts[2].startsWith('L')) isLooperPrefer = true;
 
+                                // ZIP uses auto-routing so multiple stems don't stack on one track
                                 const targetTrackIdx = getNextFreeTrack(isLooperPrefer);
                                 if (targetTrackIdx === -1) {
                                     console.warn("No free tracks left for:", filename);
@@ -8748,13 +9149,26 @@ engineClockWorker.onmessage = function () {
 
                                 if (filename.endsWith('.wav')) {
                                     const audioBuffer = await audioCtx.decodeAudioData(fileData);
-                                    studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
+                                    const visualPeaks = extractAudioPeaks(audioBuffer); 
                                     
-                                    const evt = { id: Math.random(), type: 'stem', timeOffset: 0, duration: audioBuffer.duration, freqs: [] };
+                                    // MULTI-CLIP FIX: Attach buffer directly to the event object
+                                    const evt = { 
+                                        id: Math.random(), 
+                                        type: 'stem', 
+                                        timeOffset: 0, // Zips usually start at 0
+                                        duration: audioBuffer.duration, 
+                                        freqs: [],
+                                        buffer: audioBuffer,
+                                        stretchRatio: stretchRatio,
+                                        peaks: visualPeaks,
+                                        name: filename.split('/').pop() // Extract clean name from zip path
+                                    };
                                     domainObj.tracks[localIdx].push(evt);
                                     
-                                    if (!isLooperDomain && audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
+                                    // Legacy pointer for UI empty-checks
+                                    if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
                                     
+                                    if (!isLooperDomain && audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
                                     if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
                                 }
                                 else if (filename.endsWith('.mid') || filename.endsWith('.midi')) {
@@ -8766,26 +9180,24 @@ engineClockWorker.onmessage = function () {
                                         const parsedMidi = new Midi(fileData);
                                         let trackMaxDur = 0;
                                         
-                                        // --- TEMPO EXTRACTION (ZIP MIDI) ---
-                                        if ((mode === 'replace' || isProjectEmpty) && parsedMidi.header && parsedMidi.header.tempos && parsedMidi.header.tempos.length > 0) {
-                                            applyImportedBPM(parsedMidi.header.tempos[0].bpm);
-                                        }
-
                                         parsedMidi.tracks.forEach(track => {
                                             track.notes.forEach(note => {
                                                 const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
+                                                // Adjust MIDI timing if stretched
+                                                const adjustedTime = note.time * (1 / stretchRatio);
+                                                const adjustedDur = note.duration * (1 / stretchRatio);
+                                                
                                                 const evt = {
-                                                    id: Math.random(), type: 'play', timeOffset: note.time,
-                                                    duration: note.duration, freqs: [freq], velocity: Math.round(note.velocity * 127), stArray: null 
+                                                    id: Math.random(), type: 'play', timeOffset: adjustedTime,
+                                                    duration: adjustedDur, freqs: [freq], velocity: Math.round(note.velocity * 127), stArray: null 
                                                 };
                                                 domainObj.tracks[localIdx].push(evt);
-                                                if (note.time + note.duration > trackMaxDur) trackMaxDur = note.time + note.duration;
+                                                if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
                                             });
                                         });
 
                                         if (!isLooperDomain && trackMaxDur > arranger.duration) arranger.duration = trackMaxDur;
                                         if (isLooperDomain && trackMaxDur > looper.trackDurations[localIdx]) looper.trackDurations[localIdx] = trackMaxDur;
-
                                         if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
                                     } catch (err) {
                                         console.error(`Failed to parse MIDI file ${filename} from ZIP:`, err);
@@ -8821,20 +9233,66 @@ engineClockWorker.onmessage = function () {
             // B. INDIVIDUAL AUDIO FILES (.WAV / .MP3 / .FLAC)
             // ==============================================================
             else if (ext === 'wav' || ext === 'mp3' || ext === 'flac') {
-                const targetTrackIdx = getNextFreeTrack(false); 
-                if (targetTrackIdx === -1) { showToast("No free tracks left!"); continue; }
+                const activeDomain = studio.lastSelectedDomain;
+                const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+                const isLooperDomain = targetTrackIdx < 8;
+                const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
+                const domainObj = isLooperDomain ? looper : arranger;
 
                 const arrayBuffer = await file.arrayBuffer();
                 const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
+                const visualPeaks = extractAudioPeaks(audioBuffer); 
+                
+                // --- NEW: FILENAME BPM DETECTION & STRETCHING ---
+                let stretchRatio = 1.0;
+                const bpmMatch = file.name.match(/(\d{2,3})\s*bpm/i); // Looks for "120bpm" or "120 bpm"
+                
+                if (bpmMatch) {
+                    const importedBpm = parseFloat(bpmMatch[1]);
+                    if (mode === 'replace' || isProjectEmpty) {
+                        applyImportedBPM(importedBpm);
+                    } else {
+                        const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
+                        if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
+                            stretchRatio = currentArpBPM / importedBpm;
+                            showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
+                        } else {
+                            showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
+                        }
+                    }
+                }
 
-                const localIdx = targetTrackIdx < 8 ? targetTrackIdx : targetTrackIdx - 8;
-                const domainObj = targetTrackIdx < 8 ? looper : arranger;
+                // PLAYHEAD OFFSET LOGIC
+                const playheadOffset = isLooperDomain ? 0 : (arranger.pauseTime || 0);
+                
+                // LOOPER HARD-CLIP
+                let finalDuration = audioBuffer.duration;
+                if (isLooperDomain) {
+                    const loopMaxSecs = (60 / currentArpBPM) * 16; 
+                    finalDuration = Math.min(audioBuffer.duration, loopMaxSecs);
+                }
 
-                const evt = { id: Math.random(), type: 'stem', timeOffset: 0, duration: audioBuffer.duration, freqs: [] };
+                // Apply the stretch ratio to the duration visual!
+                const adjustedDuration = finalDuration * (1 / stretchRatio);
+
+                const evt = { 
+                    id: Math.random(), 
+                    type: 'stem', 
+                    timeOffset: playheadOffset, 
+                    duration: adjustedDuration, 
+                    freqs: [],
+                    buffer: audioBuffer,
+                    stretchRatio: stretchRatio,
+                    peaks: visualPeaks, 
+                    name: file.name // Raw filename
+                };
                 domainObj.tracks[localIdx].push(evt);
+                
+                if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
 
-                if (targetTrackIdx >= 8 && audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
+                if (!isLooperDomain && (playheadOffset + adjustedDuration > arranger.duration)) {
+                    arranger.duration = playheadOffset + adjustedDuration;
+                }
 
                 if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
 
@@ -8853,33 +9311,52 @@ engineClockWorker.onmessage = function () {
                     continue;
                 }
 
-                const targetTrackIdx = getNextFreeTrack(false);
-                if (targetTrackIdx === -1) { showToast("No free tracks left!"); continue; }
+                // THE FIX: Target Active Track dynamically!
+                const activeDomain = studio.lastSelectedDomain;
+                const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+                const isLooperDomain = targetTrackIdx < 8;
+                const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
+                const domainObj = isLooperDomain ? looper : arranger;
 
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     const parsedMidi = new Midi(arrayBuffer);
                     
-                    // --- TEMPO EXTRACTION (STANDALONE MIDI) ---
-                    if ((mode === 'replace' || isProjectEmpty) && parsedMidi.header && parsedMidi.header.tempos && parsedMidi.header.tempos.length > 0) {
-                        applyImportedBPM(parsedMidi.header.tempos[0].bpm);
+                    let stretchRatio = 1.0;
+
+                    // --- TEMPO EXTRACTION & STRETCHING (STANDALONE MIDI) ---
+                    if (parsedMidi.header && parsedMidi.header.tempos && parsedMidi.header.tempos.length > 0) {
+                        const importedBpm = parsedMidi.header.tempos[0].bpm;
+                        if (mode === 'replace' || isProjectEmpty) {
+                            applyImportedBPM(importedBpm);
+                        } else {
+                            const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
+                            if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
+                                stretchRatio = currentArpBPM / importedBpm;
+                                showToast(`Time-Stretching MIDI events by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
+                            } else {
+                                showToast("BPM difference > 15%. MIDI imported without time-stretching.", "warning");
+                            }
+                        }
                     }
 
-                    const isLooperDomain = targetTrackIdx < 8;
-                    const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
-                    const domainObj = isLooperDomain ? looper : arranger;
-                    
+                    // PLAYHEAD OFFSET LOGIC
+                    const playheadOffset = isLooperDomain ? 0 : (arranger.pauseTime || 0);
                     let trackMaxDur = 0;
 
                     parsedMidi.tracks.forEach(track => {
                         track.notes.forEach(note => {
                             const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
+                            // Apply Stretch and Playhead Offset
+                            const finalTime = (note.time * (1 / stretchRatio)) + playheadOffset;
+                            const finalDur = (note.duration * (1 / stretchRatio));
+
                             const evt = {
-                                id: Math.random(), type: 'play', timeOffset: note.time, duration: note.duration,
+                                id: Math.random(), type: 'play', timeOffset: finalTime, duration: finalDur,
                                 freqs: [freq], velocity: Math.round(note.velocity * 127), stArray: null 
                             };
                             domainObj.tracks[localIdx].push(evt);
-                            if (note.time + note.duration > trackMaxDur) trackMaxDur = note.time + note.duration;
+                            if (finalTime + finalDur > trackMaxDur) trackMaxDur = finalTime + finalDur;
                         });
                     });
 
@@ -9484,14 +9961,26 @@ function assignMacroParam(knobIndex, targetId) {
         return createdEvts;
     }
 
-    function advanceStepCursor(multiplier = 1) {
+    function advanceStepCursor(actualDuration = null) {
         if (!isStepEntryMode) return;
+        
         const beatSecs = 60 / currentArpBPM;
-        const stepDur = prSnapRes > 0 ? (beatSecs * prSnapRes) : (beatSecs * 0.25);
+        const currentSnap = parseFloat(prSnapRes);
         
-        stepCursorTime = Math.max(0, stepCursorTime + (stepDur * multiplier));
+        // 1. If a note was recorded, advance by its EXACT calculated duration
+        if (actualDuration !== null && actualDuration > 0) {
+            stepCursorTime += actualDuration;
+        } 
+        // 2. Fallback: Manual ⏭ button clicks advance by 1 grid unit
+        else {
+            const stepDur = currentSnap > 0 ? (beatSecs * currentSnap) : (beatSecs * 0.25);
+            stepCursorTime += stepDur;
+        }
         
-        prScrollTime = Math.max(0, stepCursorTime - (prCanvas.height / (window.devicePixelRatio || 1) / prZoomY) * 0.25);
+        // Auto-scroll the piano roll to keep the cursor in view
+        const dpr = window.devicePixelRatio || 1;
+        prScrollTime = Math.max(0, stepCursorTime - (prCanvas.height / dpr / prZoomY) * 0.25);
+        
         if (typeof drawPianoRoll === 'function') drawPianoRoll();
     }
 
@@ -9565,6 +10054,173 @@ function assignMacroParam(knobIndex, targetId) {
             childList: true, 
             characterData: true, 
             subtree: true 
+        });
+    });
+
+    // =====================================================================
+    // --- PIANO ROLL CLIPBOARD (Copy & Paste) ---
+    // =====================================================================
+    document.addEventListener('keydown', (e) => {
+        // Only trigger if Piano Roll is open and user is holding Ctrl or Cmd (Mac)
+        if (!isPianoRollActive || (!e.ctrlKey && !e.metaKey)) return;
+
+        // --- COPY (Ctrl + C) ---
+        if (e.code === 'KeyC') {
+            if (prSelectedNotes.size === 0) return;
+            
+            // 1. Find "Time Zero" (the absolute earliest note in the selection)
+            let timeZero = Infinity;
+            prSelectedNotes.forEach(evt => {
+                const t = evt.start !== undefined ? evt.start : evt.timeOffset;
+                if (t < timeZero) timeZero = t;
+            });
+
+            // 2. Clone the notes and convert to Relative Time
+            prClipboard = [];
+            prSelectedNotes.forEach(evt => {
+                let clone = { ...evt, id: Math.random() }; // Deep copy top level
+                
+                // Safely duplicate nested arrays so modifying the paste doesn't break the original
+                if (evt.freqs) clone.freqs = [...evt.freqs];
+                if (evt.stArray) clone.stArray = [...evt.stArray];
+
+                // Convert absolute timeline placement into relative clipboard placement
+                if (clone.start !== undefined) {
+                    const dur = clone.end - clone.start;
+                    clone.start = clone.start - timeZero;
+                    clone.end = clone.start + dur;
+                } else {
+                    clone.timeOffset = clone.timeOffset - timeZero;
+                }
+                
+                prClipboard.push(clone);
+            });
+
+            showToast(`Copied ${prClipboard.length} items.`);
+            e.preventDefault();
+        }
+
+        // --- PASTE (Ctrl + V) ---
+        if (e.code === 'KeyV') {
+            if (prClipboard.length === 0) return;
+
+            const activeDomain = studio.lastSelectedDomain;
+            const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            const targetTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+            const isDrumTrack = studio.trackTypes[activeIdx] === 'drum';
+            
+            // 1. Determine Paste Anchor Time
+            let anchorTime = 0;
+            if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
+                anchorTime = stepCursorTime; // Paste at the blue Step Cursor
+            } else if (activeDomain === 'arranger') {
+                // Paste at the red playhead (or wherever it is paused)
+                anchorTime = arranger.isPlaying ? (audioCtx ? audioCtx.currentTime - arranger.startTime : 0) : arranger.pauseTime;
+            } else if (activeDomain === 'looper') {
+                anchorTime = looper.isPlaying ? looper.lastPhases[activeIdx] : 0;
+            }
+            
+            // Snap the anchor so pasted blocks align perfectly to the grid!
+            anchorTime = snapTime(anchorTime);
+
+            // 2. Deselect old notes so ONLY the newly pasted notes are highlighted
+            prSelectedNotes.clear(); 
+            let draggedMaxTime = 0;
+
+            // 3. Inject Clipboard contents
+            prClipboard.forEach(clipEvt => {
+                // Domain Safety: Do not paste synth chords into the Drum Machine (or vice versa)
+                if (isDrumTrack && clipEvt.type !== 'drum') return;
+                if (!isDrumTrack && clipEvt.type === 'drum') return;
+
+                let newEvt = { ...clipEvt, id: Math.random() };
+                if (clipEvt.freqs) newEvt.freqs = [...clipEvt.freqs];
+                if (clipEvt.stArray) newEvt.stArray = [...clipEvt.stArray];
+
+                // Route Regions to Looper Arrays, and Notes to standard Arrays
+                if (newEvt.start !== undefined && activeDomain === 'looper') {
+                    const dur = newEvt.end - newEvt.start;
+                    newEvt.start = anchorTime + clipEvt.start;
+                    newEvt.end = newEvt.start + dur;
+                    looper.regions[activeIdx].push(newEvt);
+                    if (newEvt.end > draggedMaxTime) draggedMaxTime = newEvt.end;
+                } else if (newEvt.timeOffset !== undefined) {
+                    newEvt.timeOffset = anchorTime + clipEvt.timeOffset;
+                    targetTrack.push(newEvt);
+                    const endT = newEvt.timeOffset + (newEvt.duration || 0.25);
+                    if (endT > draggedMaxTime) draggedMaxTime = endT;
+                }
+
+                prSelectedNotes.add(newEvt); // Auto-select the newly pasted notes!
+            });
+
+            // 4. Clean up track arrays
+            targetTrack.sort((a, b) => a.timeOffset - b.timeOffset);
+
+            // 5. Instantly expand global timeline if pasted beyond current length
+            if (activeDomain === 'arranger' && draggedMaxTime > arranger.duration) {
+                arranger.duration = draggedMaxTime;
+            }
+
+            showToast(`Pasted ${prSelectedNotes.size} items.`);
+            if (typeof drawPianoRoll === 'function') drawPianoRoll();
+            e.preventDefault();
+        }
+    });
+
+    // =====================================================================
+    // --- PIANO ROLL TOOL SWITCHING & PLAYHEAD PLACEMENT ---
+    // =====================================================================
+
+    // Helper: Updates Master LCD and Slider when the playhead teleports
+    function syncTransportToTime(timeSecs) {
+        if (globalSeeker) {
+            let maxDuration = Math.max(arranger.duration, ...looper.trackDurations);
+            if (maxDuration > 0) globalSeeker.value = Math.min(100, (timeSecs / maxDuration) * 100);
+        }
+        if (globalTimeDisplay) {
+            const beatSecs = 60 / currentArpBPM;
+            const totalBeats = Math.max(0, timeSecs / beatSecs); 
+            const bars = Math.floor(totalBeats / beatsPerBar) + 1;
+            const beats = Math.floor(totalBeats % beatsPerBar) + 1;
+            globalTimeDisplay.textContent = `${bars}.${beats}`;
+            
+            // Reset chord memory so it doesn't smear across the teleport!
+            currentPlaybackBar = bars;
+            noteMemoryMap.clear();
+        }
+    }
+
+    // Mutually Exclusive Tool Logic
+    const prTools = [
+        { id: 'prToolSelect', tool: 'select', step: false },
+        { id: 'prToolCopy', tool: 'copy', step: false },
+        { id: 'prToolDraw', tool: 'draw', step: false },
+        { id: 'prToolErase', tool: 'erase', step: false },
+        { id: 'prToolRegion', tool: 'region', step: false },
+        { id: 'prToolStep', tool: 'select', step: true } // Step mode uses 'select' physics under the hood
+    ];
+
+    prTools.forEach(config => {
+        const btn = document.getElementById(config.id);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            // 1. Visually reset all buttons, then highlight the clicked one
+            prTools.forEach(t => document.getElementById(t.id)?.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 2. Set the Global States
+            currentPrTool = config.tool;
+            isStepEntryMode = config.step;
+            prSelectedNotes.clear(); // Clear selections to prevent accidental cross-tool edits
+            
+            // THE FIX: Toggle visibility of the Step Entry helper buttons!
+            const btnRest = document.getElementById('prStepRest');
+            const btnBack = document.getElementById('prStepBack');
+            if (btnRest) btnRest.style.display = isStepEntryMode ? '' : 'none';
+            if (btnBack) btnBack.style.display = isStepEntryMode ? '' : 'none';
+
+            if (typeof drawPianoRoll === 'function') drawPianoRoll();
         });
     });
 
