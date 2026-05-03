@@ -1586,6 +1586,52 @@
             opacity: 0.8;
         }
 
+        /* ==============================================================
+        PIANO KEYBOARD SCALE HIGHLIGHTS (Dots)
+        ============================================================== */
+
+        .piano-key {
+            position: relative;
+        }
+
+            /* 1. Base styling (Defaults to how it looks on Black Keys) */
+            .piano-key.in-scale::after {
+                content: '';
+                position: absolute;
+                bottom: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 6px; /* Increased size */
+                height: 6px; /* Increased size */
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 2;
+                /* Bright dot with a sharp, dark drop-shadow for black keys */
+                background: rgba(255, 255, 255, 0.6);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            }
+
+            /* 2. The Root Note dot (Larger and colored by your active theme) */
+            .piano-key.in-scale.is-root::after {
+                width: 8px; /* Increased size */
+                height: 8px; /* Increased size */
+                background: var(--main-node);
+                /* Combines the theme glow WITH the structural dark shadow so it pops anywhere */
+                box-shadow: 0 0 6px var(--main-node), 0 1px 3px rgba(0, 0, 0, 0.8);
+            }
+
+        /* 3. Contrast fix: White Keys in LIGHT Theme */
+        body:not(.dark-theme) .piano-key.white-key.in-scale:not(.is-root)::after {
+            background: rgba(0, 0, 0, 0.35); /* Darker gray */
+            box-shadow: 0 1px 1px rgba(255, 255, 255, 0.8); /* Crisp white under-highlight */
+        }
+
+        /* 4. Contrast fix: White Keys in DARK Theme */
+        .dark-theme .piano-key.white-key.in-scale:not(.is-root)::after {
+            background: rgba(0, 0, 0, 0.5); /* Heavier dark gray */
+            box-shadow: 0 1px 1px rgba(255, 255, 255, 0.3); /* Softer white under-highlight */
+        }
+
         /* 11b. MIXER CONSOLE STYLES */
         .mixer-grid-4 {
             display: grid;
@@ -2810,23 +2856,67 @@
                     <div class="control-group">
                         <label>Scale Overlay</label>
                         <select id="scaleOverlay">
-                            <option value="all">All Notes (Chromatic)</option>
-                            <option value="major">Major (Ionian)</option>
-                            <option value="minor">Nat. Minor (Aeolian)</option>
-                            <option value="dorian">Dorian</option>
-                            <option value="phrygian">Phrygian</option>
-                            <option value="lydian">Lydian</option>
-                            <option value="mixolydian">Mixolydian</option>
-                            <option value="locrian">Locrian</option>
-                            <option value="harmonic">Harmonic Minor</option>
-                            <option value="melodic">Melodic Minor</option>
-                            <option value="pent_maj">Major Pentatonic</option>
-                            <option value="pent_min">Minor Pentatonic</option>
-                            <option value="blues">Blues Scale</option>
-                            <option value="wholetone">Whole Tone</option>
-                            <option value="diminished">Diminished (Octatonic)</option>
-                            <option value="acoustic">Acoustic (Lydian Dom)</option>
-                            <option value="hungarian">Hungarian Minor</option>
+                            <optgroup label="Standard & Modes">
+                                <option value="all">All Notes (chromatic)</option>
+                                <option value="major">Major / Ionian (optimistic, bright)</option>
+                                <option value="minor">Nat. Minor / Aeolian (sad, epic, emotional)</option>
+                                <option value="dorian">Dorian (dark, bluesy, sophisticated)</option>
+                                <option value="phrygian">Phrygian (exotic, dark, menacing)</option>
+                                <option value="lydian">Lydian (dreamy, futuristic, magical)</option>
+                                <option value="mixolydian">Mixolydian (relaxed, classic rock)</option>
+                                <option value="locrian">Locrian (tense, unstable, horrific)</option>
+                            </optgroup>
+
+                            <optgroup label="Minor Variations">
+                                <option value="harmonic">Harmonic Minor (classic, medieval, spy)</option>
+                                <option value="melodic">Melodic Minor (jazz, shifting, mysterious)</option>
+                                <option value="dorian_b2">Dorian ♭2 (neo-soul, jazzy, tense)</option>
+                                <option value="locrian_nat2">Locrian ♮2 / Half-Dim (jazz ii-V-I, unresolved)</option>
+                                <option value="neapolitan_min">Neapolitan Minor (tragic, gothic, somber)</option>
+                                <option value="neapolitan_maj">Neapolitan Major (bittersweet, romantic)</option>
+                                <option value="hungarian">Hungarian Minor (gypsy, dramatic, eastern)</option>
+                                <option value="ukrainian">Ukrainian Dorian (klezmer, lively minor)</option>
+                            </optgroup>
+
+                            <optgroup label="Pentatonic & Blues">
+                                <option value="pent_maj">Major Pentatonic (country, folk, happy)</option>
+                                <option value="pent_min">Minor Pentatonic (rock, blues, punchy)</option>
+                                <option value="blues">Minor Blues (gritty, standard blues)</option>
+                                <option value="maj_blues">Major Blues (southern rock, gospel)</option>
+                            </optgroup>
+
+                            <optgroup label="Bebop & 8-Note Scales">
+                                <option value="bebop_dom">Bebop Dominant (walking bass, swing)</option>
+                                <option value="bebop_maj">Bebop Major (fluid jazz, passing tones)</option>
+                                <option value="bebop_dorian">Bebop Dorian (minor swing, continuous flow)</option>
+                            </optgroup>
+
+                            <optgroup label="Exotic & World">
+                                <option value="phrygian_dom">Phrygian Dominant (flamenco, middle eastern)</option>
+                                <option value="double_harmonic">Double Harmonic / Byzantine (arabic, surf rock)</option>
+                                <option value="hirajoshi">Hirajoshi (japanese, cinematic, ninja)</option>
+                                <option value="kumoi">Kumoi (dark japanese pentatonic, contemplative)</option>
+                                <option value="pelog">Pelog (balinese gamelan, deeply exotic)</option>
+                                <option value="insen">Insen (eastern, koto, suspended)</option>
+                                <option value="egyptian">Egyptian (floating, ancient, open)</option>
+                                <option value="persian">Persian (chaotic, desert, unsettling)</option>
+                            </optgroup>
+
+                            <optgroup label="Jazz, Cinematic & Symmetrical">
+                                <option value="mixo_b6">Mixolydian ♭6 (hollywood epic, tragic triumph)</option>
+                                <option value="acoustic">Acoustic / Lydian Dom (quirky, simpsons, jazz)</option>
+                                <option value="altered">Altered / Super Locrian (jazz tension, chaotic)</option>
+                                <option value="lydian_aug">Lydian Augmented (modern jazz, spacey)</option>
+                                <option value="harmonic_maj">Harmonic Major (romantic, mysterious)</option>
+                                <option value="augmented">Augmented (sci-fi, symmetrical, suspense)</option>
+                                <option value="wholetone">Whole Tone (dream sequence, floating)</option>
+                                <option value="diminished">Diminished H-W (heavy metal, jazz tension)</option>
+                                <option value="dim_wh">Diminished W-H (horror, suspense, classical)</option>
+                                <option value="prometheus">Prometheus (sci-fi, alien, open)</option>
+                                <option value="enigmatic">Enigmatic (unsettling, quirky, bizarre)</option>
+                                <option value="tritone">Tritone Scale (petrushka, bi-tonal, symmetrical)</option>
+                                <option value="enneatonic">Enneatonic / Messiaen 3 (chromatic cascades, dense)</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="control-group">
@@ -2889,7 +2979,7 @@
 
                     <div class="control-group">
                         <label>Extensions</label>
-                        <button id="btnExtensions" class="btn-sm active-btn">7th/9th Highlights: ON</button>
+                        <button id="btnExtensions" class="btn-sm active-btn">7th/9th Highlights: OFF</button>
                     </div>
 
                     <div class="control-group">

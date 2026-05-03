@@ -3549,6 +3549,44 @@
     // Wire up the Generator Execute button
     document.getElementById('btnExecuteGen')?.addEventListener('click', generateAIProgression);
 
+    // --- PIANO KEYBOARD SCALE HIGHLIGHTER ---
+    function updatePianoScaleHighlights() {
+        const keys = document.querySelectorAll('.piano-key');
+        if (!keys.length) return;
+
+        // 1. Bail out and clear all dots if chromatic/all notes is selected
+        if (!currentScale || currentScale === 'all' || currentScale === 'chromatic') {
+            keys.forEach(key => key.classList.remove('in-scale', 'is-root'));
+            return;
+        }
+
+        const mask = scaleMasks[currentScale];
+        if (!mask) return;
+
+        // 2. Calculate the active pitch classes (0-11) for the current key center
+        const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
+        const rootPC = ((currentKeyCenter % 12) + 12) % 12;
+
+        // 3. Apply classes to the physical DOM keys
+        keys.forEach(key => {
+            const midiNote = parseInt(key.dataset.note);
+            if (isNaN(midiNote)) return;
+
+            const pc = ((midiNote % 12) + 12) % 12;
+
+            if (activeScalePCs.has(pc)) {
+                key.classList.add('in-scale');
+                if (pc === rootPC) {
+                    key.classList.add('is-root');
+                } else {
+                    key.classList.remove('is-root');
+                }
+            } else {
+                key.classList.remove('in-scale', 'is-root');
+            }
+        });
+    }
+
     // =====================================================================
     // PIANO ROLL EDITOR ENGINE
     // =====================================================================
@@ -8613,6 +8651,7 @@ engineClockWorker.onmessage = function () {
     const labelRomanSharp = ["I", "#I", "II", "#II", "III", "IV", "#IV", "V", "#V", "VI", "#VI", "VII"];
 
     const scaleMasks = {
+        // Standard & Modes
         'all': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
         'major': [0, 2, 4, 5, 7, 9, 11],
         'minor': [0, 2, 3, 5, 7, 8, 10],
@@ -8621,22 +8660,59 @@ engineClockWorker.onmessage = function () {
         'lydian': [0, 2, 4, 6, 7, 9, 11],
         'mixolydian': [0, 2, 4, 5, 7, 9, 10],
         'locrian': [0, 1, 3, 5, 6, 8, 10],
+        
+        // Minor Variations
         'harmonic': [0, 2, 3, 5, 7, 8, 11],
         'melodic': [0, 2, 3, 5, 7, 9, 11],
+        'dorian_b2': [0, 1, 3, 5, 7, 9, 10],        // 2nd mode of melodic minor
+        'locrian_nat2': [0, 2, 3, 5, 6, 8, 10],     // 6th mode of melodic minor (Half-Diminished)
+        'neapolitan_min': [0, 1, 3, 5, 7, 8, 11],
+        'neapolitan_maj': [0, 1, 3, 5, 7, 9, 11],
+        'hungarian': [0, 2, 3, 6, 7, 8, 11],
+        'ukrainian': [0, 2, 3, 6, 7, 9, 10],
+
+        // Pentatonic & Blues
         'pent_maj': [0, 2, 4, 7, 9],
         'pent_min': [0, 3, 5, 7, 10],
         'blues': [0, 3, 5, 6, 7, 10],
-        'wholetone': [0, 2, 4, 6, 8, 10],
-        'diminished': [0, 1, 3, 4, 6, 7, 9, 10],
-        'acoustic': [0, 2, 4, 6, 7, 9, 10],
-        'hungarian': [0, 2, 3, 6, 7, 8, 11]
+        'maj_blues': [0, 2, 3, 4, 7, 9],
+
+        // Bebop & 8-Note Scales (Perfect 4/4 Timing)
+        'bebop_dom': [0, 2, 4, 5, 7, 9, 10, 11],    // Mixolydian + Major 7th passing tone
+        'bebop_maj': [0, 2, 4, 5, 7, 8, 9, 11],     // Major + flat 6th passing tone
+        'bebop_dorian': [0, 2, 3, 5, 7, 9, 10, 11], // Dorian + Major 7th passing tone
+
+        // Exotic & World
+        'phrygian_dom': [0, 1, 4, 5, 7, 8, 10],
+        'double_harmonic': [0, 1, 4, 5, 7, 8, 11],  // Also known as Byzantine
+        'hirajoshi': [0, 2, 3, 7, 8],
+        'kumoi': [0, 2, 3, 7, 9],                   // Pentatonic
+        'pelog': [0, 1, 3, 7, 8],                   // Pentatonic
+        'insen': [0, 1, 5, 7, 10],
+        'egyptian': [0, 2, 5, 7, 10],
+        'persian': [0, 1, 4, 5, 6, 8, 11],
+
+        // Jazz, Cinematic & Symmetrical
+        'mixo_b6': [0, 2, 4, 5, 7, 8, 10],          // Aeolian Dominant (The "John Williams" scale)
+        'acoustic': [0, 2, 4, 6, 7, 9, 10],         // Lydian Dominant
+        'altered': [0, 1, 3, 4, 6, 8, 10],          // Super Locrian
+        'lydian_aug': [0, 2, 4, 6, 8, 9, 11],       // 3rd mode of melodic minor
+        'harmonic_maj': [0, 2, 4, 5, 7, 8, 11],
+        'augmented': [0, 3, 4, 7, 8, 11],           // Symmetrical Hexatonic
+        'wholetone': [0, 2, 4, 6, 8, 10],           // Symmetrical Hexatonic
+        'diminished': [0, 1, 3, 4, 6, 7, 9, 10],    // Half-Whole Diminished
+        'dim_wh': [0, 2, 3, 5, 6, 8, 9, 11],        // Whole-Half Diminished
+        'prometheus': [0, 2, 4, 6, 9, 10],
+        'enigmatic': [0, 1, 4, 6, 8, 10, 11],
+        'tritone': [0, 1, 4, 6, 7, 10],             // Two major triads a tritone apart
+        'enneatonic': [0, 2, 3, 4, 6, 7, 8, 10, 11] // 9-note symmetrical scale (Messiaen's Mode 3)
     };
 
     document.getElementById('keyCenter')?.addEventListener('change', e => { currentKeyCenter = parseInt(e.target.value); updateScaleOverlay(); updateLabels(); });
     document.getElementById('scaleOverlay')?.addEventListener('change', e => { currentScale = e.target.value; updateScaleOverlay(); });
     document.getElementById('labelType')?.addEventListener('change', e => { currentLabelType = e.target.value; updateLabels(); });
 
-    function updateScaleOverlay() {
+function updateScaleOverlay() {
         const mask = scaleMasks[currentScale];
         const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
 
@@ -8663,6 +8739,11 @@ engineClockWorker.onmessage = function () {
         if (scaleWarning) {
             const isChromatic = !currentScale || currentScale === 'all';
             scaleWarning.style.display = isChromatic ? 'inline' : 'none';
+        }
+
+        // --- SYNC PIANO KEYBOARD HIGHLIGHTS ---
+        if (typeof updatePianoScaleHighlights === 'function') {
+            updatePianoScaleHighlights();
         }
     }
 
@@ -10335,6 +10416,8 @@ function assignMacroParam(knobIndex, targetId) {
     // Initialize the UI on boot
     window.addEventListener('DOMContentLoaded', () => {
         refreshSavedSamplesUI();
+        updateLabels();
+        updateScaleOverlay();
         initPianoRoll();
         initMacros();
         
