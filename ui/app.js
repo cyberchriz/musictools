@@ -5230,14 +5230,22 @@ function initAudio() {
 
         // --- Hardcode a "Studio Room" feel for the global Drum Machine ---
         const globalDrumReverb = audioCtx.createGain();
-        globalDrumReverb.gain.value = 0.3; // 30% Room Reverb
+        
+        // THE FIX: Use 30% for Desktop Convolution, but drop to a tiny 2% on Mobile 
+        // to prevent the algorithmic spring delay from rattling on transients!
+        globalDrumReverb.gain.value = isMobileDevice ? 0.02 : 0.3; 
+        
         drumGain.connect(globalDrumReverb);
         globalDrumReverb.connect(convolver);
 
         const globalDrumEcho = audioCtx.createGain();
-        globalDrumEcho.gain.value = 0.1; // 10% Echo to thicken the snares
+        
+        // Also dry up the standard delay line on mobile to keep drums punchy
+        globalDrumEcho.gain.value = isMobileDevice ? 0.0 : 0.1; 
+        
         drumGain.connect(globalDrumEcho);
         globalDrumEcho.connect(delayNode);
+
 
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
@@ -6245,9 +6253,10 @@ function updateHighlights() {
         }
         if (tpRecBtn) {
             tpRecBtn.classList.remove('armed', 'recording');
+            // THE FIX: Use standard geometric circle (&#x25CF;) instead of Media Record symbol
             if (isAnyArmed) { tpRecBtn.classList.add('armed'); tpRecBtn.innerHTML = '&#x23F2;&#xFE0E;'; }
-            else if (isAnyRecording) { tpRecBtn.classList.add('recording'); tpRecBtn.innerHTML = '&#x23FA;&#xFE0E;'; }
-            else { tpRecBtn.innerHTML = '&#x23FA;&#xFE0E;'; }
+            else if (isAnyRecording) { tpRecBtn.classList.add('recording'); tpRecBtn.innerHTML = '&#x25CF;'; }
+            else { tpRecBtn.innerHTML = '&#x25CF;'; }
         }
     }
 
@@ -7203,7 +7212,7 @@ function updateHighlights() {
             }
 
             btnMasterRec.disabled = false;
-            btnMasterRec.textContent = '⏺';
+            btnMasterRec.textContent = '●';
             btnMasterRec.classList.remove('recording');
             return;
         }
@@ -7247,7 +7256,7 @@ function updateHighlights() {
             mediaRecorder.start();
         }
 
-        btnMasterRec.textContent = '⏹';
+        btnMasterRec.textContent = '■';
         btnMasterRec.classList.add('recording');
 
         // Start the Live Stopwatch!

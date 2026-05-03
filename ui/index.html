@@ -70,7 +70,7 @@
             --c-loc-txt: #546e7a;
             --settings-height: 0px;
             --synth-gap: 0px;
-            --mixer-fader-height: 100px;
+            --mixer-fader-height: 65px;
         }
 
         body.dark-theme {
@@ -2698,11 +2698,13 @@
             #master-transport-header {
                 gap: 4px !important;
                 padding: 5px !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
             }
 
                 #master-transport-header button {
                     padding: 5px 8px !important;
-                    font-size: 14px !important; /* Shrink button text */
+                    font-size: 14px !important;
                 }
 
             #global-time-display,
@@ -2712,10 +2714,15 @@
                 letter-spacing: -0.5px !important;
             }
 
-            /* Force the Master Seeker onto its own row on extremely narrow screens */
-            #global-timeline-seeker, #master-seeker {
-                flex: 1 1 100% !important;
-                margin: 4px 0 0 0 !important;
+            /* THE FIX: Elastic Seeker Bar */
+            #master-transport-header input[type="range"],
+            #global-timeline-seeker,
+            #master-seeker {
+                flex: 1 1 100px !important; /* Eats available space, but yields if squished past 100px */
+                min-width: 80px !important; /* Absolute minimum size before forcing a line break */
+                max-width: 100% !important;
+                width: auto !important; /* Destroys any hardcoded desktop widths */
+                margin: 2px 0 0 0 !important;
             }
         }
     </style>
@@ -3303,7 +3310,7 @@
         <div class="section-title" style="margin-bottom: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border-color);">
             <span style="font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">MIXER & EQUALIZER</span>
             <div style="display:flex; align-items:center; gap: 8px;">
-                <input type="range" id="mixerHeightSlider" min="50" max="250" value="100" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
+                <input type="range" id="mixerHeightSlider" min="30" max="250" value="65" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
                 <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
                 <button id="btnCloseMixer" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
             </div>
@@ -3679,7 +3686,6 @@
             <div class="resize-grip"></div>
         </div>
         <div class="pr-toolbar">
-            <span style="font-weight:bold; font-size:0.8rem; color:var(--text-muted);">PIANO ROLL</span>
             <div class="pr-tool-group">
                 <button id="prToolSelect" class="pr-tool-btn active" title="Select / Move">👆</button>
                 <button id="prToolCopy" class="pr-tool-btn" title="Marquee Copy / Duplicate">⎘</button>
@@ -3710,7 +3716,6 @@
                 <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll with Playhead" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↕️</button>
                 <input type="range" id="prZoomSlider" class="control-input" min="20" max="500" value="80" title="Zoom Time Axis (Ctrl-M.Wheel)" style="width: 80px; margin: 0 10px; vertical-align: middle;">
                 <button class="auto-hide-toggle" title="Auto-Hide Disabled" style="margin-right: 15px;">⏱</button>
-                <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Height:</label>
                 <button id="btnClosePianoRoll" class="close-btn-sm" title="Close" style="margin-left: 15px;">✕</button>
             </div>
         </div>
