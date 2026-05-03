@@ -600,7 +600,11 @@
         if (type === 'piano') {
             isPianoActive = !isPianoActive;
             document.getElementById('piano-overlay')?.classList.toggle('active', isPianoActive);
-            document.getElementById('btnTogglePiano')?.classList.toggle('toggled', isPianoActive);
+            const btn = document.getElementById('btnTogglePiano');
+            if (btn) {
+                btn.classList.toggle('toggled', isPianoActive);
+                btn.classList.toggle('active', isPianoActive); 
+            }
             document.getElementById('chord-display')?.classList.toggle('piano-active', isPianoActive);
             document.documentElement.style.setProperty('--piano-h', isPianoActive ? 'clamp(80px, 16vh, 140px)' : '0px');
             updateOverlayCSSVars();
@@ -3677,14 +3681,13 @@
 
             // --- NEW: OCTAVE MARKERS (Labels on every 'C' note) ---
             if (note % 12 === 0) {
-                const octave = Math.floor(note / 12) - 1; // MIDI math: Note 60 is C4
-                prCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; // Faint white text
-                prCtx.font = `bold ${10 * dpr}px sans-serif`;
+                const octave = Math.floor(note / 12) - 1; 
+                prCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; 
+                prCtx.font = `bold 10px sans-serif`; // Removed * dpr
                 prCtx.textAlign = 'center';
                 
-                // Draw it near the top AND bottom of the screen so it's always visible
-                prCtx.fillText(`C${octave}`, x + (noteW / 2), 15 * dpr);
-                prCtx.fillText(`C${octave}`, x + (noteW / 2), h - (5 * dpr));
+                prCtx.fillText(`C${octave}`, x + (noteW / 2), 15); // Removed * dpr
+                prCtx.fillText(`C${octave}`, x + (noteW / 2), h / dpr - 5); // Must divide screen height by dpr to get CSS pixels!
             }
         }
 
@@ -3712,16 +3715,13 @@
                 // --- NEW: BAR NUMBERS (Left Edge Ruler) ---
                 if (isBar) {
                     const barNumber = Math.floor(currentBeat / beatsPerBar) + 1;
-                    
-                    // Draw a subtle dark background pill for readability against notes
                     prCtx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-                    prCtx.fillRect(0, y - (16 * dpr), 40 * dpr, 16 * dpr);
+                    prCtx.fillRect(0, y - 16, 40, 16); // Removed * dpr
                     
-                    // Draw the Bar Text
                     prCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    prCtx.font = `bold ${10 * dpr}px sans-serif`;
+                    prCtx.font = `bold 10px sans-serif`; // Removed * dpr
                     prCtx.textAlign = 'left';
-                    prCtx.fillText(`Bar ${barNumber}`, 4 * dpr, y - (4 * dpr));
+                    prCtx.fillText(`Bar ${barNumber}`, 4, y - 4); // Removed * dpr
                 }
             }
             currentBeat++;
@@ -3805,7 +3805,7 @@
                     // 3. Draw the Label (ACTIVE TRACK ONLY)
                     if (isActiveTrack) {
                         prCtx.fillStyle = isSelected ? '#ffeb3b' : '#ffffff';
-                        prCtx.font = `bold ${11 * dpr}px sans-serif`;
+                        prCtx.font = `bold 11px sans-serif`;
                         
                         // Compile our text string
                         const clipName = evt.name ? evt.name : 'AUDIO STEM';
@@ -3825,7 +3825,7 @@
                             : clipName;
 
                         // Draw at the Bottom (Start of the clip)
-                        prCtx.fillText(labelText, 10, yBottom - 10 * dpr);
+                        prCtx.fillText(labelText, 10, yBottom - 10);
 
                         // MATH: Calculate if duration is >= 4 bars
                         const beatSecs = 60 / currentArpBPM;
@@ -3834,7 +3834,7 @@
                         if (evt.duration >= 4 * barSecs) {
                             // Draw at the Top (End of the clip)
                             // We push it down by 20px so it sits inside the upper bound
-                            prCtx.fillText(labelText, 10, yTop + 20 * dpr);
+                            prCtx.fillText(labelText, 10, yTop + 20);
                         }
                     }
                     

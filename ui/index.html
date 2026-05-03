@@ -598,8 +598,9 @@
         }
 
         /* =========================================================
-           7. MULTITRACK STUDIO & MIXER COMPONENTS
+           7. MULTITRACK MIXER & EQ COMPONENTS
            ========================================================= */
+
         .looper-controls {
             display: flex;
             flex-direction: column;
@@ -703,25 +704,6 @@
                 border-color: #fbc02d;
             }
 
-        .looper-progress-bar {
-            width: 100%;
-            height: 4px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 2px;
-            margin-bottom: 8px;
-            overflow: hidden;
-        }
-
-        .dark-theme .looper-progress-bar {
-            background: rgba(255,255,255,0.1);
-        }
-
-        #looper-progress-fill {
-            height: 100%;
-            width: 0%;
-            background: var(--main-node);
-        }
-
         .looper-actions {
             display: flex;
             gap: 5px;
@@ -778,6 +760,8 @@
             }
         }
 
+        /* --- REDESIGNED MIXER CONTAINER STYLES --- */
+
         .controls-section {
             display: flex;
             flex-direction: column;
@@ -793,6 +777,7 @@
             background: rgba(255,255,255,0.02);
         }
 
+        /* General Section Titles for non-mixer panels */
         .section-title {
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -821,22 +806,17 @@
                 padding-bottom: 0;
             }
 
+        /* Strip the heavy border/bg from the control wells in the Mixer */
         .control-well {
-            background: rgba(0,0,0,0.04);
-            border: 1px solid var(--border-color) !important;
-            border-radius: 6px;
-            padding: 8px;
-            margin-top: 4px;
-            margin-bottom: 4px;
+            padding: 0;
+            margin-bottom: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
             width: 100%;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-        }
-
-        .dark-theme .control-well {
-            background: rgba(255,255,255,0.04);
         }
 
         .control-group {
@@ -921,6 +901,55 @@
 
         .btn-sm {
             height: 26px;
+        }
+
+        /* ==============================================================
+           MIXER PANEL OPTIMIZATIONS
+           ============================================================== */
+
+        #mixer-overlay .mixer-content-wrapper {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 5px !important;
+            margin: 0 !important;
+        }
+
+        /* Top Row: Perfect 4-Element Grid */
+        .mixer-top-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto 1fr;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+
+            .mixer-top-row label {
+                font-size: 11px;
+                color: var(--text-main);
+                white-space: nowrap;
+                margin: 0;
+                padding: 0;
+            }
+
+            .mixer-top-row select {
+                width: 100%;
+                margin: 0;
+            }
+
+        /* Looper Progress Bar */
+        #looper-progress-container {
+            margin: 2px 0 6px 0 !important;
+            height: 4px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 2px;
+        }
+
+        /* Submix Grid */
+        .submix-grid.three-col {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
         }
 
         /* =========================================================
@@ -2623,16 +2652,18 @@
                 color: var(--text-main);
             }
 
-        /* --- THE PORTRAIT CONSTRAINT --- */
+        /* ==============================================================
+        MOBILE PORTRAIT & COMPACT SCREENS: STRICT UI OVERRIDES
+        ============================================================== */
         @media (orientation: portrait), (max-width: 768px) {
-            /* 1. Override the landscape dynamic width/borders */
+
+            /* --- 1. THE MACRO SHELF --- */
             #macro-overlay {
                 min-width: 100%;
                 max-width: 100%;
                 border-radius: 0;
                 border-left: none;
-                /* 2. Wrap into a 2-row layout if 8 knobs don't fit */
-                flex-wrap: wrap;
+                flex-wrap: wrap; /* Wrap into a 2-row layout if 8 knobs don't fit */
                 height: auto;
                 padding: 10px 5px;
             }
@@ -2641,49 +2672,49 @@
                 width: 24%; /* Forces a 4x2 grid */
             }
 
-            /* 3. Ensure top-docked panels yield to the new Macro Shelf (Obsolete studio-overlay removed) */
+            /* --- 2. LEFT PANELS YIELD LOGIC --- */
             #settings-overlay, #synth-overlay, #pads-overlay,
             #drums-overlay, #mixer-overlay, #info-overlay {
                 max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
             }
-        }
 
-        /* =========================================================
-           ULTRA-COMPACT SMARTPHONE HEADER (Master Transporter)
-           ========================================================= */
-        @media (max-width: 650px) {
+            /* --- 3. FAB (FLOATING ACTION BUTTON) PLACEMENT --- */
+            /* Forces the FAB to the bottom right, overriding legacy top-header bugs */
             #canvas-controls {
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                padding: 6px 10px 4px 10px !important;
-                gap: 6px !important;
-                /* Drop the pill shape to reclaim left/right edge space */
-                border-radius: 0 !important;
-                border-left: none !important;
-                border-right: none !important;
-                border-top: none !important;
-                width: 100% !important;
-                left: 0 !important;
-                top: 0 !important;
-                height: auto !important;
+                top: auto !important;
+                left: auto !important;
+                bottom: calc(var(--piano-h, 0px) + 20px) !important;
+                right: 20px !important;
+                width: auto !important;
+                flex-wrap: nowrap !important;
+                border-radius: 30px !important; /* Restore the pill shape */
             }
 
-                /* Shrink text and button padding slightly */
-                #canvas-controls button,
-                #canvas-controls select {
-                    font-size: 0.75rem !important;
-                    padding: 4px 8px !important;
-                    margin: 0 !important;
+            #btnNavToggle {
+                font-size: 24px !important;
+            }
+
+            /* --- 4. MASTER TRANSPORT HEADER TIGHTENING --- */
+            #master-transport-header {
+                gap: 4px !important;
+                padding: 5px !important;
+            }
+
+                #master-transport-header button {
+                    padding: 5px 8px !important;
+                    font-size: 14px !important; /* Shrink button text */
                 }
 
-            #globalTimeDisplay {
-                font-size: 0.9rem !important;
-                margin: 0 5px !important;
+            #global-time-display,
+            #global-bpm-display {
+                font-size: 12px !important;
+                padding: 0 4px !important;
+                letter-spacing: -0.5px !important;
             }
 
-            /* THE FIX: Force the Seeker Slider onto its own ultra-thin bottom row */
-            #globalSeeker {
-                flex: 1 1 100% !important; /* Forces it to span 100% width */
+            /* Force the Master Seeker onto its own row on extremely narrow screens */
+            #global-timeline-seeker, #master-seeker {
+                flex: 1 1 100% !important;
                 margin: 4px 0 0 0 !important;
             }
         }
@@ -3266,47 +3297,49 @@
     <div id="piano-overlay" class="piano-overlay active"></div>
 
     <!-- === MAIN OVERLAY: MIXER, EQ & TRACK CONTROLS === -->
-    <div id="mixer-overlay" class="overlay primary">
-        <div class="controls-section">
+    <div id="mixer-overlay" class="overlay primary side-panel">
 
-            <!-- Header -->
-            <div class="section-title" style="margin-bottom: 4px;">
-                <span>Mixer & Equalizer</span>
-                <div style="display:flex; align-items:center; gap: 8px;">
-                    <input type="range" id="mixerHeightSlider" min="50" max="250" value="100" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
-                    <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
-                    <button id="btnCloseMixer" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
-                </div>
+        <!-- Header (Theme Colors Restored) -->
+        <div class="section-title" style="margin-bottom: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border-color);">
+            <span style="font-size: 0.9rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">MIXER & EQUALIZER</span>
+            <div style="display:flex; align-items:center; gap: 8px;">
+                <input type="range" id="mixerHeightSlider" min="50" max="250" value="100" title="Adjust Fader Height" style="width: 70px; height: 12px; margin: 0; cursor: pointer;">
+                <button class="auto-hide-toggle active" title="Auto-Hide Enabled">⏱</button>
+                <button id="btnCloseMixer" class="close-btn-sm" title="Close" style="background:transparent; border:none; color:white; font-size:1rem; height:auto; padding:0; width:auto; line-height:1; cursor:pointer;">✕</button>
+            </div>
+        </div>
+
+        <div class="mixer-content-wrapper" style="background: transparent; box-shadow: none; border: none; padding: 0 5px; margin: 0;">
+
+            <!-- The Global Control Bar (4-Element Grid) -->
+            <div class="mixer-top-row">
+                <label for="looperQuantizeRes" title="Input Snap">Input Snap:</label>
+                <select id="looperQuantizeRes" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.65rem; padding: 2px;">
+                    <option value="off">OFF</option>
+                    <option value="8">1/8</option>
+                    <option value="16" selected>1/16</option>
+                    <option value="32">1/32</option>
+                </select>
+
+                <label for="looperLength" title="Looper Length">Looper Length:</label>
+                <select id="looperLength" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.65rem; padding: 2px;">
+                    <option value="1">1 Bar</option>
+                    <option value="2">2 Bars</option>
+                    <option value="4" selected>4 Bars</option>
+                    <option value="8">8 Bars</option>
+                </select>
             </div>
 
-            <!-- The Global Control Bar (Dynamic Colors Fixed) -->
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.1); padding: 4px 6px; border-radius: 4px; margin-bottom: 2px;">
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <label style="font-size: 0.65rem; color: var(--text-main);">Input Snap:</label>
-                    <select id="looperQuantizeRes" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.65rem; padding: 2px;">
-                        <option value="off">OFF</option>
-                        <option value="8">1/8</option>
-                        <option value="16" selected>1/16</option>
-                        <option value="32">1/32</option>
-                    </select>
-                </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <label style="font-size: 0.65rem; color: var(--text-main);">Looper Length:</label>
-                    <select id="looperLength" style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 3px; font-size: 0.65rem; padding: 2px;">
-                        <option value="1">1 Bar</option>
-                        <option value="2">2 Bars</option>
-                        <option value="4" selected>4 Bars</option>
-                        <option value="8">8 Bars</option>
-                    </select>
-                </div>
-            </div>
             <!-- Looper Progress Bar -->
-            <div class="looper-progress-bar" style="margin-top: 0px; margin-bottom: 4px; height: 3px; background: rgba(128,128,128,0.2); border-radius: 2px; overflow: hidden;"><div id="looper-progress-fill" style="height: 100%; width: 0%; background: #4caf50;"></div></div>
+            <div class="looper-progress-bar" style="margin: 2px 0 6px 0; height: 3px; background: rgba(128,128,128,0.2); border-radius: 2px; overflow: hidden;">
+                <div id="looper-progress-fill" style="height: 100%; width: 0%; background: #4caf50;"></div>
+            </div>
 
-            <!-- Section A: 4-Bus Sub-Mixer -->
-            <div class="control-well" style="padding: 4px; margin-bottom: 0;">
-                <div class="section-title" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;">Sub-Mix Groups</div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+            <!-- Section A: 3-Bus Sub-Mixer -->
+            <div class="control-well" style="padding: 0; margin-bottom: 0; background: transparent; border: none; box-shadow: none;">
+                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">SUB-MIX GROUPS</div>
+
+                <div class="submix-grid three-col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
                         <input type="range" id="synthVol" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
                         <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Synth</label><div class="val-readout" id="valSynthVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
@@ -3319,18 +3352,12 @@
                         <input type="range" id="looperMasterVol" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
                         <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Looper</label><div class="val-readout" id="valLooperMasterVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
                     </div>
-                    <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
-                        <input type="range" id="mixerImportVol" min="0" max="1.5" step="0.01" value="0.7" style="width: 100%; margin: 0 0 4px 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Import</label><div class="val-readout" id="valMixerImportVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">0.70</div></div>
-                    </div>
                 </div>
             </div>
 
             <!-- Section B: 16-Channel Mixer Grid -->
-            <div class="control-well" style="padding: 4px; margin-bottom: 0;">
-                <div class="section-title" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;">
-                    <span>Looper & Aux Sends</span>
-                </div>
+            <div class="control-well" style="padding: 0; margin-bottom: 0; background: transparent; border: none; box-shadow: none;">
+                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">LOOPER & AUX SENDS</div>
                 <div class="mixer-grid-8">
                     <!-- LOOPER TRACKS (0-7) -->
                     <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -3399,7 +3426,7 @@
                     </div>
                 </div>
 
-                <div class="section-title" style="margin: 4px 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;"><span>Arranger Tracks (A1-A8)</span></div>
+                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">ARRANGER TRACKS (A1-A8)</div>
                 <div class="mixer-grid-8">
                     <!-- ARRANGER TRACK 8 (A1) IS ACTIVE BY DEFAULT -->
                     <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -3471,8 +3498,8 @@
             </div>
 
             <!-- Section C: Master Bus, EQ, Peak Meter / Oscilloscope -->
-            <div class="control-well" style="padding: 4px; margin-bottom: 0;">
-                <div class="section-title" style="margin: 0 0 2px 0; padding: 2px 4px; font-size: 0.6rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1;">Master Bus, EQ & Dynamics</div>
+            <div class="control-well" style="padding: 0; margin-bottom: 0; background: transparent; border: none; box-shadow: none;">
+                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">MASTER BUS, EQ & DYNAMICS</div>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 2px;">
                     <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
                         <input type="range" id="eqLow" min="-15" max="15" step="0.5" value="0" style="width: 100%; margin: 0 0 4px 0;">
@@ -3505,20 +3532,23 @@
                 </div>
                 <canvas id="oscilloscope" style="width: 100%; height: 50px; background: #000; border-radius: 4px; border: 1px solid var(--border-color); display: block; margin-top: 2px;"></canvas>
             </div>
-            <div class="control-well">
-                <div class="section-title" style="margin-bottom: 6px; padding: 4px 6px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold;">Master Output & Bouncing</div>
+
+            <!-- Section D: Master Output & Bouncing -->
+            <div class="control-well" style="padding: 0; margin-bottom: 0; background: transparent; border: none; box-shadow: none;">
+                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">MASTER OUTPUT & BOUNCING</div>
                 <div class="control-row" style="grid-template-columns: repeat(6, 1fr); gap: 4px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 4px;">
                     <select id="export-format" class="looper-btn" style="grid-column: span 2; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
+                        <option value="audio/wav" selected>WAV (HD)</option>
+                        <option value="audio/mpeg">MP3/AAC</option>
                         <option value="audio/webm;codecs=opus">WebM</option>
                         <option value="audio/mp4">MP4</option>
-                        <option value="audio/mpeg">MP3</option>
-                        <option value="audio/wav">WAV</option>
                     </select>
                     <select id="export-bitrate" class="looper-btn" style="grid-column: span 1; text-align: center; font-weight: bold; border-color:var(--border-color); background: var(--bg-color); color:var(--text-main);">
                         <option value="32000">32k</option>
                         <option value="64000">64k</option>
                         <option value="128000">128k</option>
-                        <option value="256000" selected>256k</option>
+                        <option value="192000" selected>192k</option>
+                        <option value="256000">256k</option>
                         <option value="320000">320k</option>
                     </select>
                     <div style="grid-column: span 3; display: flex; gap: 4px;">
@@ -3530,6 +3560,7 @@
                 </div>
                 <audio id="masterAudioPlayer" style="display: none;"></audio>
             </div>
+
         </div>
     </div>
 
