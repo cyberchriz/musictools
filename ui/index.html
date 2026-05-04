@@ -1881,6 +1881,21 @@
             filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.5)) !important;
         }
 
+        /* --- TONNETZ INVERSION / PITCH-CLASS HIGHLIGHT --- */
+        .inversion-highlight {
+            fill: rgba(0, 229, 255, 0.35) !important;
+            stroke: #00e5ff !important;
+            stroke-width: 3px !important;
+            filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6)) !important;
+            transition: opacity 0.15s ease, fill 0.15s ease;
+            opacity: 1 !important;
+        }
+
+        .dark-theme .inversion-highlight {
+            fill: rgba(0, 229, 255, 0.25) !important;
+            filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.8)) !important;
+        }
+
         /* Text and Labels */
         .text-natural {
             fill: var(--text-light);
@@ -2504,6 +2519,39 @@
         }
 
         /* =========================================================
+           "HUMANIZE" POPUP PANEL
+           ========================================================= */
+
+        #humanize-overlay {
+            position: absolute;
+            bottom: calc(var(--piano-h, clamp(80px, 16vh, 140px)) + 15px);
+            right: 15px;
+            width: clamp(280px, 25vw, 340px);
+            background: var(--panel-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.1, 0.8, 0.3, 1);
+            transform: translateY(20px);
+        }
+
+        .dark-theme #humanize-overlay {
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            border-color: #03a9f4; /* Cyan to match the icon */
+        }
+
+        #humanize-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        /* =========================================================
            17. AI GENERATOR PANEL
            ========================================================= */
         #gen-overlay {
@@ -2920,11 +2968,13 @@
                         </select>
                     </div>
                     <div class="control-group">
-                        <label>Node Labels</label><select id="labelType">
+                        <label>Node Labels</label>
+                        <select id="labelType">
                             <option value="absolute">Absolute (C, D, E)</option>
                             <option value="degrees">Degrees (1, 2, 3)</option>
                             <option value="roman">Roman (I, II, III)</option>
-                            <option value="solfege">Solfege (Do, Re, Mi)</option>
+                            <option value="mixed">Mixed (Degrees & Roman)</option>
+                            <option value="solfege">Solfège (Do, Re, Mi)</option>
                         </select>
                     </div>
                     <div class="control-group"><label>Transposition</label><select id="transpose"><option value="0">C (Concert)</option><option value="-2">Bb (Tenor Sax)</option><option value="3">Eb (Alto Sax)</option><option value="5">F (French Horn)</option></select></div>
@@ -3777,16 +3827,36 @@
         </div>
         <div class="pr-toolbar">
             <div class="pr-tool-group">
+                <!-- Base Tools -->
                 <button id="prToolSelect" class="pr-tool-btn active" title="Select / Move">👆</button>
                 <button id="prToolCopy" class="pr-tool-btn" title="Marquee Copy / Duplicate">⎘</button>
                 <button id="prToolDraw" class="pr-tool-btn" title="Draw Note">✏️</button>
                 <button id="prToolErase" class="pr-tool-btn" title="Erase Note">🗑️</button>
                 <button id="prToolStep" class="pr-tool-btn" title="Step Entry Mode">👣</button>
-                <button id="prStepRest" class="pr-tool-btn" title="Rest / Move Forward" style="display: none;">⏭</button>
-                <button id="prStepBack" class="pr-tool-btn" title="Move Backward" style="display: none;">⏮</button>
                 <button id="prToolRegion" class="pr-tool-btn" title="Draw Loop Regions (Global Timeline)">🧱</button>
-                <button id="btnToggleGenPr" class="pr-tool-btn" title="AI Chord Generator" style="margin-left: 15px; color: #ff007f; border-color: #ff007f;">AI</button>
+
+                <!-- Contextual Actions (Only visible during Select tool) -->
+                <div id="prContextTools" style="display: flex; gap: 4px; margin-left: 6px; border-left: 1px solid var(--border-color); padding-left: 6px;">
+                    <button id="prActionQuantize" class="pr-tool-btn" title="Quantize Selected Notes (Snap)">🧲</button>
+                    <button id="btnToggleHumanize" class="pr-tool-btn" title="Humanize Dynamics & Timing" style="color: #03a9f4; border-color: #03a9f4;">👤</button>
+                    <button id="prActionLegato" class="pr-tool-btn" title="Legato / Tie Selected Notes">🔗</button>
+                </div>
+
+                <!-- Contextual Actions (Only visible during Step tool) -->
+                <div id="prStepTools" style="display: none; gap: 4px; margin-left: 4px; border-left: 1px solid var(--border-color); padding-left: 4px;">
+                    <button id="prStepBack" class="pr-tool-btn" title="Move Backward">⏮</button>
+                    <button id="prStepRest" class="pr-tool-btn" title="Rest / Move Forward">⏭</button>
+                </div>
+
+                <!-- Global Time Manipulation -->
+                <div style="display: flex; gap: 4px; margin-left: 4px; border-left: 1px solid var(--border-color); padding-left: 4px;">
+                    <button id="prActionAddBar" class="pr-tool-btn" title="Insert Bar at Playhead" style="color: #4caf50;">+B</button>
+                    <button id="prActionRemBar" class="pr-tool-btn" title="Delete Bar at Playhead" style="color: #f44336;">-B</button>
+                </div>
+
+                <button id="btnToggleGenPr" class="pr-tool-btn" title="AI Chord Generator" style="margin-left: 10px; color: #ff007f; border-color: #ff007f;">AI</button>
             </div>
+
             <div class="pr-tool-group">
                 <label style="font-size:0.7rem; font-weight:bold; color:var(--text-main);">Snap:</label>
                 <select id="prSnapGrid" style="width: auto;">
@@ -3802,11 +3872,12 @@
                     <option value="4">1/1 (Whole)</option>
                 </select>
             </div>
+
             <div class="pr-tool-group" style="flex-grow:1; border-right:none; justify-content: flex-end;">
                 <button id="btnPrAutoScroll" class="pr-tool-btn active" title="Auto-Scroll with Playhead" style="margin-right: 10px; width: auto; padding: 0 8px; font-size: 0.75rem; font-weight: bold;">↕️</button>
                 <input type="range" id="prZoomSlider" class="control-input" min="20" max="500" value="80" title="Zoom Time Axis (Ctrl-M.Wheel)" style="width: 80px; margin: 0 10px; vertical-align: middle;">
                 <button class="auto-hide-toggle" title="Auto-Hide Disabled" style="margin-right: 15px;">⏱</button>
-                <button id="btnClosePianoRoll" class="close-btn-sm" title="Close" style="margin-left: 15px;">✕</button>
+                <button id="btnClosePianoRoll" class="close-btn-sm" title="Close" style="margin-left: 10px;">✕</button>
             </div>
         </div>
         <div class="pr-canvas-container" id="pr-container" style="display: flex; flex-direction: row;">
@@ -3822,6 +3893,51 @@
             <div id="pr-vel-wrapper" style="width: 80px; min-width: 20px; position: relative; background: #111; overflow: hidden;">
                 <canvas id="pr-vel-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; touch-action: none;"></canvas>
             </div>
+        </div>
+    </div>
+
+    <!-- === OVERLAY: HUMANIZE ENGINE === -->
+    <div id="humanize-overlay" class="overlay auto-hides">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 1.1rem;">Humanize Engine</h3>
+            <button id="btnCloseHumanize" class="close-btn-sm" title="Close" style="cursor: pointer;">✕</button>
+        </div>
+        <div class="panel-content">
+            <div class="control-group" style="margin-bottom: 10px;">
+                <label style="display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-main);">
+                    <span>Timing Jitter (Gaussian)</span>
+                    <span id="lblHumTiming" style="font-family: monospace;">15ms</span>
+                </label>
+                <input type="range" id="humTiming" min="0" max="100" value="15" style="width: 100%;">
+            </div>
+
+            <div class="section-title" style="margin-top: 15px; margin-bottom: 8px; padding: 4px 6px; font-size: 0.7rem; background: var(--text-muted); color: var(--bg-color); border-radius: 4px;">Velocity Dynamics</div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-main);">
+                    <span>Base Force (Macro)</span>
+                    <span id="lblHumBaseVel" style="font-family: monospace;">Mezzo-Forte (80)</span>
+                </label>
+                <input type="range" id="humBaseVel" min="10" max="127" value="80" style="width: 100%;">
+            </div>
+
+            <div class="control-group" style="margin-bottom: 8px;">
+                <label style="display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-main);">
+                    <span>Crescendo / Decrescendo</span>
+                    <span id="lblHumRamp" style="font-family: monospace;">0%</span>
+                </label>
+                <input type="range" id="humRamp" min="-100" max="100" value="0" style="width: 100%;">
+            </div>
+
+            <div class="control-group" style="margin-bottom: 15px;">
+                <label style="display: flex; justify-content: space-between; margin-bottom: 4px; color: var(--text-main);">
+                    <span>Micro-Velocity Jitter</span>
+                    <span id="lblHumVelJitter" style="font-family: monospace;">10%</span>
+                </label>
+                <input type="range" id="humVelJitter" min="0" max="50" value="10" style="width: 100%;">
+            </div>
+
+            <button id="btnExecuteHumanize" class="synth-btn active-btn" style="width: 100%; height: 40px; background: #03a9f4; border-color: #03a9f4;">👤 APPLY HUMANIZE</button>
         </div>
     </div>
 
@@ -3966,19 +4082,37 @@
             <div class="control-group" style="margin-bottom: 10px;">
                 <label>Rhythmic Style & Articulation</label>
                 <select id="genStyle" class="control-input">
-                    <optgroup label="Block & Strum">
-                        <option value="block_1">Block Chords (1/1)</option>
-                        <option value="strum_down_4">Guitar: Downstrokes (1/4)</option>
-                        <option value="strum_updown_8">Guitar: Up / Down (1/8)</option>
-                        <option value="strum_sync_8">Guitar: Syncopated Pop (1/8)</option>
+                    <optgroup label="Rhythmic Chords (Block)">
+                        <option value="block_1">Whole Note (1/1)</option>
+                        <option value="block_4">Quarter Notes (1/4)</option>
+                        <option value="block_8">8th Notes (1/8)</option>
+                        <option value="block_offbeat_8">Offbeat / Reggae (1/8)</option>
+                        <option value="block_sync_8">Syncopated 3-3-2 (1/8)</option>
+                    </optgroup>
+                    <optgroup label="Guitar & Strumming">
+                        <option value="strum_down_4">Downstrokes (1/4)</option>
+                        <option value="strum_updown_8">Up / Down (1/8)</option>
+                        <option value="strum_sync_8">Syncopated Pop (1/8)</option>
+                        <option value="strum_folk_8">Folk: Root & Strum (1/8)</option>
+                        <option value="strum_fast_16">Fast Acoustic (1/16)</option>
                     </optgroup>
                     <optgroup label="Arpeggiators">
                         <option value="arp_up_8" selected>Arp: Up (1/8)</option>
                         <option value="arp_down_8">Arp: Down (1/8)</option>
                         <option value="arp_updown_16">Arp: Up / Down (1/16)</option>
+                        <option value="arp_alberti_8">Arp: Alberti Bass (1/8)</option>
                         <option value="arp_pattern1">Arp: Rolling 16ths (1/16)</option>
                         <option value="arp_euclid">Arp: Euclidean 3-3-2 (1/8)</option>
+                        <option value="arp_random_16">Arp: Random (1/16)</option>
                         <option value="travis">Guitar: Travis Picking (1/8)</option>
+                    </optgroup>
+                    <optgroup label="Bass Lines">
+                        <option value="bass_pedal_4">Pedal: Quarter Notes (1/4)</option>
+                        <option value="bass_pedal_8">Pedal: 8th Notes (1/8)</option>
+                        <option value="bass_octaves_8">Octave Bounce (1/8)</option>
+                        <option value="bass_octaves_16">Octave Bounce (1/16)</option>
+                        <option value="bass_bossa_8">Bossa Nova (1/8)</option>
+                        <option value="bass_walking_4">Walking Bass (1/4)</option>
                     </optgroup>
                     <optgroup label="Lead Melodies">
                         <option value="melody_slow">Melody: Slow & Sustained</option>
@@ -3989,71 +4123,83 @@
             </div>
 
             <div class="control-group">
-                <label style="margin-bottom: 10px; display: block; font-weight: bold; color: #fff;">Generative Parameters</label>
-
+                <!-- FLATTENED GRID: Allows items to span across both columns -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
 
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Timing Humanization</label>
-                            <input type="range" id="genTimingHum" min="0" max="100" value="30" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
-
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Velocity Dynamics</label>
-                            <input type="range" id="genVelHum" min="0" max="100" value="40" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
-
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Melodic Leaps</label>
-                            <input type="range" id="genMelodicLeaps" min="0" max="100" value="20" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
-
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Passing Tones</label>
-                            <input type="range" id="genPassingTones" min="0" max="100" value="40" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
-
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Contour Stability</label>
-                            <input type="range" id="genContour" min="0" max="100" value="80" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
-
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Melodic Range (Pendulum)</label>
-                            <input type="range" id="genMelodicRange" min="0" max="100" value="50" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
-
+                    <!-- ================= ZERO-FOOTPRINT DIVIDER ================= -->
+                    <div style="grid-column: span 2; display: flex; align-items: center; margin: 4px 0;">
+                        <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                        <span style="font-size: 0.55rem; color: #888; font-weight: bold; text-transform: uppercase; padding: 0 8px; letter-spacing: 1px;">Generative Parameters</span>
+                        <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
                     </div>
 
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- ================= GLOBAL PARAMETERS ================= -->
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Timing Humanize</span><span id="lblGenTiming">30%</span></label>
+                        <input type="range" id="genTimingHum" min="0" max="100" value="30" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenTiming').textContent = this.value + '%'">
+                    </div>
 
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Borrowed Chords (Modal)</label>
-                            <input type="range" id="genBorrowed" min="0" max="100" value="15" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Velocity Dynamics</span><span id="lblGenVel">40%</span></label>
+                        <input type="range" id="genVelHum" min="0" max="100" value="40" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenVel').textContent = this.value + '%'">
+                    </div>
 
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">7th/9th Extensions</label>
-                            <input type="range" id="genExtensions" min="0" max="100" value="30" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Swing / Shuffle</span><span id="lblGenSwing">0%</span></label>
+                        <input type="range" id="genSwing" min="0" max="100" value="0" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenSwing').textContent = this.value + '%'">
+                    </div>
 
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Legato Melting</label>
-                            <input type="range" id="genLegato" min="0" max="100" value="60" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Legato Melting</span><span id="lblGenLegato">60%</span></label>
+                        <input type="range" id="genLegato" min="0" max="100" value="60" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenLegato').textContent = this.value + '%'">
+                    </div>
 
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Motif Repetition (Seq.)</label>
-                            <input type="range" id="genMotif" min="0" max="100" value="75" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Borrowed Chords</span><span id="lblGenBorrowed">15%</span></label>
+                        <input type="range" id="genBorrowed" min="0" max="100" value="15" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenBorrowed').textContent = this.value + '%'">
+                    </div>
 
-                        <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05); overflow: hidden;">
-                            <label style="font-size: 0.65rem; color: #ccc; display: block; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Phrase Length (Breathing)</label>
-                            <input type="range" id="genPhraseLength" min="0" max="100" value="50" class="control-input" style="margin: 0; width: 100%;">
-                        </div>
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>7th/9th Extensions</span><span id="lblGenExt">30%</span></label>
+                        <input type="range" id="genExtensions" min="0" max="100" value="30" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenExt').textContent = this.value + '%'">
+                    </div>
 
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Motif Repetition</span><span id="lblGenMotif">75%</span></label>
+                        <input type="range" id="genMotif" min="0" max="100" value="75" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenMotif').textContent = this.value + '%'">
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Phrase Length</span><span id="lblGenPhrase">50%</span></label>
+                        <input type="range" id="genPhraseLength" min="0" max="100" value="50" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenPhrase').textContent = this.value + '%'">
+                    </div>
+
+                    <!-- ================= ZERO-FOOTPRINT DIVIDER ================= -->
+                    <div style="grid-column: span 2; display: flex; align-items: center; margin: 4px 0;">
+                        <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                        <span style="font-size: 0.55rem; color: #888; font-weight: bold; text-transform: uppercase; padding: 0 8px; letter-spacing: 1px;">Melody & Solo Only</span>
+                        <div style="flex-grow: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+                    </div>
+
+                    <!-- ================= MELODY PARAMETERS ================= -->
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Melodic Leaps</span><span id="lblGenLeaps">20%</span></label>
+                        <input type="range" id="genMelodicLeaps" min="0" max="100" value="20" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenLeaps').textContent = this.value + '%'">
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Passing Tones</span><span id="lblGenPassing">40%</span></label>
+                        <input type="range" id="genPassingTones" min="0" max="100" value="40" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenPassing').textContent = this.value + '%'">
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Contour Stability</span><span id="lblGenContour">80%</span></label>
+                        <input type="range" id="genContour" min="0" max="100" value="80" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenContour').textContent = this.value + '%'">
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.04); padding: 6px 8px 4px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <label style="font-size: 0.65rem; color: #ccc; display: flex; justify-content: space-between; margin-bottom: 2px;"><span>Range (Pendulum)</span><span id="lblGenRange">50%</span></label>
+                        <input type="range" id="genMelodicRange" min="0" max="100" value="50" class="control-input" style="margin: 0; width: 100%;" oninput="document.getElementById('lblGenRange').textContent = this.value + '%'">
                     </div>
 
                 </div>
