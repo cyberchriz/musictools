@@ -205,7 +205,7 @@
 
     let prClipboard = []; // Global Midi Clipboard
 
-    const CHORD_BUFFER_MAX = 8; // Max notes in the rolling queue for chord/harmony analysis
+    const CHORD_BUFFER_MAX = 5; // Max notes in the rolling queue for chord/harmony analysis (best root and lowest note always get prioritized for preservation within the bucket!)
 
     const MAX_BPM_STRETCH_RATIO = 0.15; // 15% threshold for time-stretching
     let audioClips = []; // Stores objects: { id, trackId, buffer, startBeat, durationBeats, sourceNode }
@@ -213,9 +213,100 @@
 
     let stepKeysHeldCount = 0;
 
+    let currentArrangerTrackCount = 8;
+
+    // =====================================================================
+    // GENERAL MIDI (GM) DRUM MAP & ALIAS ROUTING
+    // =====================================================================
+    const gmDrumMap = {
+        35: { name: 'Acoustic Bass Drum', alias: 'kick' },
+        36: { name: 'Bass Drum 1', alias: 'kick' },
+        37: { name: 'Side Stick', alias: 'rimshot' },
+        38: { name: 'Acoustic Snare', alias: 'snare' },
+        39: { name: 'Hand Clap', alias: 'clap' },
+        40: { name: 'Electric Snare', alias: 'snare' },
+        41: { name: 'Low Floor Tom', alias: 'tom3' },
+        42: { name: 'Closed Hi Hat', alias: 'hihat' },
+        43: { name: 'High Floor Tom', alias: 'tom3' },
+        44: { name: 'Pedal Hi-Hat', alias: 'hihat' },
+        45: { name: 'Low Tom', alias: 'tom2' },
+        46: { name: 'Open Hi-Hat', alias: 'hihat' },
+        47: { name: 'Low-Mid Tom', alias: 'tom2' },
+        48: { name: 'Hi-Mid Tom', alias: 'tom1' },
+        49: { name: 'Crash Cymbal 1', alias: 'cymbal' },
+        50: { name: 'High Tom', alias: 'tom1' },
+        51: { name: 'Ride Cymbal 1', alias: 'ride' },
+        52: { name: 'Chinese Cymbal', alias: 'cymbal' },
+        53: { name: 'Ride Bell', alias: 'ride' },
+        54: { name: 'Tambourine', alias: 'rimshot' },
+        55: { name: 'Splash Cymbal', alias: 'cymbal' },
+        56: { name: 'Cowbell', alias: 'cowbell' },
+        57: { name: 'Crash Cymbal 2', alias: 'cymbal' },
+        58: { name: 'Vibraslap', alias: 'cymbal' },
+        59: { name: 'Ride Cymbal 2', alias: 'ride' },
+        60: { name: 'Hi Bongo', alias: 'tom1' },
+        61: { name: 'Low Bongo', alias: 'tom2' },
+        62: { name: 'Mute Hi Conga', alias: 'tom1' },
+        63: { name: 'Open Hi Conga', alias: 'tom2' },
+        64: { name: 'Low Conga', alias: 'tom3' },
+        65: { name: 'High Timbale', alias: 'tom1' },
+        66: { name: 'Low Timbale', alias: 'tom2' },
+        67: { name: 'High Agogo', alias: 'rimshot' },
+        68: { name: 'Low Agogo', alias: 'rimshot' },
+        69: { name: 'Cabasa', alias: 'rimshot' },
+        70: { name: 'Maracas', alias: 'hihat' },
+        71: { name: 'Short Whistle', alias: 'hihat' },
+        72: { name: 'Long Whistle', alias: 'cymbal' },
+        73: { name: 'Short Guiro', alias: 'hihat' },
+        74: { name: 'Long Guiro', alias: 'cymbal' },
+        75: { name: 'Claves', alias: 'rimshot' },
+        76: { name: 'Hi Wood Block', alias: 'click' },
+        77: { name: 'Low Wood Block', alias: 'click' },
+        78: { name: 'Mute Cuica', alias: 'tom1' },
+        79: { name: 'Open Cuica', alias: 'tom2' },
+        80: { name: 'Mute Triangle', alias: 'click' },
+        81: { name: 'Open Triangle', alias: 'cymbal' }
+    };
+
     function showToast(msg) {
         let toast = document.getElementById('toast-container');
         if (toast) { toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2500); }
+    }
+
+    // =====================================================================
+    // FILENAME TO MIDI CONVERTER
+    // =====================================================================
+    function extractMidiFromFilename(filename) {
+        if (!filename) return 60;
+
+        // REGEX EXPLANATION:
+        // (?:^|[^a-zA-Z]) -> Must start at the beginning of the string OR after a non-letter (prevents matching "flac4" or "mp3")
+        // ([a-gA-G])      -> Matches exactly one letter A through G
+        // ([#b]?)         -> Optionally matches a sharp (#) or flat (b)
+        // (-?\d{1,3})     -> Matches 1 to 3 digits, optionally preceded by a minus sign (for negative octaves like C-1)
+        // (?:[^a-zA-Z]|$) -> Must be followed by a non-letter or the end of the string
+        const regex = /(?:^|[^a-zA-Z])([a-gA-G])([#b]?)(-?\d{1,3})(?:[^a-zA-Z]|$)/;
+        const match = filename.match(regex);
+        
+        if (!match) return 60; // Default to Middle C if no pattern is found
+
+        const noteName = match[1].toUpperCase();
+        const accidental = match[2].toLowerCase();
+        const octave = parseInt(match[3], 10);
+
+        // Map note names to base pitch classes
+        const notes = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
+        let pitchClass = notes[noteName];
+
+        // Apply accidentals
+        if (accidental === '#') pitchClass += 1;
+        if (accidental === 'b') pitchClass -= 1;
+
+        // MIDI Math: C4 = Note 60. Formula: (Octave + 1) * 12 + PitchClass
+        let midiNote = (octave + 1) * 12 + pitchClass;
+        
+        // Clamp to valid MIDI range
+        return Math.max(0, Math.min(127, midiNote));
     }
 
     function isSustainOn() { return sustainLocked || sustainHeld; }
@@ -243,6 +334,7 @@
     let currentKeyCenter = 0, currentScale = 'all', currentLabelType = 'absolute';
 
     let currentDeclick = 0.010; // Default to 10 milliseconds
+    let globalStaggerCounter = 0; // Tracks global voice spawning to prevent phase summing
 
     // for metronome feature: play a single click (High pitch for Downbeat, Low pitch for Offbeats)
     function playClick(time, isAccent) {
@@ -816,7 +908,7 @@
             tremolo: document.getElementById('tremolo').value, sweep: document.getElementById('sweep').value, detune: document.getElementById('detune').value, subOsc: document.getElementById('subOsc').value,
             noise: document.getElementById('noise').value, filterEnv: document.getElementById('filterEnv').value, padHeight: document.getElementById('padHeightSlider').value, drumHeight: document.getElementById('drumHeightSlider').value,
             overtones: document.getElementById('overtones').value,
-            masterVol: document.getElementById('masterVol').value, synthVol: document.getElementById('synthVol').value, drumVol: document.getElementById('drumVol').value, looperMasterVol: document.getElementById('looperMasterVol').value, mixerImportVol: document.getElementById('mixerImportVol').value, eqLow: document.getElementById('eqLow').value, eqMid: document.getElementById('eqMid').value, eqHigh: document.getElementById('eqHigh').value,
+            masterVol: document.getElementById('masterVol').value, synthVol: document.getElementById('synthVol').value, drumVol: document.getElementById('drumVol').value, looperVCA: document.getElementById('looperVCA').value, mixerImportVol: document.getElementById('mixerImportVol').value, eqLow: document.getElementById('eqLow').value, eqMid: document.getElementById('eqMid').value, eqHigh: document.getElementById('eqHigh').value,
             oscMix: document.getElementById('oscMix').value, glide: document.getElementById('glide').value, filterType: document.getElementById('filterType').value,
             midiVelocity: document.getElementById('midiVelocity').value,
             looperLength: document.getElementById('looperLength').value,
@@ -850,7 +942,7 @@
                     const av = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); el.dispatchEvent(new Event('change')); } };
 
                     // REMOVED Custom Buttons from this array! Only true standard inputs remain here.
-                    ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'themeColorSelect', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperMasterVol', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones', 'bgEffectMode', 'bgIntensity', 'declick', 'lfoDelay', 'lfoFade', 'lfoKeytrack'].forEach(k => av(k, s[k]));
+                    ['keyCenter', 'scaleOverlay', 'labelType', 'transpose', 'tuningMode', 'arpBpm', 'arpRhythm', 'arpSwing', 'arpLoop', 'themeColorSelect', 'masterTune', 'uiHideDelay', 'instrumentPreset', 'attack', 'decay', 'sustain', 'release', 'brightness', 'resonance', 'chorus', 'distortion', 'echo', 'reverbMix', 'lfoSpeed', 'vibrato', 'tremolo', 'sweep', 'detune', 'subOsc', 'noise', 'filterEnv', 'masterVol', 'synthVol', 'drumVol', 'looperVCA', 'mixerImportVol', 'eqLow', 'eqMid', 'eqHigh', 'oscMix', 'glide', 'filterType', 'midiVelocity', 'looperLength', 'busComp', 'mixerHeightSlider', 'limiterMode', 'overtones', 'bgEffectMode', 'bgIntensity', 'declick', 'lfoDelay', 'lfoFade', 'lfoKeytrack'].forEach(k => av(k, s[k]));
 
                     av('padHeightSlider', s.padHeight);
                     av('drumHeightSlider', s.drumHeight);
@@ -983,23 +1075,200 @@
         }
     });
 
-    // MIXER DESK & EQ CONTROLS
+    // =======================================================
+    // DYNAMIC ARRANGER ARCHITECTURE & MASTER CONTROLS
+    // =======================================================
+
+    // --- 1. FACTORY: ADD 8 TRACKS ---
+    document.getElementById('btnAddArrangerBank')?.addEventListener('click', () => {
+        // --- NEW: Soft Warning instead of a Hard Limit ---
+        if (currentArrangerTrackCount === 64) {
+            showToast("⚠️ High track count. If audio stutters, consider bouncing tracks.", "warning");
+        }
+
+        const startLocalIdx = currentArrangerTrackCount;
+        const startGlobalIdx = startLocalIdx + 8;
+        currentArrangerTrackCount += 8;
+
+        // 1. Expand Audio & State Arrays
+        for (let i = 0; i < 8; i++) {
+            arranger.tracks.push([]);
+            arranger.muted.push(false);
+            arranger.soloed.push(false);
+            
+            studio.trackTypes.push(null);
+            studio.trackSynthStates.push(captureCurrentSynthState());
+            studio.trackAudioBuffers.push(null);
+        }
+
+        // 2. Expand Web Audio Routing
+        if (typeof audioCtx !== 'undefined' && audioCtx) {
+            for (let i = 0; i < 8; i++) {
+                let g = audioCtx.createGain(); g.gain.value = 1.0; linearGainNodes.push(g);
+                let p = audioCtx.createStereoPanner(); p.pan.value = 0.0; linearPanners.push(p);
+
+                g.connect(p);
+                p.connect(synthGain); // Default to Synth Bus
+
+                let eSend = audioCtx.createGain(); eSend.gain.value = 0;
+                g.connect(eSend); linearEchoSends.push(eSend); eSend.connect(delayNode);
+
+                let rSend = audioCtx.createGain(); rSend.gain.value = 0;
+                g.connect(rSend); linearReverbSends.push(rSend); rSend.connect(convolver);
+            }
+        }
+
+        // 3. Inject DOM Elements
+        const grid = document.getElementById('arranger-mixer-grid');
+        if (grid) {
+            let newHTML = "";
+            for (let i = 0; i < 8; i++) {
+                const localIdx = startLocalIdx + i;
+                const globalIdx = startGlobalIdx + i;
+                newHTML += `
+                <div style="display: flex; flex-direction: column; gap: 4px;" class="new-track-strip">
+                    <div class="inst-label" id="inst-label-${globalIdx}" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
+                    <button class="track-btn" data-track="${globalIdx}" data-domain="arranger" style="width: 100%; margin: 0; padding: 4px 0;">A${localIdx + 1}</button>
+                    <div class="mixer-channel" style="margin: 0; padding-top: 4px;">
+                        <div style="display:flex; justify-content: space-between; gap:2px; width: 100%; margin-bottom: 6px;">
+                            <button class="mute-btn" data-track="${globalIdx}" title="Mute" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">M</button>
+                            <button class="mute-btn solo-btn" data-track="${globalIdx}" title="Solo" style="flex: 1; padding: 2px 0; font-size: 0.6rem;">S</button>
+                        </div>
+                        <input type="range" class="aux-send echo-send" data-track="${globalIdx}" min="0" max="1" step="0.01" value="0">
+                        <input type="range" class="aux-send reverb-send" data-track="${globalIdx}" min="0" max="1" step="0.01" value="0">
+                        <input type="range" class="aux-send pan-slider" data-track="${globalIdx}" min="-1" max="1" step="0.01" value="0">
+                        <input type="range" orient="vertical" class="v-slider track-vol" data-track="${globalIdx}" min="0" max="1" step="0.01" value="1.0">
+                    </div>
+                </div>`;
+            }
+            grid.insertAdjacentHTML('beforeend', newHTML);
+
+            // If you implemented the bindTrackButtonEvents function, bind the long-press to the new buttons
+            grid.querySelectorAll('.new-track-strip .track-btn').forEach(btn => {
+                if (typeof bindTrackButtonEvents === 'function') bindTrackButtonEvents(btn);
+            });
+            grid.querySelectorAll('.new-track-strip').forEach(el => el.classList.remove('new-track-strip'));
+        }
+
+        // 4. Update Header UI
+        const headerText = document.getElementById('arranger-header-text');
+        if (headerText) headerText.textContent = `ARRANGER TRACKS (A1-A${currentArrangerTrackCount})`;
+    });
+
+    // --- 2. CLEAR ALL ARRANGER TRACKS (2000ms Hold & Shrink) ---
+    const btnClearAllArranger = document.getElementById('btnClearAllArranger');
+    if (btnClearAllArranger) {
+        let clearAllTimer = null;
+        let justClearedAll = false;
+
+        const startClearAll = (e) => {
+            if (e.cancelable) e.preventDefault(); // Prevent mobile long-press menus
+            justClearedAll = false;
+            
+            btnClearAllArranger.classList.add('clearing'); 
+            
+            clearAllTimer = setTimeout(() => {
+                justClearedAll = true;
+                
+                // 1. Wipe the Base 8 Tracks (A1-A8)
+                for (let i = 0; i < 8; i++) {
+                    arranger.tracks[i] = [];
+                    studio.trackAudioBuffers[i + 8] = null;
+                    studio.trackTypes[i + 8] = null;
+                    
+                    const el = document.getElementById(`inst-label-${i + 8}`);
+                    if (el) el.textContent = 'EMPTY';
+                    
+                    const btn = document.querySelector(`.track-btn[data-track="${i + 8}"]`);
+                    if (btn) btn.classList.remove('type-voice', 'type-drum');
+                }
+
+                // 2. Destroy and Shrink Tracks A9+ (Garbage Collection)
+                if (currentArrangerTrackCount > 8) {
+                    // Disconnect Web Audio Nodes from the hardware to free up CPU/RAM
+                    for (let i = 8; i < currentArrangerTrackCount; i++) {
+                        try {
+                            if (linearGainNodes[i]) linearGainNodes[i].disconnect();
+                            if (linearPanners[i]) linearPanners[i].disconnect();
+                            if (linearEchoSends[i]) linearEchoSends[i].disconnect();
+                            if (linearReverbSends[i]) linearReverbSends[i].disconnect();
+                        } catch (err) { } // Catch any routing edge-cases gracefully
+                    }
+
+                    // Truncate all audio arrays back to length 8
+                    arranger.tracks.length = 8;
+                    arranger.muted.length = 8;
+                    arranger.soloed.length = 8;
+                    
+                    linearGainNodes.length = 8;
+                    linearPanners.length = 8;
+                    linearEchoSends.length = 8;
+                    linearReverbSends.length = 8;
+                    
+                    // The global Studio arrays hold 16 items total (8 Looper + 8 Arranger)
+                    studio.trackTypes.length = 16; 
+                    studio.trackSynthStates.length = 16;
+                    studio.trackAudioBuffers.length = 16;
+
+                    // Remove dynamically added DOM elements from the grid
+                    const grid = document.getElementById('arranger-mixer-grid');
+                    if (grid) {
+                        // Keep exactly the first 8 default children, destroy the rest!
+                        while (grid.children.length > 8) {
+                            grid.removeChild(grid.lastChild);
+                        }
+                    }
+
+                    currentArrangerTrackCount = 8;
+                    
+                    // Reset Header Text
+                    const headerText = document.getElementById('arranger-header-text');
+                    if (headerText) headerText.textContent = `ARRANGER TRACKS (A1-A8)`;
+                }
+
+                // 3. Reset Global Arranger Clocks
+                arranger.duration = 0;
+                arranger.pauseTime = 0;
+
+                const masterSeeker = document.getElementById('global-timeline-seeker');
+                if (masterSeeker) masterSeeker.value = 0;
+                
+                // Force UI update
+                if (typeof drawPianoRoll === 'function') drawPianoRoll();
+                if (typeof updateStudioUI === 'function') updateStudioUI();
+                
+                showToast("All Arranger Tracks Cleared & Reset!");
+                
+                // 4. Visual Success Flash
+                btnClearAllArranger.classList.remove('clearing');
+                btnClearAllArranger.classList.add('cleared-flash');
+                setTimeout(() => btnClearAllArranger.classList.remove('cleared-flash'), 300);
+
+            }, 2000);
+        };
+
+        const cancelClearAll = () => {
+            if (clearAllTimer) clearTimeout(clearAllTimer);
+            btnClearAllArranger.classList.remove('clearing');
+        };
+
+        btnClearAllArranger.addEventListener('mousedown', startClearAll);
+        btnClearAllArranger.addEventListener('mouseup', cancelClearAll);
+        btnClearAllArranger.addEventListener('mouseleave', cancelClearAll);
+        btnClearAllArranger.addEventListener('touchstart', startClearAll, { passive: false });
+        btnClearAllArranger.addEventListener('touchend', cancelClearAll);
+        btnClearAllArranger.addEventListener('touchcancel', cancelClearAll);
+    }
+
+    // =======================================================
+    // 1. MIXER DESK & COMPRESSOR CONTROLS
+    // =======================================================
     document.getElementById('mixerHeightSlider')?.addEventListener('input', (e) => { document.documentElement.style.setProperty('--mixer-fader-height', `${e.target.value}px`); updateOverlayCSSVars(); });
     document.getElementById('limiterMode')?.addEventListener('change', e => { updateSafetyCurve(e.target.value); });
     document.getElementById('busComp')?.addEventListener('input', e => { const val = parseFloat(e.target.value); updateLabel('busComp', val, 'Bus Comp', '%'); if (compressor) { compressor.threshold.value = isMobileDevice ? -15.0 : -4.0 - (val / 100 * 16); compressor.ratio.value = 1 + (val / 100 * 11); } });
     document.getElementById('declick')?.addEventListener('input', e => {
         currentDeclick = parseInt(e.target.value) / 1000; // Convert ms to seconds!
         updateLabel('declick', e.target.value, 'De-Click', 'ms');
-    });
-    document.getElementById('synthVol')?.addEventListener('input', e => { if (synthGain) synthGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valSynthVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
-    document.getElementById('drumVol')?.addEventListener('input', e => { if (drumGain) drumGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valDrumVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
-    document.getElementById('looperMasterVol')?.addEventListener('input', e => { if (looperMasterGain) looperMasterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valLooperMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
-    document.getElementById('masterVol')?.addEventListener('input', e => { if (masterGain) masterGain.gain.value = parseFloat(e.target.value); const el = document.getElementById('valMasterVol'); if (el) el.textContent = parseFloat(e.target.value).toFixed(2); });
-
-    document.getElementById('mixerImportVol')?.addEventListener('input', e => {
-        if (importedAudioMasterGainNode) importedAudioMasterGainNode.gain.value = parseFloat(e.target.value);
-        const mixReadout = document.getElementById('valMixerImportVol');
-        if (mixReadout) mixReadout.textContent = parseFloat(e.target.value).toFixed(2);
     });
 
     let isMasterMixOn = true;
@@ -1015,31 +1284,68 @@
         return `${Math.floor(t / 60).toString()}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
     };
 
-    const updateEqReadout = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = `${val > 0 ? '+' : ''}${val}dB`; };
-    document.getElementById('eqLow')?.addEventListener('input', e => { if (eqLow) eqLow.gain.value = parseFloat(e.target.value); updateEqReadout('valEqLow', e.target.value); });
-    document.getElementById('eqMid')?.addEventListener('input', e => { if (eqMid) eqMid.gain.value = parseFloat(e.target.value); updateEqReadout('valEqMid', e.target.value); });
-    document.getElementById('eqHigh')?.addEventListener('input', e => { if (eqHigh) eqHigh.gain.value = parseFloat(e.target.value); updateEqReadout('valEqHigh', e.target.value); });
-
-    document.querySelectorAll('.track-vol').forEach(slider => {
-        slider.addEventListener('input', e => {
-            const trackIdx = parseInt(e.target.getAttribute('data-track'));
-            const isLooper = trackIdx < 8;
-            const localIdx = isLooper ? trackIdx : trackIdx - 8;
-            const gainNodes = isLooper ? looperGainNodes : linearGainNodes;
-            const domainObj = isLooper ? looper : arranger;
+    // =======================================================
+    // 2. SUBMIX & MASTER GAIN CONTROLLERS
+    // =======================================================
+    const bindSmoothFader = (sliderId, readoutId, getGainNode) => {
+        document.getElementById(sliderId)?.addEventListener('input', e => {
+            const val = parseFloat(e.target.value);
+            const node = getGainNode(); // Fetch the exact node ONLY when slider moves!
             
-            if (gainNodes[localIdx] && !domainObj.muted[localIdx]) {
-                gainNodes[localIdx].gain.value = parseFloat(e.target.value);
+            if (node && audioCtx) {
+                node.gain.setTargetAtTime(val, audioCtx.currentTime, 0.015);
             }
+            const readout = document.getElementById(readoutId);
+            if (readout) readout.textContent = val.toFixed(2);
         });
+    };
+
+    // Wrapping the variables in () => passes a getter function instead of crashing on load
+    bindSmoothFader('synthVol', 'valSynthVol', () => synthGain);
+    bindSmoothFader('drumVol', 'valDrumVol', () => drumGain);
+    bindSmoothFader('masterVol', 'valMasterVol', () => masterGain);
+    bindSmoothFader('mixerImportVol', 'valMixerImportVol', () => importedAudioMasterGainNode);
+
+    document.getElementById('looperVCA')?.addEventListener('input', e => {
+        const val = parseFloat(e.target.value);
+        const readout = document.getElementById('valLooperVCA');
+        if (readout) readout.textContent = val.toFixed(2);
+        updateMixerGains(); // VCA mathematically recalculates all 8 track volumes instantly!
     });
 
+    // =======================================================
+    // 3. MASTER EQ CONTROLS
+    // =======================================================
+    const updateEqReadout = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = `${val > 0 ? '+' : ''}${val}dB`; };
+    
+    const bindSmoothEQ = (sliderId, readoutId, getFilterNode) => {
+        document.getElementById(sliderId)?.addEventListener('input', e => {
+            const val = parseFloat(e.target.value);
+            const node = getFilterNode(); // Fetch the exact node ONLY when slider moves!
+            
+            if (node && audioCtx) {
+                node.gain.setTargetAtTime(val, audioCtx.currentTime, 0.015);
+            }
+            updateEqReadout(readoutId, val);
+        });
+    };
+
+    bindSmoothEQ('eqLow', 'valEqLow', () => eqLow);
+    bindSmoothEQ('eqMid', 'valEqMid', () => eqMid);
+    bindSmoothEQ('eqHigh', 'valEqHigh', () => eqHigh);
+
+    // =======================================================
+    // 4. AUX SENDS: ECHO & REVERB (Anti-Zipper Smoothing)
+    // =======================================================
     document.querySelectorAll('.echo-send').forEach(slider => {
         slider.addEventListener('input', e => {
             const trackIdx = parseInt(e.target.getAttribute('data-track'));
             const nodes = trackIdx < 8 ? looperEchoSends : linearEchoSends;
             const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
-            if (nodes[localIdx]) nodes[localIdx].gain.value = parseFloat(e.target.value);
+            if (nodes[localIdx] && audioCtx) {
+                // Unified 1.0 scale (Matches Synth Knobs and initAudio)
+                nodes[localIdx].gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.015);
+            }
         });
     });
 
@@ -1048,7 +1354,10 @@
             const trackIdx = parseInt(e.target.getAttribute('data-track'));
             const nodes = trackIdx < 8 ? looperReverbSends : linearReverbSends;
             const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
-            if (nodes[localIdx]) nodes[localIdx].gain.value = parseFloat(e.target.value);
+            if (nodes[localIdx] && audioCtx) {
+                // Unified 1.0 scale (Matches Synth Knobs and initAudio)
+                nodes[localIdx].gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.015);
+            }
         });
     });
 
@@ -1356,9 +1665,31 @@
             // If the user clicks the rhythm that is ALREADY playing, turn it OFF!
             if (currentDrumPreset === clickedPreset) {
                 updateDrumUI('none');
-                nextMetroTime = 0; // Reset the clock so the next beat starts perfectly on the 1
+                nextMetroTime = 0; 
             } else {
                 updateDrumUI(clickedPreset);
+
+                // --- THE ROUTING FIX ---
+                // Officially claim the active track as a Drum Track so the live preset routes through its sliders!
+                if (typeof syncActiveTrackInstrument === 'function') {
+                    syncActiveTrackInstrument(true);
+                }
+
+                // --- THE DAW RECORDING FIX ---
+                // If the user selects a drum rhythm while a track is armed, instantly begin recording!
+                const now = audioCtx ? audioCtx.currentTime : 0;
+                let stateChanged = false;
+                
+                if (looper.isArmed) { 
+                    looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; 
+                    looper.startTime = now; stateChanged = true; 
+                }
+                if (arranger.isArmed) { 
+                    arranger.isArmed = false; arranger.isRecording = true; arranger.isPlaying = true; 
+                    arranger.startTime = now; stateChanged = true; 
+                }
+                
+                if (stateChanged) updateStudioUI();
             }
         });
     });
@@ -1905,6 +2236,7 @@
     let currentReverb = 0;
     let currentOsc1 = 'triangle', currentOsc2 = 'sine', currentDetune = 2, currentOsc2Mult = 1;
     let currentSubOsc = 0.05, currentNoise = 0.03, currentOscMix = 0.5, currentGlide = 0, currentFilterType = 'lowpass';
+    let currentSampleRootKey = 60;
     let currentOvertones = 0;
     let acousticWaveCache = null;
     let currentAttack = 0.01, currentDecay = 0.4, currentSustain = 0.2, currentRelease = 0.3;
@@ -2375,9 +2707,12 @@
         // Set loop behavior based on instrument
         isSamplerLooping = (val !== 'sample_fm');
 
-        // Hide the analog oscillator mix slider if we are in Sampler mode
+        // Toggle UI Elements safely
         const grpOscMix = document.getElementById('grpOscMix');
+        const grpSampleRoot = document.getElementById('grpSampleRoot');
+
         if (grpOscMix) grpOscMix.style.display = isSamplerMode ? 'none' : 'flex';
+        if (grpSampleRoot) grpSampleRoot.style.display = isSamplerMode ? 'flex' : 'none';
 
         // --- Gray out controls that do not apply to audio samples ---
         const disabledInSampler = ['vibrato', 'detune', 'subOsc', 'noise', 'overtones'];
@@ -2396,7 +2731,7 @@
             syncADSR('attack', 0.01); syncADSR('decay', 1.0); syncADSR('sustain', 0.8); syncADSR('release', 0.4);
 
             // Zero out synth-specific modulations
-            ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato'].forEach(id => {
+            ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato', 'distortion'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { el.value = 0; el.dispatchEvent(new Event('input')); }
             });
@@ -2404,6 +2739,17 @@
             // Open the filter all the way to let the sample shine
             const br = document.getElementById('brightness');
             if (br) { br.value = 8; br.dispatchEvent(new Event('input')); }
+            
+            // --- NEW: AUTO-DETECT ROOT KEY FROM FILENAME ---
+            const rootInput = document.getElementById('sampleRootKey');
+            if (rootInput) {
+                // The filename is hiding right inside the dropdown value (e.g., 'sample_db:MyViolin_F#3.wav')
+                const detectedMidi = extractMidiFromFilename(val);
+                rootInput.value = detectedMidi;
+                
+                // Dispatch the input event so your global tracker and retroactive track updater instantly catch it!
+                rootInput.dispatchEvent(new Event('input')); 
+            }
 
             // --- THE NEW SLEEK ROUTING LOGIC ---
             if (val === 'sample_custom') {
@@ -2520,17 +2866,42 @@
         ctx.fillStyle = 'rgba(255, 235, 59, 0.2)'; ctx.fill();
     }
 
-    // Apply visual updates to all synth sliders
-    document.getElementById('echo')?.addEventListener('input', e => {
-        currentEcho = parseFloat(e.target.value);
-        if (delayMix) delayMix.gain.setTargetAtTime(currentEcho, audioCtx.currentTime, 0.05);
-        updateLabel('echo', currentEcho.toFixed(2), 'Echo');
-    });
+document.getElementById('echo')?.addEventListener('input', e => {
+    currentEcho = parseFloat(e.target.value);
+    updateLabel('echo', currentEcho.toFixed(2), 'Echo');
+        
+    // ONLY update the track mixer if this was a physical user interaction!
+    if (e.isTrusted && typeof audioCtx !== 'undefined' && typeof studio !== 'undefined') {
+        const activeDomain = studio.lastSelectedDomain;
+        const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+        const nodes = activeDomain === 'looper' ? looperEchoSends : linearEchoSends;
+        const localIdx = activeDomain === 'looper' ? activeIdx : activeIdx - 8;
+            
+        if (nodes[localIdx]) nodes[localIdx].gain.setTargetAtTime(currentEcho, audioCtx.currentTime, 0.015);
+            
+        const mixerSlider = document.querySelector(`.echo-send[data-track="${activeIdx}"]`);
+        if (mixerSlider) mixerSlider.value = currentEcho;
+    }
+});
+
     document.getElementById('reverbMix')?.addEventListener('input', e => {
         currentReverb = parseFloat(e.target.value);
-        if (reverbGain) reverbGain.gain.setTargetAtTime(currentReverb, audioCtx.currentTime, 0.05);
         updateLabel('reverbMix', currentReverb.toFixed(2), 'Reverb');
+        
+        // ONLY update the track mixer if this was a physical user interaction!
+        if (e.isTrusted && typeof audioCtx !== 'undefined' && typeof studio !== 'undefined') {
+            const activeDomain = studio.lastSelectedDomain;
+            const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            const nodes = activeDomain === 'looper' ? looperReverbSends : linearReverbSends;
+            const localIdx = activeDomain === 'looper' ? activeIdx : activeIdx - 8;
+            
+            if (nodes[localIdx]) nodes[localIdx].gain.setTargetAtTime(currentReverb, audioCtx.currentTime, 0.015);
+            
+            const mixerSlider = document.querySelector(`.reverb-send[data-track="${activeIdx}"]`);
+            if (mixerSlider) mixerSlider.value = currentReverb;
+        }
     });
+
     document.getElementById('autoPan')?.addEventListener('input', e => {
         currentAutoPan = parseFloat(e.target.value);
         if (lfoPanGain) lfoPanGain.gain.setTargetAtTime(currentAutoPan, audioCtx.currentTime, 0.05);
@@ -2709,6 +3080,27 @@
     document.getElementById('oscMix')?.addEventListener('input', e => { currentOscMix = parseFloat(e.target.value); updateLabel('oscMix', Math.round(currentOscMix * 100), 'Osc Mix (1-2)', '%'); });
     document.getElementById('glide')?.addEventListener('input', e => { currentGlide = parseFloat(e.target.value); const lbl = document.getElementById('lblGlideText'); if (lbl) lbl.textContent = `Glide: ${currentGlide.toFixed(2)}s`; });
     document.getElementById('filterType')?.addEventListener('change', e => { currentFilterType = e.target.value; });
+
+    document.getElementById('sampleRootKey')?.addEventListener('input', e => {
+        currentSampleRootKey = parseInt(e.target.value) || 60;
+        
+        const activeDomain = typeof studio !== 'undefined' ? studio.lastSelectedDomain : 'arranger';
+        const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+        const localIdx = activeDomain === 'looper' ? activeIdx : activeIdx - 8;
+        const domainObj = activeDomain === 'looper' ? looper : arranger;
+        
+        // 1. Update the active track's saved memory state
+        if (studio.trackSynthStates[activeIdx]) {
+            studio.trackSynthStates[activeIdx].sampleRootKey = currentSampleRootKey;
+        }
+
+        // 2. Retroactively apply this new root key to all existing notes on the track!
+        domainObj.tracks[localIdx].forEach(evt => {
+            if (evt.type === 'play' && evt.synthState) {
+                evt.synthState.sampleRootKey = currentSampleRootKey;
+            }
+        });
+    });
 
     // MIDI additions
     document.getElementById('midiSyncMode')?.addEventListener('change', e => {
@@ -3931,6 +4323,7 @@
         // --- DRAW LOOPER BOUNDARY VOID ---
         let activeDomain = studio.lastSelectedDomain;
         let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+        const isDrumTrack = studio.trackTypes[activeIdx] === 'drum'; // <-- WE ADD THIS CHECK!
 
         if (activeDomain === 'looper') {
             const beatSecs = 60 / currentArpBPM;
@@ -3956,6 +4349,13 @@
             }
         }
 
+        // --- PRE-CALCULATE GLOBAL LABEL THRESHOLD ---
+        // We evaluate the absolute worst-case scenario to create an 
+        // ALL-OR-NOTHING toggle for the top row of labels!
+        prCtx.font = `bold 10px sans-serif`;
+        const maxTextWidth = prCtx.measureText("ACOUSTIC BASS DRUM").width;
+        const showTopLabels = h > (maxTextWidth * 2) + 45;
+
         // 3. Draw Piano Key Lanes (Background Stripes)
         const whiteKeys = [0, 2, 4, 5, 7, 9, 11];
         for (let note = currentPianoMin; note <= currentPianoMax; note++) {
@@ -3973,15 +4373,55 @@
                 prCtx.stroke();
             }
 
-            // --- NEW: OCTAVE MARKERS (Labels on every 'C' note) ---
-            if (note % 12 === 0) {
-                const octave = Math.floor(note / 12) - 1; 
-                prCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; 
-                prCtx.font = `bold 10px sans-serif`; // Removed * dpr
-                prCtx.textAlign = 'center';
-                
-                prCtx.fillText(`C${octave}`, x + (noteW / 2), 15); // Removed * dpr
-                prCtx.fillText(`C${octave}`, x + (noteW / 2), h / dpr - 5); // Must divide screen height by dpr to get CSS pixels!
+            if (isDrumTrack) {
+                // --- NEW: VERTICAL DRUM LABELS (GM STANDARD) ---
+                if (gmDrumMap[note]) {
+                    const drumName = gmDrumMap[note].name.toUpperCase(); 
+                    
+                    prCtx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+                    prCtx.fillRect(x, 0, noteW, h);
+
+                    prCtx.fillStyle = 'rgba(255, 255, 255, 0.45)'; 
+                    prCtx.font = `bold 10px sans-serif`;
+
+                    // Bottom Label (Always visible)
+                    prCtx.save();
+                    prCtx.textAlign = 'left';
+                    prCtx.textBaseline = 'middle';
+                    prCtx.translate(x + (noteW / 2), h - 10);
+                    prCtx.rotate(-Math.PI / 2);
+                    prCtx.fillText(drumName, 0, 0);
+                    prCtx.restore();
+                    
+                    // Top Label (Uses the GLOBAL toggle so it's perfectly uniform)
+                    if (showTopLabels) {
+                        prCtx.save();
+                        prCtx.textAlign = 'right';
+                        prCtx.textBaseline = 'middle';
+                        prCtx.translate(x + (noteW / 2), 15);
+                        prCtx.rotate(-Math.PI / 2);
+                        prCtx.fillText(drumName, 0, 0);
+                        prCtx.restore();
+                    }
+                }
+            } else {
+                // --- EXISTING: PIANO OCTAVE MARKERS ---
+                if (note % 12 === 0) {
+                    const octave = Math.floor(note / 12) - 1; 
+                    const labelText = `C${octave}`;
+                    
+                    prCtx.fillStyle = 'rgba(255, 255, 255, 0.3)'; 
+                    prCtx.font = `bold 10px sans-serif`; 
+                    prCtx.textAlign = 'center';
+                    
+                    // Bottom Marker (Always visible)
+                    prCtx.fillText(labelText, x + (noteW / 2), h - 10); 
+
+                    // Top Marker (Uses the GLOBAL toggle)
+                    if (showTopLabels) {
+                        prCtx.fillText(labelText, x + (noteW / 2), 15); 
+                    }
+                }
             }
         }
 
@@ -4406,7 +4846,7 @@
 
             let notes = [];
             if (evt.type === 'play' && evt.freqs) notes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
-            else if (evt.type === 'drum') notes = [Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36];
+            else if (evt.type === 'drum') notes = [parseInt(Object.keys(gmDrumMap).find(k => gmDrumMap[k].alias === evt.drumType)) || 36];
             else if (evt.type === 'stem') { minN = 0; maxN = 127; } // Stems span the whole track
             
             notes.forEach(n => { if (n < minN) minN = n; if (n > maxN) maxN = n; });
@@ -4414,10 +4854,10 @@
         return { minT, maxT, minN, maxN };
     }
 
-    const reverseDrumMap = { 36: 'kick', 38: 'snare', 42: 'hihat', 39: 'clap', 49: 'cymbal', 45: 'tom1', 47: 'tom2', 43: 'tom3', 56: 'cowbell', 51: 'ride', 37: 'rimshot', 76: 'click' };
-
     function eraseNoteAt(time, note, track) {
-        const targetDrum = reverseDrumMap[note];
+        // --- THE ALIAS FIX ---
+        const targetDrum = gmDrumMap[note] ? gmDrumMap[note].alias : null;
+        
         for (let i = track.length - 1; i >= 0; i--) {
             const evt = track[i];
             const end = evt.timeOffset + (evt.duration || 0.5);
@@ -4447,13 +4887,15 @@
 
     // Helper: Find a specific note event under the cursor
     function getEventAtCursor(time, note, track) {
-        const targetDrum = reverseDrumMap[note];
+        // --- THE ALIAS FIX ---
+        const targetDrum = gmDrumMap[note] ? gmDrumMap[note].alias : null;
+        
         for (let i = track.length - 1; i >= 0; i--) {
             const evt = track[i];
             const end = evt.timeOffset + (evt.duration || 0.5);
             if (time >= evt.timeOffset && time <= end) {
                 
-                // --- NEW: Stems span the whole X-axis, so if the time matches, it's a hit! ---
+                // Stems span the whole X-axis, so if the time matches, it's a hit!
                 if (evt.type === 'stem') {
                     return { evt, originalNote: note }; 
                 }
@@ -4615,8 +5057,8 @@
                         if (evt.type === 'play' && evt.freqs) {
                             originalPitches = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
                         } else if (evt.type === 'drum') {
-                            const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
-                            originalPitches = [parseInt(drumPitch)];
+                            const drumPitch = parseInt(Object.keys(gmDrumMap).find(k => gmDrumMap[k].alias === evt.drumType)) || 36;
+                            originalPitches = [drumPitch];
                         }
 
                         prDragState.moveCache.set(evt, {
@@ -4676,8 +5118,8 @@
                         if (clone.type === 'play' && clone.freqs) {
                             originalPitches = clone.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
                         } else if (clone.type === 'drum') {
-                            const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === clone.drumType) || 36;
-                            originalPitches = [parseInt(drumPitch)];
+                            const drumPitch = parseInt(Object.keys(gmDrumMap).find(k => gmDrumMap[k].alias === clone.drumType)) || 36;
+                            originalPitches = [drumPitch];
                         }
                         
                         prDragState.moveCache.set(clone, {
@@ -4759,7 +5201,7 @@
                 const noteFreq = masterTune * Math.pow(2, (clickNote - 69) / 12);
                 const beatSecs = 60 / currentArpBPM;
                 const defaultDur = prSnapRes > 0 ? (beatSecs * prSnapRes) : (beatSecs * 0.25);
-                const drumType = isDrumTrack ? reverseDrumMap[clickNote] : null;
+                const drumType = isDrumTrack ? (gmDrumMap[clickNote] ? gmDrumMap[clickNote].alias : null) : null;
 
                 if (isDrumTrack && !drumType) return;
 
@@ -4860,7 +5302,8 @@
                             const evtNotes = evt.freqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
                             noteMatch = evtNotes.some(n => n >= minN && n <= maxN);
                         } else if (evt.type === 'drum') {
-                            const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
+                            // --- THE ALIAS FIX ---
+                            const drumPitch = parseInt(Object.keys(gmDrumMap).find(k => gmDrumMap[k].alias === evt.drumType)) || 36;
                             noteMatch = drumPitch >= minN && drumPitch <= maxN;
                         }
 
@@ -5065,7 +5508,7 @@
                         noteMatch = evtNotes.some(n => n >= minN && n <= maxN);
                     }
                     else if (evt.type === 'drum') {
-                        const drumPitch = Object.keys(reverseDrumMap).find(k => reverseDrumMap[k] === evt.drumType) || 36;
+                        const drumPitch = parseInt(Object.keys(gmDrumMap).find(k => gmDrumMap[k].alias === evt.drumType)) || 36;
                         noteMatch = drumPitch >= minN && drumPitch <= maxN;
                     }
 
@@ -5567,7 +6010,7 @@ const btnQuantize = document.getElementById('prActionQuantize');
     }
 
 
-function initAudio() {
+    function initAudio() {
         // --- FORCE WAKE IN CASE OF AUDIO THROTTLING ---
         if (audioCtx) {
             if (audioCtx.state === 'suspended') {
@@ -5672,10 +6115,6 @@ function initAudio() {
         drumGain.gain.value = parseFloat(document.getElementById('drumVol')?.value || 1.0);
         drumGain.connect(masterEqIn);
 
-        looperMasterGain = audioCtx.createGain();
-        looperMasterGain.gain.value = parseFloat(document.getElementById('looperMasterVol')?.value || 1.0);
-        looperMasterGain.connect(masterEqIn);
-
         // Looper Per-Track Faders & Aux Sends
         for (let i = 0; i < 8; i++) {
             let g = audioCtx.createGain();
@@ -5686,13 +6125,15 @@ function initAudio() {
             p.pan.value = parseFloat(document.querySelector(`.pan-slider[data-track="${i}"]`)?.value || 0.0);
             looperPanners.push(p);
 
-            // Wire Track Fader -> Panner -> Master Looper Bus
             g.connect(p);
-            p.connect(looperMasterGain);
+            // DYNAMIC BUS ROUTING
+            if (studio.trackTypes[i] === 'drum') p.connect(drumGain);
+            else p.connect(synthGain);
 
-            let eSend = audioCtx.createGain();
+             let eSend = audioCtx.createGain();
             eSend.gain.value = parseFloat(document.querySelector(`.echo-send[data-track="${i}"]`)?.value || 0);
-            g.connect(eSend); looperEchoSends.push(eSend);
+            g.connect(eSend);
+            looperEchoSends.push(eSend);
 
             let rSend = audioCtx.createGain();
             rSend.gain.value = parseFloat(document.querySelector(`.reverb-send[data-track="${i}"]`)?.value || 0);
@@ -5700,11 +6141,7 @@ function initAudio() {
         }
 
         // Arranger Per-Track Faders & Aux Sends
-        linearMasterGain = audioCtx.createGain();
-        linearMasterGain.gain.value = 1.0;
-        linearMasterGain.connect(masterEqIn);
-
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < currentArrangerTrackCount; i++) {
             let g = audioCtx.createGain();
             g.gain.value = parseFloat(document.querySelector(`.track-vol[data-track="${i + 8}"]`)?.value || 1.0);
             linearGainNodes.push(g);
@@ -5714,7 +6151,9 @@ function initAudio() {
             linearPanners.push(p);
 
             g.connect(p);
-            p.connect(linearMasterGain);
+            // DYNAMIC BUS ROUTING
+            if (studio.trackTypes[i + 8] === 'drum') p.connect(drumGain);
+            else p.connect(synthGain);
 
             let eSend = audioCtx.createGain();
             eSend.gain.value = parseFloat(document.querySelector(`.echo-send[data-track="${i + 8}"]`)?.value || 0);
@@ -5731,13 +6170,11 @@ function initAudio() {
         const data = sharedNoiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
 
-        // --- HYBRID REVERB ENGINE ---
-        reverbGain = audioCtx.createGain();
-        reverbGain.gain.value = typeof currentReverb !== 'undefined' ? currentReverb : 0;
-
+        // --- RESTORED SYNTH PANNER ---
+        // We still need this for the Auto-Pan effect!
         masterSynthPanner = audioCtx.createStereoPanner();
         synthGain.connect(masterSynthPanner);
-        masterSynthPanner.connect(reverbGain);
+        masterSynthPanner.connect(masterEqIn); // Dry synth bus goes straight to Master EQ
 
         if (isMobileDevice) {
             // Cheap, CPU-friendly Algorithmic Spring Reverb for Mobile
@@ -5750,20 +6187,14 @@ function initAudio() {
             revFilter.connect(revFeedback);
             revFeedback.connect(convolver);
 
-            reverbGain.connect(convolver);
             convolver.connect(masterEqIn);
         } else {
             // Studio-Grade Convolution Reverb for Desktop
             convolver = audioCtx.createConvolver();
             convolver.buffer = createImpulseResponse(audioCtx, 2.5, 3.0);
-            reverbGain.connect(convolver);
+            
             convolver.connect(masterEqIn);
         }
-
-        masterSynthPanner.connect(masterEqIn); // Dry synth goes to EQ
-
-        // Also wire the panner output to the delay node later:
-        // (You will need to scroll down ~15 lines to ECHO / DELAY and change `synthGain.connect(delayNode);` to `masterSynthPanner.connect(delayNode);`)
 
         // SMART DISTORTION
         preDistortionGain = audioCtx.createGain();
@@ -5787,13 +6218,22 @@ function initAudio() {
         // ECHO / DELAY
         delayNode = audioCtx.createDelay(); delayNode.delayTime.value = 0.3;
         feedbackGain = audioCtx.createGain(); feedbackGain.gain.value = 0.3;
-        delayMix = audioCtx.createGain(); delayMix.gain.value = typeof currentEcho !== 'undefined' ? currentEcho : 0.12;
+        
+        // 1. The Master Delay Return is now permanently open at 100% volume
+        delayMix = audioCtx.createGain(); 
+        delayMix.gain.value = 1.0; 
 
         delayNode.connect(feedbackGain);
         feedbackGain.connect(delayNode);
         delayNode.connect(delayMix);
-        delayMix.connect(masterEqIn); // Delay feeds into EQ
-        masterSynthPanner.connect(delayNode);
+        delayMix.connect(masterEqIn); 
+
+        // 2. The Synth gets its own dedicated Send knob, instead of choking the master return!
+        window.synthEchoSendNode = audioCtx.createGain();
+        window.synthEchoSendNode.gain.value = typeof currentEcho !== 'undefined' ? currentEcho : 0.12;
+        
+        masterSynthPanner.connect(window.synthEchoSendNode);
+        window.synthEchoSendNode.connect(delayNode);
 
         // Connect Aux Sends to Master FX
         for (let i = 0; i < 8; i++) {
@@ -5805,25 +6245,6 @@ function initAudio() {
             if (linearReverbSends[i]) linearReverbSends[i].connect(convolver);
         }
 
-        // --- Hardcode a "Studio Room" feel for the global Drum Machine ---
-        const globalDrumReverb = audioCtx.createGain();
-        
-        // THE FIX: Use 30% for Desktop Convolution, but drop to a tiny 2% on Mobile 
-        // to prevent the algorithmic spring delay from rattling on transients!
-        globalDrumReverb.gain.value = isMobileDevice ? 0.02 : 0.3; 
-        
-        drumGain.connect(globalDrumReverb);
-        globalDrumReverb.connect(convolver);
-
-        const globalDrumEcho = audioCtx.createGain();
-        
-        // Also dry up the standard delay line on mobile to keep drums punchy
-        globalDrumEcho.gain.value = isMobileDevice ? 0.0 : 0.1; 
-        
-        drumGain.connect(globalDrumEcho);
-        globalDrumEcho.connect(delayNode);
-
-
         if (audioCtx.state === 'suspended') audioCtx.resume();
 
         // Bake the acoustic wave (overtones emulation)
@@ -5832,7 +6253,7 @@ function initAudio() {
 
     const playingMidiNotes = new Set();
 
-let highlightUpdatePending = false;
+    let highlightUpdatePending = false;
     let previousHighlightState = "";
     let cachedGridNodes = null; // RAM Cache for Chrome
     let cachedTextNodes = null;
@@ -5861,6 +6282,7 @@ let highlightUpdatePending = false;
 
             midiActiveNotes.forEach((velocities, midiNote) => { playingMidiNotes.add(midiNote); });
 
+            // Run the Harmonic Engine FIRST so we have the freshest context!
             if (typeof updateHarmonicEngine === 'function') {
                 updateHarmonicEngine();
             }
@@ -5881,25 +6303,55 @@ let highlightUpdatePending = false;
             previousHighlightState = currentStateStr;
 
             const activeElements = new Set();
-            const inversionElements = new Set(); // NEW: Track pitch-class matches for the Cyan glow
+            const inversionElements = new Set(); 
+            const ghostElements = new Set(); // NEW: For Faint Dyad/Ambiguity Matches
             const extensionsToHighlight = new Set();
             const extensionPitchClasses = new Set();
 
-            // CHROME FIX: Fetch from RAM instead of querying the DOM
             if (!cachedGridNodes) cachedGridNodes = document.querySelectorAll('.highlightable:not(.piano-key)');
 
             for (let i = 0; i < cachedGridNodes.length; i++) {
                 let el = cachedGridNodes[i]; if (!el._st || el._st.length === 0) continue;
-                let mappedNotes = snapStArray(el._st).map(st => { let f = getFreqFromSt(st); if (isOctUpOn()) f *= 2; if (isOctDownOn()) f *= 0.5; return Math.round(12 * Math.log2(f / masterTune) + 69); });
+                
+                let mappedNotes = snapStArray(el._st).map(st => { 
+                    let f = getFreqFromSt(st); 
+                    if (isOctUpOn()) f *= 2; 
+                    if (isOctDownOn()) f *= 0.5; 
+                    return Math.round(12 * Math.log2(f / masterTune) + 69); 
+                });
 
                 let isCoF = el.closest('#cof-overlay') !== null;
                 
-                // 1. Is it a literal, exact MIDI note match? (Yellow)
+                // 1. EXACT MATCH (Yellow)
                 let isExactMatch = isCoF ? mappedNotes.every(m => playingPitchClasses.has(((m % 12) + 12) % 12)) : mappedNotes.every(m => playingMidiNotes.has(m));
                 
-                // 2. Is it a Pitch-Class only match? (Notes are right, but octaves are wrong) (Cyan)
-                // We only care about this for chords (length >= 3) on the main Tonnetz!
-                let isPitchClassMatch = !isCoF && el._st.length >= 3 && mappedNotes.every(m => playingPitchClasses.has(((m % 12) + 12) % 12));
+                let isPitchClassMatch = false;
+                let isGhostDyad = false;
+
+                // 2. PITCH CLASS & DYAD HYBRID LOGIC (Cyan)
+                if (!isCoF && el._st.length >= 3) {
+                    let matchCount = 0;
+                    mappedNotes.forEach(m => {
+                        if (playingPitchClasses.has(((m % 12) + 12) % 12)) matchCount++;
+                    });
+
+                    // Full Chord Inversion
+                    if (matchCount === el._st.length && playingPitchClasses.size >= 3) {
+                        isPitchClassMatch = true;
+                    } 
+                    // Option 3 Hybrid: "no5" Dyad Match
+                    else if (matchCount === 2 && playingPitchClasses.size === 2) {
+                        // Mapped notes index 0 is always the root of the geometric triad
+                        const triRootPC = ((mappedNotes[0] % 12) + 12) % 12; 
+                        
+                        // Ask the Harmonic Engine if it knows what this dyad is supposed to be!
+                        if (currentIdentifiedRootPC !== null && currentIdentifiedRootPC === triRootPC) {
+                            isPitchClassMatch = true; // Mind-Reading Confident Match (Bright Cyan)
+                        } else {
+                            isGhostDyad = true; // Ambiguous Fallback (Faint Cyan)
+                        }
+                    }
+                }
 
                 if (isExactMatch) {
                     activeElements.add(el);
@@ -5911,8 +6363,9 @@ let highlightUpdatePending = false;
                         extensionPitchClasses.add(((ninthMidi % 12) + 12) % 12);
                     }
                 } else if (isPitchClassMatch) {
-                    // It's an inversion/voice-led chord!
                     inversionElements.add(el);
+                } else if (isGhostDyad) {
+                    ghostElements.add(el);
                 }
             }
 
@@ -5920,32 +6373,38 @@ let highlightUpdatePending = false;
                 let el = cachedGridNodes[i]; 
                 const shouldBeActive = activeElements.has(el); 
                 const shouldBeInversion = inversionElements.has(el);
+                const shouldBeGhost = ghostElements.has(el);
                 
                 const isActive = el._isActiveState === true;
                 const isInversion = el._isInversionState === true;
+                const isGhost = el._isGhostState === true;
 
                 if (el._highlightEl) {
                     // State 1: EXACT MATCH (Yellow)
                     if (shouldBeActive && !isActive) { 
-                        el._isActiveState = true; 
-                        el._isInversionState = false;
-                        el._highlightEl.classList.remove('inversion-highlight');
+                        el._isActiveState = true; el._isInversionState = false; el._isGhostState = false;
+                        el._highlightEl.classList.remove('inversion-highlight', 'ghost-highlight');
                         el._highlightEl.classList.add(el._activeClass); 
                         el._highlightEl.style.opacity = '1'; 
                     }
-                    // State 2: INVERSION MATCH (Cyan)
+                    // State 2: INVERSION MATCH (Bright Cyan)
                     else if (shouldBeInversion && !isInversion && !shouldBeActive) {
-                        el._isInversionState = true;
-                        el._isActiveState = false;
-                        el._highlightEl.classList.remove(el._activeClass);
+                        el._isInversionState = true; el._isActiveState = false; el._isGhostState = false;
+                        el._highlightEl.classList.remove(el._activeClass, 'ghost-highlight');
                         el._highlightEl.classList.add('inversion-highlight');
                         el._highlightEl.style.opacity = '1';
                     }
-                    // State 3: OFF (Fade out)
-                    else if (!shouldBeActive && !shouldBeInversion && (isActive || isInversion)) { 
-                        el._isActiveState = false; 
-                        el._isInversionState = false;
-                        el._highlightEl.classList.remove(el._activeClass, 'inversion-highlight'); 
+                    // State 3: GHOST DYAD (Faint Cyan)
+                    else if (shouldBeGhost && !isGhost && !shouldBeActive && !shouldBeInversion) {
+                        el._isGhostState = true; el._isActiveState = false; el._isInversionState = false;
+                        el._highlightEl.classList.remove(el._activeClass, 'inversion-highlight');
+                        el._highlightEl.classList.add('ghost-highlight');
+                        el._highlightEl.style.opacity = '1';
+                    }
+                    // State 4: OFF (Fade out)
+                    else if (!shouldBeActive && !shouldBeInversion && !shouldBeGhost && (isActive || isInversion || isGhost)) { 
+                        el._isActiveState = false; el._isInversionState = false; el._isGhostState = false;
+                        el._highlightEl.classList.remove(el._activeClass, 'inversion-highlight', 'ghost-highlight'); 
                         if (!el._isExtState) el._highlightEl.style.opacity = '0'; 
                     }
 
@@ -5959,7 +6418,7 @@ let highlightUpdatePending = false;
                         const isExt = el._isExtState === true;
 
                         if (shouldBeExt && !isExt) { el._isExtState = true; el._highlightEl.classList.add('extension-highlight'); el._highlightEl.style.opacity = '1'; }
-                        else if (!shouldBeExt && isExt) { el._isExtState = false; el._highlightEl.classList.remove('extension-highlight'); if (!el._isActiveState && !el._isInversionState) el._highlightEl.style.opacity = '0'; }
+                        else if (!shouldBeExt && isExt) { el._isExtState = false; el._highlightEl.classList.remove('extension-highlight'); if (!el._isActiveState && !el._isInversionState && !el._isGhostState) el._highlightEl.style.opacity = '0'; }
                     }
                 }
             }
@@ -5968,7 +6427,6 @@ let highlightUpdatePending = false;
 
             // --- HARMONIC HEATMAP TRIGGER ---
             if (isHeatmapActive) {
-                // The active notes are now pulled safely from the engine's globals!
                 const activeEngineNotes = Array.from(noteMemoryMap.keys()).sort();
                 const currentNotesStr = activeEngineNotes.join(',');
                 if (heatmapBaseNotes.join(',') !== currentNotesStr) {
@@ -6194,10 +6652,9 @@ let highlightUpdatePending = false;
         isStrongSequence = false;
 
         if (activeNotes.length === 1) {
-            let octave = Math.floor(minNote / 12) - 1;
-            chordNameStr = `${labelAbsoluteSharp[bassPC]}${octave}`;
+            chordNameStr = ""; 
         } else if (pitchClasses.length === 1 && activeNotes.length > 1) {
-            chordNameStr = `${labelAbsoluteSharp[bassPC]} Octaves`;
+            chordNameStr = ""; 
         } else if (bestMatch !== null) {
             if (rootHistory.length === 0 || rootHistory[0] !== bestRoot) {
                 rootHistory.unshift(bestRoot);
@@ -6268,10 +6725,12 @@ let highlightUpdatePending = false;
         const midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
 
         // --- ANALOG PHASE STAGGER & JITTER BUFFER ---
-        // 1. De-click lookahead buffer
-        // 2. Micro-stagger (1.5ms per note index) to prevent massive digital phase-summing on MIDI chords!
-        const chordStagger = isChord ? (index * 0.0015) : 0;
-        const safeStartTime = Math.max(startTime + chordStagger, audioCtx.currentTime + currentDeclick);
+        // Cycle from 0 to 5 to guarantee identical notes across tracks never perfectly phase-align!
+        globalStaggerCounter = (globalStaggerCounter + 1) % 6; 
+        
+        // If it's a known chord array, use the index. Otherwise, use the global rolling counter!
+        const stagger = isChord ? (index * 0.0015) : (globalStaggerCounter * 0.0015);
+        const safeStartTime = Math.max(startTime + stagger, audioCtx.currentTime + currentDeclick);
 
         // Polyphony Capping ("Voice Stealing")
         if (globalVoicePool.length >= maxVoices) {
@@ -6291,7 +6750,8 @@ let highlightUpdatePending = false;
             subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
             brightness: currentBrightness, filterEnv: currentFilterEnv,
             attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
-            oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType
+            oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType,
+            sampleRootKey: currentSampleRootKey
         };
 
         const osc1Gain = audioCtx.createGain();
@@ -6309,7 +6769,10 @@ let highlightUpdatePending = false;
             sampleSource.buffer = activeSampleBuffer;
             sampleSource.loop = isSamplerLooping;
 
-            const baseFreq = masterTune * Math.pow(2, (60 - 69) / 12);
+            // --- THE FIX: Read the track's specific root key instead of hardcoding 60! ---
+            const rootMidi = s.sampleRootKey !== undefined ? s.sampleRootKey : 60;
+            const baseFreq = 440.0 * Math.pow(2, (rootMidi - 69) / 12);
+            
             const targetRate = freq / baseFreq;
 
             if (shouldGlide) {
@@ -6426,14 +6889,28 @@ let highlightUpdatePending = false;
         if (subOsc) { subOsc.connect(subGain); subGain.connect(filter); }
         if (noiseSrc) { noiseSrc.connect(noiseGain); noiseGain.connect(filter); }
 
-        filter.connect(gainNode); gainNode.connect(ampLfoGain);
-        if (destination) {
-            ampLfoGain.connect(destination); 
-        } else {
-            ampLfoGain.connect(preDistortionGain); 
+        filter.connect(gainNode); 
+        gainNode.connect(ampLfoGain);
+
+        let finalVoiceOutput = ampLfoGain;
+
+        // --- THE PER-VOICE DISTORTION UPGRADE ---
+        if (s.distortion > 0) {
+            const voiceDistortion = audioCtx.createWaveShaper();
+            voiceDistortion.curve = makeDistortionCurve(s.distortion);
+            voiceDistortion.oversample = isMobileDevice ? '2x' : '4x';
+            
+            ampLfoGain.connect(voiceDistortion);
+            finalVoiceOutput = voiceDistortion;
         }
 
-        // Safely catch the null value and default to the UI slider
+        // Route the fully processed voice to the Active Track Mixer
+        if (destination) {
+            finalVoiceOutput.connect(destination); 
+        } else {
+            finalVoiceOutput.connect(synthGain); 
+        }
+
         const activeVelocity = (noteVel !== null && noteVel !== undefined) ? noteVel : (typeof currentVelocity !== 'undefined' ? currentVelocity : 100);
         
         // Normalize to Web Audio scale (0.0 to 1.0)
@@ -6526,35 +7003,57 @@ let highlightUpdatePending = false;
     let stepAdvanceTimeout = null; // Declare the debounce timer
 
     function playFrequencies(element, freqs, originalStArray = null, synthState = null, destination = null, noteVel = null) {
-        initAudio(); if (activeNodes.has(element)) return;
+        initAudio();
+        if (activeNodes.has(element)) return;
+
+        // Dynamically route live playing through the selected DAW track's mixer channel!
+        let activeDest = destination;
+        if (!activeDest && typeof studio !== 'undefined') {
+            const activeDomain = studio.lastSelectedDomain;
+            const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
+            activeDest = activeDomain === 'looper' ? looperGainNodes[activeIdx] : linearGainNodes[activeIdx - 8];
+        }
+
+        // --- THE INVERSION STORAGE FIX ---
+        // Centralize the frequency recalculation and stArray generation here!
+        let finalFreqs = [...freqs];
+        let storageStArray = originalStArray ? [...originalStArray] : null;
+
+        if (originalStArray) {
+            let extendedSt = getExtendedStArray(originalStArray);
+            let snapped = snapStArray(extendedSt);
+            finalFreqs = snapped.map(st => getFreqFromSt(st));
+            
+            if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2);
+            if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
+            if (typeof voiceLeadHeld !== 'undefined' && voiceLeadHeld) finalFreqs = applyVoiceLeading(finalFreqs);
+
+            // Calculate the 1:1 mapped ST coordinates so sequencer playback perfectly mirrors the live octaves/inversions!
+            storageStArray = finalFreqs.map((f, i) => {
+                const finalMidi = Math.round(12 * Math.log2(f / masterTune) + 69);
+                const baseMidi = Math.round(12 * Math.log2(getFreqFromSt(snapped[i]) / masterTune) + 69);
+                return snapped[i] + (finalMidi - baseMidi);
+            });
+        }
 
         if (!element.isLooper) {
-            if (activeUserNotes === 0) retriggerLFO(); 
+            if (activeUserNotes === 0) retriggerLFO();
             activeUserNotes++;
             if (uiHideDelay > 0) hideNav();
 
             if (typeof isStepEntryMode !== 'undefined' && isStepEntryMode) {
-                clearTimeout(stepAdvanceTimeout); 
+                clearTimeout(stepAdvanceTimeout);
                 
-                let finalFreqs = [...freqs];
-                if (originalStArray) {
-                    let extendedSt = getExtendedStArray(originalStArray);
-                    let snapped = snapStArray(extendedSt);
-                    finalFreqs = snapped.map(st => getFreqFromSt(st));
-                    if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2);
-                    if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
-                    if (voiceLeadHeld) finalFreqs = applyVoiceLeading(finalFreqs);
-                }
                 lastPlayedMidiNotes = finalFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
-
-                let createdEvts = handleStepEntry(finalFreqs, originalStArray, null, 1);
+                
+                // Pass the perfectly matched storageStArray to the step sequencer!
+                let createdEvts = handleStepEntry(finalFreqs, storageStArray, null, 1);
+                
                 const stateToUse = synthState || captureCurrentSynthState();
-                
-                // THE CRASH FIX: Pass 'noteVel' instead of the undefined 'velocity' string
-                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, stateToUse, destination, noteVel));
-                
-                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, isStepPreview: true, startTime: audioCtx.currentTime, originalStArray: originalStArray, looperEvt: createdEvts, velocity: noteVel });
-                
+                const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, stateToUse, activeDest, noteVel));
+
+                // Save the PURE originalStArray to the node memory for safe live-retriggering
+                activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, isStepPreview: true, startTime: audioCtx.currentTime, originalStArray: storageStArray || originalStArray, looperEvt: createdEvts, velocity: noteVel, destination: activeDest });
                 updateHighlights();
                 return;
             }
@@ -6563,46 +7062,36 @@ let highlightUpdatePending = false;
         if ((looper.isArmed || arranger.isArmed) && !element.isLooper) {
             if (looper.isArmed) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = audioCtx.currentTime; }
             if (arranger.isArmed) { arranger.isArmed = false; arranger.isRecording = true; arranger.isPlaying = true; arranger.startTime = audioCtx.currentTime; }
-            
-            metronomeBeatCount = 0;
-            nextMetronomeTick = audioCtx.currentTime + (60 / currentArpBPM); 
-            playClick(audioCtx.currentTime, true); 
-            
-            if (metronomeMode === 1) isMetronomePlaying = false; 
-            updateStudioUI(); 
-        }
-
-        let finalFreqs = [...freqs];
-        if (originalStArray) {
-            let extendedSt = getExtendedStArray(originalStArray);
-            let snapped = snapStArray(extendedSt);
-            finalFreqs = snapped.map(st => getFreqFromSt(st));
-
-            if (isOctUpOn()) finalFreqs = finalFreqs.map(f => f * 2);
-            if (isOctDownOn()) finalFreqs = finalFreqs.map(f => f * 0.5);
-            if (voiceLeadHeld) finalFreqs = applyVoiceLeading(finalFreqs);
+            metronomeBeatCount = 0; nextMetronomeTick = audioCtx.currentTime + (60 / currentArpBPM);
+            playClick(audioCtx.currentTime, true);
+            if (metronomeMode === 1) isMetronomePlaying = false;
+            updateStudioUI();
         }
 
         lastPlayedMidiNotes = finalFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69));
 
         let looperEvt = null;
         if ((looper.isRecording || arranger.isRecording) && !element.isLooper) {
-            looperEvt = recordStudioEvent(finalFreqs, 'play', originalStArray);
+            // Pass the perfectly matched storageStArray to the live sequencer!
+            looperEvt = recordStudioEvent(finalFreqs, 'play', storageStArray);
         }
 
         if (isArpOn() && finalFreqs.length > 1) {
             let arpFreqs = applyArpMode(finalFreqs);
-            let stepDuration = 0; const beatDuration = 60 / currentArpBPM;
-            if (finalFreqs.length === 3) stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3); else stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
+            let stepDuration = 0;
+            const beatDuration = 60 / currentArpBPM;
+            if (finalFreqs.length === 3) stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 3) : ((beatDuration * 2) / 3);
+            else stepDuration = currentArpRhythm === 'fast' ? (beatDuration / 4) : (beatDuration / 2);
             
-            activeNodes.set(element, { type: 'arp', freqs: arpFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState, destination: destination, velocity: noteVel }); scheduleArps();
+            // Save the PURE originalStArray to the node memory
+            activeNodes.set(element, { type: 'arp', freqs: arpFreqs, stepDuration: stepDuration, nextNoteTime: audioCtx.currentTime, noteIndex: 0, voices: [], looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: storageStArray || originalStArray, synthState: synthState, destination: activeDest, velocity: noteVel });
+            scheduleArps();
         } else {
-            // THE CRASH FIX: Pass 'noteVel' instead of the undefined 'velocity' string
-            const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, synthState, destination, noteVel));
+            const voices = finalFreqs.map((freq) => spawnVoice(freq, audioCtx.currentTime, 0, finalFreqs.length, true, synthState, activeDest, noteVel));
             
-            activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: originalStArray, synthState: synthState, destination: destination, velocity: noteVel });
+            // Save the PURE originalStArray to the node memory
+            activeNodes.set(element, { type: 'chord', freqs: finalFreqs, voices: voices, looperEvt: looperEvt, startTime: audioCtx.currentTime, originalStArray: storageStArray || originalStArray, synthState: synthState, destination: activeDest, velocity: noteVel });
         }
-
         updateHighlights();
     }
 
@@ -6778,6 +7267,7 @@ let highlightUpdatePending = false;
             brightness: currentBrightness, filterEnv: currentFilterEnv,
             attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
             oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType,
+            sampleRootKey: parseInt(document.getElementById('sampleRootKey')?.value || 60),
             instrumentPreset: document.getElementById('instrumentPreset')?.value || 'piano',
             lfoDelay: typeof currentLfoDelay !== 'undefined' ? currentLfoDelay : 0,
             lfoFade: typeof currentLfoFade !== 'undefined' ? currentLfoFade : 0,
@@ -6803,6 +7293,15 @@ let highlightUpdatePending = false;
             studio.trackTypes[activeIdx] = drumType ? 'drum' : 'voice';
             const btn = document.querySelector(`.track-btn[data-track="${activeIdx}"]`);
             if (btn) btn.classList.add(drumType ? 'type-drum' : 'type-voice');
+        }
+
+        // ---> DYNAMIC AUDIO BUS ROUTING <---
+        if (typeof audioCtx !== 'undefined' && audioCtx) {
+            const panner = activeDomain === 'looper' ? looperPanners[localIdx] : linearPanners[localIdx];
+            if (panner) {
+                panner.disconnect(); // Unplug the cable
+                panner.connect(studio.trackTypes[activeIdx] === 'drum' ? drumGain : synthGain); // Plug into correct bus
+            }
         }
 
         // 2. Update Track Label & State Memory
@@ -6841,7 +7340,8 @@ let highlightUpdatePending = false;
             brightness: s.brightness, filterEnv: s.filterEnv, attack: s.attack, decay: s.decay,
             sustain: s.sustain, release: s.release, oscMix: s.oscMix, glide: s.glide,
             lfoDelay: s.lfoDelay, lfoFade: s.lfoFade, lfoKeytrack: s.lfoKeytrack,
-            overtones: s.overtones, vibrato: s.vibrato, sweep: s.sweep, tremolo: s.tremolo
+            overtones: s.overtones, vibrato: s.vibrato, sweep: s.sweep, tremolo: s.tremolo,
+            sampleRootKey: s.sampleRootKey
         };
         for (const [id, val] of Object.entries(map)) {
             const el = document.getElementById(id);
@@ -7038,18 +7538,160 @@ let highlightUpdatePending = false;
         });
     });
 
-    document.querySelectorAll('.mute-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            if (e.target.classList.contains('edit-btn') || e.target.classList.contains('solo-btn')) return; // Ignore Edit and Solo buttons!
-            const track = parseInt(e.target.dataset.track);
-            const isLooper = track < 8;
-            const domainObj = isLooper ? looper : arranger;
-            const localIdx = isLooper ? track : track - 8;
+    // =======================================================
+    // UNIFIED MIXER GAIN CONTROLLER (Volume, Mute, Solo, & VCA)
+    // =======================================================
+    function updateMixerGains() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
 
-            domainObj.muted[localIdx] = !domainObj.muted[localIdx];
-            e.target.classList.toggle('muted', domainObj.muted[localIdx]);
+        const looperVcaSlider = document.getElementById('looperVCA');
+        const looperVcaMultiplier = looperVcaSlider ? parseFloat(looperVcaSlider.value) : 1.0;
+
+        const applyGains = (domainObj, gainNodes, trackOffset, vcaMultiplier) => {
+            const isSoloActive = domainObj.soloed.some(s => s);
+            
+            // DYNAMIC LOOP: Count based on the actual array size, not a hardcoded 8!
+            for (let i = 0; i < gainNodes.length; i++) {
+                if (!gainNodes[i]) continue;
+                
+                const slider = document.querySelector(`.track-vol[data-track="${i + trackOffset}"]`);
+                const baseVol = slider ? parseFloat(slider.value) : 1.0;
+                
+                let targetGain = baseVol * vcaMultiplier;
+                if (domainObj.muted[i] || (isSoloActive && !domainObj.soloed[i])) {
+                    targetGain = 0;
+                }
+                
+                gainNodes[i].gain.setTargetAtTime(targetGain, now, 0.015);
+            }
+        };
+
+        applyGains(looper, looperGainNodes, 0, looperVcaMultiplier);
+        applyGains(arranger, linearGainNodes, 8, 1.0);
+    }
+
+    // --- EVENT DELEGATION: Automatically supports dynamically added tracks! ---
+    const mixerOverlay = document.getElementById('mixer-overlay');
+    if (mixerOverlay) {
+        
+        // 1. Unified Slider Tracking
+        mixerOverlay.addEventListener('input', e => {
+            if (e.target.classList.contains('echo-send')) {
+                const trackIdx = parseInt(e.target.getAttribute('data-track'));
+                const nodes = trackIdx < 8 ? looperEchoSends : linearEchoSends;
+                const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
+                if (nodes[localIdx] && audioCtx) nodes[localIdx].gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.015);
+            }
+            else if (e.target.classList.contains('reverb-send')) {
+                const trackIdx = parseInt(e.target.getAttribute('data-track'));
+                const nodes = trackIdx < 8 ? looperReverbSends : linearReverbSends;
+                const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
+                if (nodes[localIdx] && audioCtx) nodes[localIdx].gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.015);
+            }
+            else if (e.target.classList.contains('pan-slider')) {
+                const trackIdx = parseInt(e.target.getAttribute('data-track'));
+                const nodes = trackIdx < 8 ? looperPanners : linearPanners;
+                const localIdx = trackIdx < 8 ? trackIdx : trackIdx - 8;
+                if (nodes[localIdx]) nodes[localIdx].pan.value = parseFloat(e.target.value);
+            }
+            else if (e.target.classList.contains('track-vol')) {
+                updateMixerGains();
+            }
         });
-    });
+
+        // 2. Unified Mute/Solo Tracking
+        mixerOverlay.addEventListener('click', e => {
+            if (e.target.classList.contains('mute-btn')) {
+                const isSolo = e.target.classList.contains('solo-btn');
+                if (!isSolo && e.target.classList.contains('edit-btn')) return; 
+                
+                const track = parseInt(e.target.dataset.track);
+                const isLooper = track < 8;
+                const domainObj = isLooper ? looper : arranger;
+                const localIdx = isLooper ? track : track - 8;
+
+                if (isSolo) {
+                    domainObj.soloed[localIdx] = !domainObj.soloed[localIdx];
+                    e.target.classList.toggle('soloed', domainObj.soloed[localIdx]);
+                } else {
+                    domainObj.muted[localIdx] = !domainObj.muted[localIdx];
+                    e.target.classList.toggle('muted', domainObj.muted[localIdx]);
+                }
+                updateMixerGains();
+            }
+        });
+    }
+
+    // --- UNIFIED TRACK BUTTONS: Selection & Long-Press to Clear ---
+    function bindTrackButtonEvents(btn) {
+        if (btn._isBound) return; // Prevent double-binding on dynamically added buttons
+        btn._isBound = true;
+        
+        let holdTimer = null;
+        const HOLD_DURATION = 2000;
+        let justCleared = false; 
+
+        const startHold = (e) => {
+            justCleared = false;
+            btn.classList.add('clearing'); 
+            
+            holdTimer = setTimeout(() => {
+                justCleared = true; 
+                const track = parseInt(btn.getAttribute('data-track'));
+                const domain = btn.getAttribute('data-domain');
+                const localIdx = domain === 'looper' ? track : track - 8;
+                const domainObj = domain === 'looper' ? looper : arranger;
+
+                domainObj.tracks[localIdx] = [];
+                studio.trackAudioBuffers[track] = null; 
+                if (domain === 'looper') { looper.trackDurations[localIdx] = 0; looper.lastPhases[localIdx] = 0; }
+
+                btn.classList.remove('type-voice', 'type-drum');
+                studio.trackTypes[track] = null;
+                const el = document.getElementById(`inst-label-${track}`);
+                if (el) el.textContent = 'EMPTY';
+
+                if (domain === 'arranger') {
+                    let maxDur = 0;
+                    arranger.tracks.forEach(t => t.forEach(evt => { if (evt.timeOffset + (evt.duration || 0.5) > maxDur) maxDur = evt.timeOffset + (evt.duration || 0.5); }));
+                    arranger.duration = maxDur;
+                    if (maxDur === 0) arranger.pauseTime = 0;
+                }
+                
+                btn.classList.remove('clearing');
+                btn.classList.add('cleared-flash');
+                setTimeout(() => btn.classList.remove('cleared-flash'), 300);
+            }, HOLD_DURATION);
+        };
+
+        const cancelHold = () => { if (holdTimer) clearTimeout(holdTimer); btn.classList.remove('clearing'); };
+
+        btn.addEventListener('mousedown', startHold); btn.addEventListener('mouseup', cancelHold); btn.addEventListener('mouseleave', cancelHold);
+        btn.addEventListener('touchstart', startHold, { passive: true }); btn.addEventListener('touchend', cancelHold); btn.addEventListener('touchcancel', cancelHold);
+
+        btn.addEventListener('click', e => {
+            if (justCleared) return; 
+
+            const track = parseInt(btn.dataset.track);
+            const domain = btn.dataset.domain;
+            studio.lastSelectedDomain = domain;
+
+            if (domain === 'looper') { studio.trackSynthStates[studio.activeLooperTrack] = captureCurrentSynthState(); studio.activeLooperTrack = track; } 
+            else { studio.trackSynthStates[studio.activeArrangerTrack] = captureCurrentSynthState(); studio.activeArrangerTrack = track; }
+
+            document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            if (studio.trackTypes[track] !== 'drum' && studio.trackSynthStates[track]) applySynthStateToUI(studio.trackSynthStates[track]);
+            
+            // --- NEW: Update Piano Roll Label ---
+            updatePianoRollTrackLabel();
+        });
+    }
+
+    // Bind all tracks that exist on startup
+    document.querySelectorAll('.track-btn').forEach(bindTrackButtonEvents);
 
     // =====================================================================
     // MASTER TRANSPORT HEADER LOGIC
@@ -7394,21 +8036,14 @@ let highlightUpdatePending = false;
                 const btn = document.querySelector(`.track-btn[data-track="${targetTrack}"]`);
                 if (btn) btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
 
-                const eSlider = document.querySelector(`.echo-send[data-track="${targetTrack}"]`);
-                const rSlider = document.querySelector(`.reverb-send[data-track="${targetTrack}"]`);
-                const pSlider = document.querySelector(`.pan-slider[data-track="${targetTrack}"]`);
-                const eNodes = isLooperDomain ? looperEchoSends : linearEchoSends;
-                const rNodes = isLooperDomain ? looperReverbSends : linearReverbSends;
                 const pNodes = isLooperDomain ? looperPanners : linearPanners;
-                
-                // Smart Inheritance: Drums get the Studio Room & Center Pan. Synths get the active UI state.
-                const inheritedEcho = type === 'drum' ? 0.1 : currentEcho;
-                const inheritedReverb = type === 'drum' ? 0.3 : currentReverb;
-                const inheritedPan = type === 'drum' ? 0 : (typeof currentPan !== 'undefined' ? currentPan : 0);
 
-                if (eSlider && eNodes[localIdx]) { eSlider.value = inheritedEcho; eNodes[localIdx].gain.value = inheritedEcho; }
-                if (rSlider && rNodes[localIdx]) { rSlider.value = inheritedReverb; rNodes[localIdx].gain.value = inheritedReverb; }
-                if (pSlider && pNodes[localIdx]) { pSlider.value = inheritedPan; pNodes[localIdx].pan.value = inheritedPan; }
+                // --- DYNAMIC ROUTING FIX ---
+                // Ensure the track's audio cable is instantly plugged into the correct Submix Bus
+                if (typeof audioCtx !== 'undefined' && pNodes[localIdx]) {
+                    pNodes[localIdx].disconnect();
+                    pNodes[localIdx].connect(type === 'drum' ? drumGain : synthGain);
+                }
             }
 
             if (type === 'drum') {
@@ -7420,28 +8055,36 @@ let highlightUpdatePending = false;
             const labelEl = document.getElementById(`inst-label-${targetTrack}`);
             if (type !== 'drum') {
                 synthState = captureCurrentSynthState();
-                
+                    
                 // Immediately stamp the global track memory so it doesn't stay as the default Piano!
                 studio.trackSynthStates[targetTrack] = synthState; 
-                
+                    
                 const instSelect = document.getElementById('instrumentPreset');
-                if (labelEl && instSelect) labelEl.textContent = instSelect.options[instSelect.selectedIndex].text;
+                // Added a safety check to ensure selectedIndex exists!
+                if (labelEl && instSelect && instSelect.selectedIndex >= 0) {
+                    labelEl.textContent = instSelect.options[instSelect.selectedIndex].text;
+                }
             } else if (labelEl) {
                 labelEl.textContent = 'DRUMS';
             }
 
             let createdEvts = [];
 
-            // THE FIX: Explode chords into individual single-note events!
-            if (type === 'play' && freqs.length > 0) {
+            // Explode chords into individual single-note events!
+            if (type === 'play' && freqs && freqs.length > 0) {
                 freqs.forEach((f, idx) => {
                     const singleSt = originalStArray && originalStArray[idx] !== undefined ? [originalStArray[idx]] : null;
-                    const evt = { id: Math.random(), freqs: [f], timeOffset: offsetTime, type, stArray: singleSt, drumType, velocity, duration: 0.5, synthState };
+                    
+                    // THE FIX: Add 'recordedAt' timestamp to prevent Double Monitoring
+                    const evt = { id: Math.random(), freqs: [f], timeOffset: offsetTime, type, stArray: singleSt, drumType, velocity, duration: 0.5, synthState, recordedAt: audioCtx.currentTime };
                     domainObj.tracks[localIdx].push(evt);
                     createdEvts.push(evt);
                 });
             } else {
-                const evt = { id: Math.random(), freqs, timeOffset: offsetTime, type, stArray: originalStArray, drumType, velocity, duration: 0.5, synthState };
+                // Handles Drums (where freqs is null) or single-note melodies
+                
+                // THE FIX: Add 'recordedAt' timestamp to prevent Double Monitoring
+                const evt = { id: Math.random(), freqs, timeOffset: offsetTime, type, stArray: originalStArray, drumType, velocity, duration: 0.5, synthState, recordedAt: audioCtx.currentTime };
                 domainObj.tracks[localIdx].push(evt);
                 createdEvts.push(evt);
             }
@@ -7457,8 +8100,8 @@ let highlightUpdatePending = false;
             const loopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
             let offset = (timeToUse - looper.startTime) % loopSec;
             if (offset < 0) offset += loopSec;
-            if (looperQuantize) {
-                const stepDuration = (60 / currentArpBPM) * (4 / looperQuantizeRes);
+            if (typeof looperQuantize !== 'undefined' && looperQuantize) {
+                const stepDuration = (60 / currentArpBPM) * (4 / (typeof looperQuantizeRes !== 'undefined' ? looperQuantizeRes : 16));
                 offset = Math.round(offset / stepDuration) * stepDuration;
                 if (offset >= loopSec) offset = 0;
             }
@@ -7473,8 +8116,8 @@ let highlightUpdatePending = false;
 
         if (arranger.isRecording) {
             let offset = timeToUse - arranger.startTime;
-            if (looperQuantize) {
-                const stepDuration = (60 / currentArpBPM) * (4 / looperQuantizeRes);
+            if (typeof looperQuantize !== 'undefined' && looperQuantize) {
+                const stepDuration = (60 / currentArpBPM) * (4 / (typeof looperQuantizeRes !== 'undefined' ? looperQuantizeRes : 16));
                 offset = Math.round(offset / stepDuration) * stepDuration;
             }
             const aEvts = writeEvent(studio.activeArrangerTrack, offset, arranger, false);
@@ -7564,10 +8207,7 @@ let highlightUpdatePending = false;
             }
 
             // Loop through all 8 tracks independently
-            const isLooperSoloActive = looper.soloed.some(s => s);
             looper.tracks.forEach((track, idx) => {
-                if (looper.muted[idx]) return; // MUTE ALWAYS WINS
-                if (isLooperSoloActive && !looper.soloed[idx]) return; // SOLO FILTER
                 if (track.length === 0) return;
 
                 // --- REGION GATE ---
@@ -7590,6 +8230,11 @@ let highlightUpdatePending = false;
 
                 track.forEach(evt => {
                     if (evt.timeOffset > looper.lastPhases[idx] && evt.timeOffset <= phase) {
+                        
+                        // --- THE DOUBLE MONITORING FIX (LOOPER) ---
+                        // Ignore events that were recorded a fraction of a second ago!
+                        if (evt.recordedAt && Math.abs(audioCtx.currentTime - evt.recordedAt) < 0.15) return;
+
                         if (evt.type === 'play') {
                             let dummy = { _st: evt.stArray || [], isLooper: true };
                             const isActiveTrack = studio.lastSelectedDomain === 'looper' && studio.activeLooperTrack === idx;
@@ -7655,7 +8300,7 @@ let highlightUpdatePending = false;
                 arranger.isPlaying = false;
                 looper.isPlaying = false;
                 
-                // 2. Lock the playhead and phase to the absolute end
+                // 2. Lock the playhead and phase to the absolute end1
                 arranger.pauseTime = arranger.duration;
                 phase = arranger.duration;
                 
@@ -7685,12 +8330,14 @@ let highlightUpdatePending = false;
             }
 
             if (arranger.isPlaying && phase > lastArrangerPhase) {
-                const isArrangerSoloActive = arranger.soloed.some(s => s);
                 arranger.tracks.forEach((track, localIdx) => {
-                    if (arranger.muted[localIdx]) return; // MUTE ALWAYS WINS
-                    if (isArrangerSoloActive && !arranger.soloed[localIdx]) return; // SOLO FILTER
                     track.forEach(evt => {
                         if (evt.timeOffset > lastArrangerPhase && evt.timeOffset <= phase) {
+                            
+                            // --- THE DOUBLE MONITORING FIX (ARRANGER) ---
+                            // Ignore events that were recorded a fraction of a second ago!
+                            if (evt.recordedAt && Math.abs(audioCtx.currentTime - evt.recordedAt) < 0.15) return;
+
                             if (evt.type === 'play') {
                                 let dummy = { _st: evt.stArray || [], isLooper: true };
                                 const isActiveTrack = studio.lastSelectedDomain === 'arranger' && studio.activeArrangerTrack === (localIdx + 8);
@@ -7827,7 +8474,7 @@ let highlightUpdatePending = false;
             const format = exportFormatSel.value;
             if (isCustomWavRecording && recorderWorkletNode) {
                 recorderWorkletNode.disconnect();
-                compressor.disconnect(recorderWorkletNode);
+                safetyClipper.disconnect(recorderWorkletNode);
                 if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
                     try { importedAudioMasterGainNode.disconnect(recorderWorkletNode); } catch (e) { }
                 }
@@ -7863,7 +8510,7 @@ let highlightUpdatePending = false;
             await workletPromise;
 
             recorderWorkletNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
-            compressor.connect(recorderWorkletNode);
+            safetyClipper.connect(recorderWorkletNode);
 
             if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
                 try { importedAudioMasterGainNode.connect(recorderWorkletNode); } catch (e) { }
@@ -8119,33 +8766,136 @@ let highlightUpdatePending = false;
         const previousMasterVol = masterGain.gain.value;
         masterGain.gain.value = 0;
 
-        // 4. Wire up 16 independent microphones to the 16 tracks
+        // --- PACK RAW ASSETS & SAMPLER INSTRUMENTS ---
+        // Ensures 100% non-destructive recovery by saving the original, un-rendered audio
+        const rawAssetsFolder = zip.folder("Raw_Assets");
+        const savedAssets = new Set();
+                    
+        const saveAudioBufferToZip = (name, buffer) => {
+            if (name && buffer && !savedAssets.has(name)) {
+                savedAssets.add(name);
+                const chanData = [];
+                for (let c = 0; c < buffer.numberOfChannels; c++) chanData.push(buffer.getChannelData(c));
+                if (chanData.length === 1) chanData.push(chanData[0]); // Duplicate mono to stereo safely
+                const rawWav = exportWAV(chanData, buffer.sampleRate);
+                rawAssetsFolder.file(name, rawWav);
+            }
+        };
+
+        // 1. Save timeline clips
+        const saveOriginalAssets = (domainObj) => {
+            domainObj.tracks.forEach(track => {
+                track.forEach(evt => {
+                    if (evt.type === 'stem') saveAudioBufferToZip(evt.name, evt.buffer);
+                });
+            });
+        };
+        saveOriginalAssets(looper);
+        saveOriginalAssets(arranger);
+
+        // 2. Save custom sampler instruments loaded into the synth engine
+        if (typeof sampleDatabase !== 'undefined') {
+            for (const [sampleName, buffer] of Object.entries(sampleDatabase)) {
+                saveAudioBufferToZip(sampleName, buffer);
+            }
+        }
+
+        // 4. Wire up independent microphones to ALL dynamic tracks (Now with Aux FX included!)
         const isLooperSoloExp = looper.soloed.some(s => s);
         const isArrangerSoloExp = arranger.soloed.some(s => s);
+                    
+        // --- THE FIX: Calculate the true dynamic track limit! ---
+        const totalBouncingTracks = 8 + currentArrangerTrackCount; 
 
-        for (let i = 0; i < 16; i++) {
+        for (let i = 0; i < totalBouncingTracks; i++) {
             const isLooper = i < 8;
             const localIdx = isLooper ? i : i - 8;
-            const domainObj = isLooper ? looper : arranger;
-            const hasSolo = isLooper ? isLooperSoloExp : isArrangerSoloExp;
+            const trackType = studio.trackTypes[i];
+                        
+            if (trackType === null) continue; // Skip empty tracks
 
-            if (domainObj.tracks[localIdx].length === 0) { stemWorklets.push(null); continue; }
-            if (domainObj.muted[localIdx]) { stemWorklets.push(null); continue; } // MUTE ALWAYS WINS
-            if (hasSolo && !domainObj.soloed[localIdx]) { stemWorklets.push(null); continue; } // SOLO FILTER
+            // Handle Solo/Mute logic during bounce
+            const isSoloed = isLooper ? looper.soloed[localIdx] : arranger.soloed[localIdx];
+            const isMuted = isLooper ? looper.muted[localIdx] : arranger.muted[localIdx];
+            const isSoloActive = isLooper ? isLooperSoloExp : isArrangerSoloExp;
+            if (isMuted || (isSoloActive && !isSoloed)) continue;
 
-            let worklet = new AudioWorkletNode(audioCtx, 'recorder-processor');
-            const panner = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
+            // Identify the correct hardware nodes for this track
+            const pannerNode = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
+            const hwEcho = isLooper ? looperEchoSends[localIdx] : linearEchoSends[localIdx];
+            const hwReverb = isLooper ? looperReverbSends[localIdx] : linearReverbSends[localIdx];
 
-            // Tap the audio PRE-MASTER (Dry stems with their track volume/pan applied, but no global EQ/Limiter)
-            if (panner) panner.connect(worklet);
+            if (pannerNode) {
+                // Calculate sample length based on duration and global sample rate
+                const length = Math.max(1, audioCtx.sampleRate * exportSec);
+                            
+                // Initialize an Offline Render Context specifically for this track
+                const offlineCtx = new OfflineAudioContext(2, length, audioCtx.sampleRate);
+                            
+                // 1. Create a receiver node in the offline context
+                const offlineReceiver = offlineCtx.createGain();
+                offlineReceiver.gain.value = 1.0;
 
-            worklet.connect(dummySilencer); // Pull audio through the graph
+                // 2. Re-create the Aux FX Chain virtually inside the offline context
+                const offlineEcho = offlineCtx.createGain();
+                offlineEcho.gain.value = hwEcho ? hwEcho.gain.value : 0;
+                            
+                const offlineDelay = offlineCtx.createDelay(1.0);
+                const currentBPM = currentArpBPM || 120;
+                offlineDelay.delayTime.value = (60 / currentBPM) * 0.75; // Dotted 8th note
+                            
+                const offlineReverb = offlineCtx.createGain();
+                offlineReverb.gain.value = hwReverb ? hwReverb.gain.value : 0;
+                            
+                // If mobile convolver logic is active, use a delay line, else use real impulse response
+                let offlineConvolver;
+                if (typeof convolver !== 'undefined' && convolver && convolver.buffer) {
+                    offlineConvolver = offlineCtx.createConvolver();
+                    offlineConvolver.buffer = convolver.buffer;
+                } else {
+                    offlineConvolver = offlineCtx.createDelay(0.1);
+                    offlineConvolver.delayTime.value = 0.04;
+                }
 
-            worklet.port.onmessage = (e) => {
-                stemBuffers[i][0].push(e.data.left);
-                stemBuffers[i][1].push(e.data.right);
-            };
-            stemWorklets.push(worklet);
+                // 3. Connect the Virtual Chain
+                offlineReceiver.connect(offlineCtx.destination); // Dry Signal
+                            
+                offlineReceiver.connect(offlineEcho);
+                offlineEcho.connect(offlineDelay);
+                offlineDelay.connect(offlineCtx.destination); // Echo Return
+                            
+                offlineReceiver.connect(offlineReverb);
+                offlineReverb.connect(offlineConvolver);
+                offlineConvolver.connect(offlineCtx.destination); // Reverb Return
+
+                // 4. Tap the live physical graph into the virtual receiver
+                const mediaStreamDest = audioCtx.createMediaStreamDestination();
+                pannerNode.connect(mediaStreamDest);
+                            
+                // 5. Send the live audio feed into the offline context for recording!
+                const liveSource = offlineCtx.createMediaStreamSource(mediaStreamDest.stream);
+                liveSource.connect(offlineReceiver);
+                            
+                // Push the promise into the array so we can `await` all 16 rendering simultaneously
+                stemWorklets.push(
+                    offlineCtx.startRendering().then(renderedBuffer => {
+                        // Disconnect the live tap when finished
+                        pannerNode.disconnect(mediaStreamDest);
+                                    
+                        // Convert the Float32 AudioBuffer to a physical .WAV file Blob
+                        const wavBlob = exportWAV([renderedBuffer.getChannelData(0), renderedBuffer.getChannelData(1)], audioCtx.sampleRate);
+                                    
+                        // Generate the clean file name for the ZIP archive
+                        const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
+                        const instName = document.getElementById(`inst-label-${i}`)?.textContent || 'Track';
+                        const cleanName = instName.replace(/[^a-zA-Z0-9]/g, '_');
+                        const typeLabel = trackType === 'drum' ? 'Drums' : 'Synth';
+                        const fileName = `Track_${(i + 1).toString().padStart(2, '0')}_${prefix}_${typeLabel}_${cleanName}.wav`;
+                                    
+                        zip.folder("Audio").file(fileName, wavBlob);
+                    })
+                );
+            }
         }
 
         // 5. Reset both engines to exactly 0, and hit play!
@@ -8234,6 +8984,13 @@ let highlightUpdatePending = false;
                 // 3. Hybrid Session Importer (Embedded State)
                 const sessionData = {
                     bpm: currentArpBPM,
+                    currentArrangerTrackCount: currentArrangerTrackCount, // Save dynamic track limits!
+                    mixerState: {
+                        volumes: Array.from(document.querySelectorAll('.track-vol')).map(el => parseFloat(el.value)),
+                        pans: Array.from(document.querySelectorAll('.pan-slider')).map(el => parseFloat(el.value)),
+                        echoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => parseFloat(el.value)),
+                        reverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => parseFloat(el.value))
+                    },
                     studioState: studio,
                     looperState: looper,
                     arrangerState: arranger,
@@ -8424,134 +9181,183 @@ let highlightUpdatePending = false;
         }, timeToPlay * 1000);
     }
 
-    function playDrum(type, time, velocity = 1, destination = null) {
-        if (midiOutMode === 'midi') return;
+    function playDrum(type, time, velocity = 1, destination = null) { 
+        if (midiOutMode === 'midi') return; 
 
-        // THE FIX: Normalize MIDI velocity (1-127) to Web Audio Gain (0.0-1.0).
-        // The fallback protects old data if a note was saved as a decimal.
-        const normVel = velocity > 1 ? velocity / 127.0 : Math.max(0.01, velocity);
-
-        // Hoist variables so the garbage collector can find them later
-        let osc = audioCtx.createOscillator();
-        let osc2 = null;
-        let noise = null;
-        let filter = null;
-        const mainGain = audioCtx.createGain();
-
-        const targetDest = destination || (typeof drumGain !== 'undefined' ? drumGain : compressor);
-        mainGain.connect(targetDest);
-
-        if (type === 'click' || type === 'snare') {
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(type === 'click' ? (normVel > 0.8 ? 1200 : 800) : 300, time);
-            osc.frequency.exponentialRampToValueAtTime(100, time + 0.05);
-            osc.connect(mainGain);
-            mainGain.gain.setValueAtTime(normVel, time); // Replaced velocity with normVel
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + (type === 'snare' ? 0.1 : 0.05));
-            osc.start(time); osc.stop(time + 0.1);
-        } else if (type === 'kick') {
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(150, time);
-            osc.frequency.exponentialRampToValueAtTime(0.001, time + 0.5);
-            osc.connect(mainGain);
-            mainGain.gain.setValueAtTime(normVel * 1.5, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
-            osc.start(time); osc.stop(time + 0.5);
-        } else if (type === 'hihat' || type === 'cymbal') {
-            const bufferSize = audioCtx.sampleRate * (type === 'cymbal' ? 1.0 : 0.1);
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-            noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-            filter = audioCtx.createBiquadFilter();
-            filter.type = 'highpass';
-            filter.frequency.value = type === 'cymbal' ? 5000 : 7000;
-
-            noise.connect(filter); filter.connect(mainGain);
-
-            mainGain.gain.setValueAtTime(normVel * 0.8, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + (type === 'cymbal' ? 1.0 : 0.1));
-            noise.start(time);
-        } else if (type.startsWith('tom')) {
-            let freq = 150;
-            if (type === 'tom1') freq = 200;
-            if (type === 'tom2') freq = 130;
-            if (type === 'tom3') freq = 85;
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, time);
-            osc.frequency.exponentialRampToValueAtTime(freq * 0.3, time + 0.3);
-            osc.connect(mainGain);
-            mainGain.gain.setValueAtTime(normVel * 1.5, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
-            osc.start(time); osc.stop(time + 0.3);
-        } else if (type === 'clap') {
-            const bufferSize = audioCtx.sampleRate * 0.2;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-            noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-            filter = audioCtx.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 1200; filter.Q.value = 0.8;
-
-            noise.connect(filter); filter.connect(mainGain);
-
-            mainGain.gain.setValueAtTime(normVel * 1.5, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
-            noise.start(time);
-        } else if (type === 'cowbell') {
-            osc2 = audioCtx.createOscillator();
-            osc.type = 'square'; osc2.type = 'square';
-            osc.frequency.setValueAtTime(800, time);
-            osc2.frequency.setValueAtTime(540, time);
-            osc.connect(mainGain);
-            osc2.connect(mainGain);
-            mainGain.gain.setValueAtTime(normVel * 0.6, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
-            osc.start(time); osc.stop(time + 0.2);
-            osc2.start(time); osc2.stop(time + 0.2);
-        } else if (type === 'ride') {
-            const bufferSize = audioCtx.sampleRate * 1.5;
-            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-            noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-            filter = audioCtx.createBiquadFilter();
-            filter.type = 'bandpass';
-            filter.frequency.value = 4000; filter.Q.value = 2;
-
-            noise.connect(filter); filter.connect(mainGain);
-
-            mainGain.gain.setValueAtTime(normVel * 0.5, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 1.5);
-            noise.start(time);
-        } else if (type === 'rimshot') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(800, time);
-            osc.frequency.exponentialRampToValueAtTime(200, time + 0.05);
-            osc.connect(mainGain);
-            mainGain.gain.setValueAtTime(normVel * 1.2, time);
-            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-            osc.start(time); osc.stop(time + 0.05);
+        // =======================================================
+        // --- AUTO-START RECORDING ON MANUAL HIT ---
+        // =======================================================
+        if (typeof looper !== 'undefined' && typeof arranger !== 'undefined' && typeof audioCtx !== 'undefined') {
+            if (looper.isArmed || arranger.isArmed) {
+                const now = audioCtx ? audioCtx.currentTime : 0;
+                let stateChanged = false;
+                if (looper.isArmed) { looper.isArmed = false; looper.isRecording = true; looper.isPlaying = true; looper.startTime = now; stateChanged = true; }
+                if (arranger.isArmed) { arranger.isArmed = false; arranger.isRecording = true; arranger.isPlaying = true; arranger.startTime = now; stateChanged = true; }
+                if (stateChanged && typeof updateStudioUI === 'function') updateStudioUI();
+            }
         }
 
-        // Auto-Destruct Drum Nodes to save Mobile CPU
-        const tailMs = (type === 'cymbal' || type === 'ride') ? 2000 : 800;
-        setTimeout(() => {
-            try {
-                if (osc) osc.disconnect();
-                if (osc2) osc2.disconnect();
-                if (noise) noise.disconnect();
-                if (filter) filter.disconnect();
-                if (mainGain) mainGain.disconnect();
-            } catch (e) { }
-        }, tailMs);
+        // =======================================================
+        // --- SMART ALIAS INTERCEPTOR (GENERAL MIDI FIX) ---
+        // =======================================================
+        // Ensure that imported MIDI files requesting obscure GM drums 
+        // fallback to one of our 12 core synthesized equivalents.
+        const coreDrums = ['kick', 'snare', 'hihat', 'clap', 'cymbal', 'tom1', 'tom2', 'tom3', 'cowbell', 'ride', 'rimshot', 'click'];
+        
+        let activeType = type;
+        if (!coreDrums.includes(activeType)) {
+            // It might be a raw MIDI note number passed as a string/int
+            const midiNote = parseInt(activeType);
+            if (!isNaN(midiNote) && typeof gmDrumMap !== 'undefined' && gmDrumMap[midiNote]) {
+                activeType = gmDrumMap[midiNote].alias;
+            } else {
+                activeType = 'click'; // Ultimate fallback for unknown data
+            }
+        }
+
+        // Normalize MIDI velocity (1-127) to Web Audio Gain (0.0-1.0). 
+        // The fallback protects old data if a note was saved as a decimal. 
+        const normVel = velocity > 1 ? velocity / 127.0 : Math.max(0.01, velocity); 
+
+        // Hoist variables so the garbage collector can find them later 
+        let osc = audioCtx.createOscillator(); 
+        let osc2 = null; 
+        let noise = null; 
+        let filter = null; 
+        const mainGain = audioCtx.createGain(); 
+
+        // ======================================================= 
+        // --- LIVE MONITORING FIX FOR DRUMS --- 
+        // ======================================================= 
+        let activeDest = destination; 
+             
+        // Dynamically route live pad hits through the active DAW track 
+        if (!activeDest && typeof studio !== 'undefined') { 
+            const activeDomain = studio.lastSelectedDomain; 
+            const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack; 
+                 
+            // Only route to the track if it is ACTUALLY a drum track! 
+            if (studio.trackTypes[activeIdx] === 'drum') { 
+                activeDest = activeDomain === 'looper' ? looperGainNodes[activeIdx] : linearGainNodes[activeIdx - 8]; 
+            } 
+        } 
+
+        // Fallback: If no drum track is selected, route to the global Drum Bus 
+        const targetDest = activeDest || (typeof drumGain !== 'undefined' ? drumGain : compressor); 
+        mainGain.connect(targetDest); 
+
+        // --- SYNTHESIS BLOCK (Now uses activeType instead of type) ---
+        if (activeType === 'click' || activeType === 'snare') { 
+            osc.type = 'square'; 
+            osc.frequency.setValueAtTime(activeType === 'click' ? (normVel > 0.8 ? 1200 : 800) : 300, time); 
+            osc.frequency.exponentialRampToValueAtTime(100, time + 0.05); 
+            osc.connect(mainGain); 
+            mainGain.gain.setValueAtTime(normVel, time); // Replaced velocity with normVel 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + (activeType === 'snare' ? 0.1 : 0.05)); 
+            osc.start(time); osc.stop(time + 0.1); 
+        } else if (activeType === 'kick') { 
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(150, time); 
+            osc.frequency.exponentialRampToValueAtTime(0.001, time + 0.5); 
+            osc.connect(mainGain); 
+            mainGain.gain.setValueAtTime(normVel * 1.5, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.5); 
+            osc.start(time); osc.stop(time + 0.5); 
+        } else if (activeType === 'hihat' || activeType === 'cymbal') { 
+            const bufferSize = audioCtx.sampleRate * (activeType === 'cymbal' ? 1.0 : 0.1); 
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); 
+            const data = buffer.getChannelData(0); 
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; 
+
+            noise = audioCtx.createBufferSource(); 
+            noise.buffer = buffer; 
+            filter = audioCtx.createBiquadFilter(); 
+            filter.type = 'highpass'; 
+            filter.frequency.value = activeType === 'cymbal' ? 5000 : 7000; 
+
+            noise.connect(filter); filter.connect(mainGain); 
+
+            mainGain.gain.setValueAtTime(normVel * 0.8, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + (activeType === 'cymbal' ? 1.0 : 0.1)); 
+            noise.start(time); 
+        } else if (activeType.startsWith('tom')) { 
+            let freq = 150; 
+            if (activeType === 'tom1') freq = 200; 
+            if (activeType === 'tom2') freq = 130; 
+            if (activeType === 'tom3') freq = 85; 
+            osc.type = 'sine'; 
+            osc.frequency.setValueAtTime(freq, time); 
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.3, time + 0.3); 
+            osc.connect(mainGain); 
+            mainGain.gain.setValueAtTime(normVel * 1.5, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.3); 
+            osc.start(time); osc.stop(time + 0.3); 
+        } else if (activeType === 'clap') { 
+            const bufferSize = audioCtx.sampleRate * 0.2; 
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); 
+            const data = buffer.getChannelData(0); 
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; 
+
+            noise = audioCtx.createBufferSource(); 
+            noise.buffer = buffer; 
+            filter = audioCtx.createBiquadFilter(); 
+            filter.type = 'bandpass'; 
+            filter.frequency.value = 1200; filter.Q.value = 0.8; 
+
+            noise.connect(filter); filter.connect(mainGain); 
+
+            mainGain.gain.setValueAtTime(normVel * 1.5, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2); 
+            noise.start(time); 
+        } else if (activeType === 'cowbell') { 
+            osc2 = audioCtx.createOscillator(); 
+            osc.type = 'square'; osc2.type = 'square'; 
+            osc.frequency.setValueAtTime(800, time); 
+            osc2.frequency.setValueAtTime(540, time); 
+            osc.connect(mainGain); 
+            osc2.connect(mainGain); 
+            mainGain.gain.setValueAtTime(normVel * 0.6, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2); 
+            osc.start(time); osc.stop(time + 0.2); 
+            osc2.start(time); osc2.stop(time + 0.2); 
+        } else if (activeType === 'ride') { 
+            const bufferSize = audioCtx.sampleRate * 1.5; 
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); 
+            const data = buffer.getChannelData(0); 
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; 
+
+            noise = audioCtx.createBufferSource(); 
+            noise.buffer = buffer; 
+            filter = audioCtx.createBiquadFilter(); 
+            filter.type = 'bandpass'; 
+            filter.frequency.value = 4000; filter.Q.value = 2; 
+
+            noise.connect(filter); filter.connect(mainGain); 
+
+            mainGain.gain.setValueAtTime(normVel * 0.5, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 1.5); 
+            noise.start(time); 
+        } else if (activeType === 'rimshot') { 
+            osc.type = 'triangle'; 
+            osc.frequency.setValueAtTime(800, time); 
+            osc.frequency.exponentialRampToValueAtTime(200, time + 0.05); 
+            osc.connect(mainGain); 
+            mainGain.gain.setValueAtTime(normVel * 1.2, time); 
+            mainGain.gain.exponentialRampToValueAtTime(0.001, time + 0.05); 
+            osc.start(time); osc.stop(time + 0.05); 
+        } 
+
+        // Auto-Destruct Drum Nodes to save Mobile CPU 
+        const tailMs = (activeType === 'cymbal' || activeType === 'ride') ? 2000 : 800; 
+        setTimeout(() => { 
+            try { 
+                if (osc) osc.disconnect(); 
+                if (osc2) osc2.disconnect(); 
+                if (noise) noise.disconnect(); 
+                if (filter) filter.disconnect(); 
+                if (mainGain) mainGain.disconnect(); 
+            } catch (e) { } 
+        }, tailMs); 
     }
 
     function triggerSequencerDrum(type, playTime, velocity = 1) {
@@ -9666,7 +10472,7 @@ function updateScaleOverlay() {
         looper.tracks.forEach(t => totalEvents += t.length);
         arranger.tracks.forEach(t => totalEvents += t.length);
         const hasAudioData = studio.trackAudioBuffers.some(b => b !== null);
-        
+    
         const isProjectEmpty = (totalEvents === 0 && !hasAudioData);
         let mode = 'add'; // Default to Add so we never ruin the user's UI selection!
 
@@ -9692,7 +10498,7 @@ function updateScaleOverlay() {
                 btn.classList.remove('type-voice', 'type-drum', 'active');
                 btn.style.borderBottom = ''; 
             });
-            
+        
             // Force the sequencer back to A1 ONLY if we are starting a completely fresh project
             studio.activeArrangerTrack = 8;
             studio.activeLooperTrack = 0;
@@ -9706,13 +10512,13 @@ function updateScaleOverlay() {
             if (!isNaN(bpm) && bpm >= 40 && bpm <= 240) {
                 currentArpBPM = bpm;
                 if (typeof anchorBPM !== 'undefined') anchorBPM = bpm; // Fixes Time-Stretch!
-                
+            
                 const mainBpmSlider = document.getElementById('arpBpm');
                 const drumBpmSlider = document.getElementById('drumBpmSlider');
                 const mainBpmLbl = document.getElementById('lblArpBpm');
                 const drumBpmLbl = document.getElementById('drumBpmValue');
                 const globalBpmDisp = document.getElementById('global-bpm-display');
-                
+            
                 if (mainBpmSlider) mainBpmSlider.value = bpm;
                 if (drumBpmSlider) drumBpmSlider.value = bpm;
                 if (mainBpmLbl) mainBpmLbl.textContent = `Arp/Metron: ${bpm} BPM`;
@@ -9724,29 +10530,39 @@ function updateScaleOverlay() {
             }
         };
 
-        // --- UPGRADED HELPER: Data-Driven Empty Track Hunter (Preserved for ZIP Extraction) ---
-        const getNextFreeTrack = (preferLooper = false) => {
+        // --- UPGRADED HELPER: Strict Domain Empty Track Hunter ---
+        const getNextFreeTrack = (preferLooper = false, startIdxOverride = -1, strictDomain = false) => {
             const activeDomain = studio.lastSelectedDomain;
-            const activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
-            
+            let startIdx = startIdxOverride !== -1 ? startIdxOverride : (activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack);
+            const arrangerMax = 8 + (typeof currentArrangerTrackCount !== 'undefined' ? currentArrangerTrackCount : 8);
+
             const isTrackEmpty = (i) => {
                 const domainObj = i < 8 ? looper : arranger;
                 const localIdx = i < 8 ? i : i - 8;
+                if (!domainObj.tracks[localIdx]) return false; // Failsafe
                 return domainObj.tracks[localIdx].length === 0 && studio.trackAudioBuffers[i] === null;
             };
 
-            if (isTrackEmpty(activeIdx)) return activeIdx;
-
-            const startIdx = preferLooper ? 0 : 8;
-            const endIdx = preferLooper ? 8 : 16;
-            for (let i = startIdx; i < endIdx; i++) {
+            // 1. Try starting from the currently selected track downwards
+            const primaryEnd = preferLooper ? 8 : arrangerMax;
+            for (let i = startIdx; i < primaryEnd; i++) {
                 if (isTrackEmpty(i)) return i;
             }
-            
-            const overflowStart = preferLooper ? 8 : 0;
-            const overflowEnd = preferLooper ? 16 : 8;
-            for (let i = overflowStart; i < overflowEnd; i++) {
+        
+            // 2. Wrap around and check from the beginning of that domain
+            const primaryStart = preferLooper ? 0 : 8;
+            for (let i = primaryStart; i < startIdx; i++) {
                 if (isTrackEmpty(i)) return i;
+            }
+
+            // 3. If standard search fails, check the OTHER domain as a last resort
+            // THE FIX: Bypassed during imports so it correctly returns -1 to trigger track spawning!
+            if (!strictDomain) {
+                const overflowStart = preferLooper ? 8 : 0;
+                const overflowEnd = preferLooper ? arrangerMax : 8;
+                for (let i = overflowStart; i < overflowEnd; i++) {
+                    if (isTrackEmpty(i)) return i;
+                }
             }
             return -1; 
         };
@@ -9765,104 +10581,205 @@ function updateScaleOverlay() {
                     let stretchRatio = 1.0;
 
                     if (sessionFile && mode === 'replace') {
-                        showToast("Native Session found! Restoring non-destructive MIDI...");
+                        showToast("Native Session found! Restoring studio state...");
                         const sessionText = await sessionFile.async("string");
                         const state = JSON.parse(sessionText);
 
                         applyImportedBPM(state.bpm);
 
+                        // 1. REBUILD DYNAMIC TRACKS FIRST
+                        // If the saved project had 24 tracks, we need to click the +8 button until we have 24!
+                        if (state.currentArrangerTrackCount && state.currentArrangerTrackCount > 8) {
+                            const banksNeeded = (state.currentArrangerTrackCount - 8) / 8;
+                            const addBankBtn = document.getElementById('btnAddArrangerBank');
+                            if (addBankBtn) {
+                                for (let b = 0; b < banksNeeded; b++) addBankBtn.click();
+                            }
+                        }
+
+                        // 2. RESTORE DATA ARRAYS
                         Object.assign(looper, state.looperState);
                         Object.assign(arranger, state.arrangerState);
                         Object.assign(studio, state.studioState);
                         arranger.duration = state.exportDuration || arranger.duration;
 
-                        for (let i = 0; i < 16; i++) {
-                            const type = studio.trackTypes[i];
-                            if (type !== null) {
-                                const btn = document.querySelector(`.track-btn[data-track="${i}"]`);
-                                if (btn) btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
+                        // 3. RE-LINK BINARY AUDIO BUFFERS (.WAVs)
+                        // JSON destroys audio buffers. We must decode the WAVs from the zip and inject them back into the events!
+                        for (const filename of Object.keys(zip.files)) {
+                            if (filename.endsWith('.wav')) {
+                                const fileData = await zip.files[filename].async("arraybuffer");
+                                const audioBuffer = await audioCtx.decodeAudioData(fileData);
+                                const cleanName = filename.split('/').pop();
 
-                                const labelEl = document.getElementById(`inst-label-${i}`);
-                                if (labelEl && studio.trackSynthStates[i]) {
-                                    labelEl.textContent = type === 'drum' ? 'DRUMS' : (studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
-                                }
+                                // Search both Looper and Arranger tracks for the missing buffer
+                                const linkAudioToEvent = (domainObj, globalOffset) => {
+                                    domainObj.tracks.forEach((track, localIdx) => {
+                                        track.forEach(evt => {
+                                            if (evt.type === 'stem' && evt.name === cleanName) {
+                                                evt.buffer = audioBuffer;
+                                                // Restore the legacy UI reference
+                                                studio.trackAudioBuffers[localIdx + globalOffset] = audioBuffer; 
+                                            }
+                                        });
+                                    });
+                                };
+                                linkAudioToEvent(looper, 0);
+                                linkAudioToEvent(arranger, 8);
                             }
-                            const isLooper = i < 8;
-                            const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
-                            if (muteBtn) muteBtn.classList.toggle('muted', isLooper ? looper.muted[i] : arranger.muted[i - 8]);
                         }
+
+                        // 4. RESTORE TRACK UI, LABELS, & MIXER FADERS
+                        const totalTracks = 8 + currentArrangerTrackCount;
+                        for (let i = 0; i < totalTracks; i++) {
+                            const type = studio.trackTypes[i];
+                            const btn = document.querySelector(`.track-btn[data-track="${i}"]`);
+                            const labelEl = document.getElementById(`inst-label-${i}`);
+                            const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
+                            const isLooper = i < 8;
+
+                            // Type Colors
+                            if (type !== null && btn) {
+                                btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
+                            }
+
+                            // Labels
+                            if (labelEl && studio.trackSynthStates[i]) {
+                                labelEl.textContent = type === 'drum' ? 'DRUMS' : (studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
+                            }
+
+                            // Mutes & Solos
+                            if (muteBtn) {
+                                const isMuted = isLooper ? looper.muted[i] : arranger.muted[i - 8];
+                                muteBtn.classList.toggle('muted', isMuted);
+                            }
+
+                            // Restore Mixer Faders & Audio Hardware
+                            if (state.mixerState) {
+                                const hwGain = isLooper ? looperGainNodes[i] : linearGainNodes[i - 8];
+                                const hwPan = isLooper ? looperPanners[i] : linearPanners[i - 8];
+                                const hwEcho = isLooper ? looperEchoSends[i] : linearEchoSends[i - 8];
+                                const hwReverb = isLooper ? looperReverbSends[i] : linearReverbSends[i - 8];
+
+                                const updateSlider = (className, hwNode, valArray, param) => {
+                                    const slider = document.querySelector(`.${className}[data-track="${i}"]`);
+                                    if (slider && valArray[i] !== undefined) {
+                                        slider.value = valArray[i];
+                                        if (hwNode && audioCtx) {
+                                            if (param === 'pan') hwNode.pan.value = valArray[i];
+                                            else hwNode.gain.setTargetAtTime(valArray[i], audioCtx.currentTime, 0.015);
+                                        }
+                                    }
+                                };
+
+                                updateSlider('track-vol', hwGain, state.mixerState.volumes, 'gain');
+                                updateSlider('pan-slider', hwPan, state.mixerState.pans, 'pan');
+                                updateSlider('echo-send', hwEcho, state.mixerState.echoSends, 'gain');
+                                updateSlider('reverb-send', hwReverb, state.mixerState.reverbSends, 'gain');
+                            }
+                        }
+
+                        // 5. Restore active track synth UI
                         applySynthStateToUI(studio.trackSynthStates[studio.activeLooperTrack]);
                         document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('active');
-                    } 
+                    }
                     else {
                         if (sessionFile) showToast("Native Session found. Extracting stems to merge...");
                         else showToast("Foreign DAWproject detected. Scanning for metadata...");
 
-                        let trackMetadata = {}; 
-                        const xmlFile = zip.file("project.xml");
-                        
-                        // BPM EVALUATION BLOCK
-                        if (xmlFile) {
-                            try {
-                                const xmlText = await xmlFile.async("string");
-                                const parser = new DOMParser();
-                                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                    let trackMetadata = {}; 
+                    const xmlFile = zip.file("project.xml");
+                    
+                    if (xmlFile) {
+                        try {
+                            const xmlText = await xmlFile.async("string");
+                            const parser = new DOMParser();
+                            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
 
-                                const transportNode = xmlDoc.querySelector("transport");
-                                if (transportNode && transportNode.getAttribute("tempo")) {
-                                    const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
-                                    
-                                    if (mode === 'replace' || isProjectEmpty) {
-                                        applyImportedBPM(importedBpm);
-                                    } else {
-                                        const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
-                                        if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
-                                            stretchRatio = currentArpBPM / importedBpm;
-                                            showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
-                                        } else {
-                                            showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
-                                        }
-                                    }
+                            // BPM EVALUATION...
+                            const transportNode = xmlDoc.querySelector("transport");
+                            if (transportNode && transportNode.getAttribute("tempo")) {
+                                const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
+                                if (mode === 'replace' || isProjectEmpty) applyImportedBPM(importedBpm);
+                                else {
+                                    const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
+                                    if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
+                                        stretchRatio = currentArpBPM / importedBpm;
+                                        showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
+                                    } else showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
                                 }
+                            }
 
-                                const trackNodes = xmlDoc.querySelectorAll("track");
-                                trackNodes.forEach(track => {
-                                    const audioFileNode = track.querySelector("audio-file");
-                                    if (audioFileNode) {
-                                        let path = audioFileNode.getAttribute("path");
-                                        if (path) {
-                                            if (path.startsWith("./")) path = path.substring(2);
-                                            trackMetadata[path] = { name: track.getAttribute("name"), color: track.getAttribute("color") };
-                                        }
-                                    }
-                                });
-                            } catch (xmlErr) { console.warn("Could not parse project.xml", xmlErr); }
-                        }
-
-                        for (const filename of Object.keys(zip.files)) {
-                            if (filename.endsWith('.wav') || filename.endsWith('.mid') || filename.endsWith('.midi')) {
+                            // --- UPGRADED: Foreign Track, Volume, and Pan Parser ---
+                            const trackNodes = xmlDoc.querySelectorAll("track");
+                            trackNodes.forEach(track => {
+                                const audioFileNode = track.querySelector("audio-file");
+                                let path = audioFileNode ? audioFileNode.getAttribute("path") : null;
                                 
-                                let isLooperPrefer = false;
-                                const parts = filename.split('_');
-                                if (parts.length >= 4 && parts[2].startsWith('L')) isLooperPrefer = true;
+                                if (path) {
+                                    if (path.startsWith("./")) path = path.substring(2);
+                                    
+                                    // Dig into the foreign mixer channel
+                                    let mixVol = 1.0; let mixPan = 0.0;
+                                    const channelNode = track.querySelector("channel");
+                                    if (channelNode) {
+                                        const volNode = channelNode.querySelector("volume");
+                                        const panNode = channelNode.querySelector("pan");
+                                        // Some DAWs use 'value', some use 'db'. We assume linear 0.0-1.0 'value' for lightweight parsing
+                                        if (volNode && volNode.getAttribute("value")) mixVol = parseFloat(volNode.getAttribute("value"));
+                                        if (panNode && panNode.getAttribute("value")) mixPan = parseFloat(panNode.getAttribute("value"));
+                                    }
 
-                                // ZIP uses auto-routing so multiple stems don't stack on one track
-                                const targetTrackIdx = getNextFreeTrack(isLooperPrefer);
-                                if (targetTrackIdx === -1) {
-                                    console.warn("No free tracks left for:", filename);
-                                    continue; 
+                                    trackMetadata[path] = { 
+                                        name: track.getAttribute("name"), 
+                                        color: track.getAttribute("color"),
+                                        volume: mixVol,
+                                        pan: mixPan
+                                    };
                                 }
+                            });
+                        } catch (xmlErr) { console.warn("Could not parse project.xml", xmlErr); }
+                    }
 
-                                const isLooperDomain = targetTrackIdx < 8;
-                                const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
-                                const domainObj = isLooperDomain ? looper : arranger;
+                    // --- UPGRADED: File iteration and Database Injection ---
+                    for (const filename of Object.keys(zip.files)) {
+                        if (filename.endsWith('.wav') || filename.endsWith('.mid') || filename.endsWith('.midi')) {
+                            
+                            // If it's just raw audio being restored to the sampler DB, decode and continue!
+                            // (We skip adding these to the timeline because the JSON handles timeline placement)
+                            if (sessionFile && filename.startsWith("Raw_Assets/")) {
                                 const fileData = await zip.files[filename].async("arraybuffer");
+                                const audioBuffer = await audioCtx.decodeAudioData(fileData);
+                                const cleanName = filename.split('/').pop();
+                                
+                                // Inject into Sample Database so loaded trackSynthStates instantly find their custom sounds!
+                                if (typeof sampleDatabase !== 'undefined') sampleDatabase[cleanName] = audioBuffer;
+                                continue; 
+                            }
+
+                            // Do not place the rendered Audio/ stems back onto the timeline during a Native restore!
+                            if (sessionFile && filename.startsWith("Audio/")) continue;
+
+                            let isLooperPrefer = false;
+                            const parts = filename.split('_');
+                            if (parts.length >= 4 && parts[2].startsWith('L')) isLooperPrefer = true;
+
+                            let targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true);
+                            
+                            if (targetTrackIdx === -1 && !isLooperPrefer) {
+                                document.getElementById('btnAddArrangerBank')?.click();
+                                targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true); 
+                            }
+                            if (targetTrackIdx === -1) continue; 
+
+                            const isLooperDomain = targetTrackIdx < 8;
+                            const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
+                            const domainObj = isLooperDomain ? looper : arranger;
+                            const fileData = await zip.files[filename].async("arraybuffer");
 
                                 if (filename.endsWith('.wav')) {
                                     const audioBuffer = await audioCtx.decodeAudioData(fileData);
                                     const visualPeaks = extractAudioPeaks(audioBuffer); 
-                                    
-                                    // MULTI-CLIP FIX: Attach buffer directly to the event object
+                                
                                     const evt = { 
                                         id: Math.random(), 
                                         type: 'stem', 
@@ -9875,10 +10792,10 @@ function updateScaleOverlay() {
                                         name: filename.split('/').pop() // Extract clean name from zip path
                                     };
                                     domainObj.tracks[localIdx].push(evt);
-                                    
+                                
                                     // Legacy pointer for UI empty-checks
                                     if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
-                                    
+                                
                                     if (!isLooperDomain && audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
                                     if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
                                 }
@@ -9890,17 +10807,17 @@ function updateScaleOverlay() {
                                     try {
                                         const parsedMidi = new Midi(fileData);
                                         let trackMaxDur = 0;
-                                        
+                                    
                                         parsedMidi.tracks.forEach(track => {
                                             track.notes.forEach(note => {
                                                 const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
                                                 // Adjust MIDI timing if stretched
                                                 const adjustedTime = note.time * (1 / stretchRatio);
                                                 const adjustedDur = note.duration * (1 / stretchRatio);
-                                                
+                                            
                                                 const evt = {
                                                     id: Math.random(), type: 'play', timeOffset: adjustedTime,
-                                                    duration: adjustedDur, freqs: [freq], velocity: Math.round(note.velocity * 127), stArray: null 
+                                                    duration: adjustedDur, freqs: [freq], velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))), stArray: null 
                                                 };
                                                 domainObj.tracks[localIdx].push(evt);
                                                 if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
@@ -9919,17 +10836,37 @@ function updateScaleOverlay() {
                                 const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
                                 const meta = trackMetadata[filename];
 
+                                // 1. Apply Base UI (Color & Track Type)
                                 if (btn) {
                                     btn.classList.add('type-voice');
                                     if (meta && meta.color) btn.style.borderBottom = `3px solid ${meta.color}`;
                                 }
-                                
+                            
+                                // 2. Apply Track Name
                                 if (labelEl) {
                                     if (meta && meta.name) {
                                         labelEl.textContent = meta.name.substring(0, 12).toUpperCase();
                                     } else {
+                                        // Fallback if XML had no name: clean up the filename
                                         let nameMatch = filename.split('/').pop().replace('.wav', '').replace('.mid', '').replace('.midi', '').replace(/^Track_\d+_/i, '');
                                         labelEl.textContent = nameMatch.substring(0, 12).toUpperCase();
+                                    }
+                                }
+
+                                // 3. Apply Foreign Volume & Pan Settings
+                                if (meta) {
+                                    const volSlider = document.querySelector(`.track-vol[data-track="${targetTrackIdx}"]`);
+                                    const panSlider = document.querySelector(`.pan-slider[data-track="${targetTrackIdx}"]`);
+                            
+                                    if (volSlider && meta.volume !== undefined) {
+                                        volSlider.value = meta.volume;
+                                        const hwGain = isLooperDomain ? looperGainNodes[localIdx] : linearGainNodes[localIdx];
+                                        if (hwGain) hwGain.gain.value = meta.volume;
+                                    }
+                                    if (panSlider && meta.pan !== undefined) {
+                                        panSlider.value = meta.pan;
+                                        const hwPan = isLooperDomain ? looperPanners[localIdx] : linearPanners[localIdx];
+                                        if (hwPan) hwPan.pan.value = meta.pan;
                                     }
                                 }
                             }
@@ -9939,7 +10876,7 @@ function updateScaleOverlay() {
                     showToast(`Error unpacking ${file.name}`);
                 }
             }
-            
+        
             // ==============================================================
             // B. INDIVIDUAL AUDIO FILES (.WAV / .MP3 / .FLAC)
             // ==============================================================
@@ -9953,11 +10890,11 @@ function updateScaleOverlay() {
                 const arrayBuffer = await file.arrayBuffer();
                 const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                 const visualPeaks = extractAudioPeaks(audioBuffer); 
-                
-                // --- NEW: FILENAME BPM DETECTION & STRETCHING ---
+            
+                // --- FILENAME BPM DETECTION & STRETCHING ---
                 let stretchRatio = 1.0;
-                const bpmMatch = file.name.match(/(\d{2,3})\s*bpm/i); // Looks for "120bpm" or "120 bpm"
-                
+                const bpmMatch = file.name.match(/(\d{2,3})\s*bpm/i); 
+            
                 if (bpmMatch) {
                     const importedBpm = parseFloat(bpmMatch[1]);
                     if (mode === 'replace' || isProjectEmpty) {
@@ -9975,7 +10912,7 @@ function updateScaleOverlay() {
 
                 // PLAYHEAD OFFSET LOGIC
                 const playheadOffset = isLooperDomain ? 0 : (arranger.pauseTime || 0);
-                
+            
                 // LOOPER HARD-CLIP
                 let finalDuration = audioBuffer.duration;
                 if (isLooperDomain) {
@@ -9995,10 +10932,10 @@ function updateScaleOverlay() {
                     buffer: audioBuffer,
                     stretchRatio: stretchRatio,
                     peaks: visualPeaks, 
-                    name: file.name // Raw filename
+                    name: file.name 
                 };
                 domainObj.tracks[localIdx].push(evt);
-                
+            
                 if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
 
                 if (!isLooperDomain && (playheadOffset + adjustedDuration > arranger.duration)) {
@@ -10014,7 +10951,7 @@ function updateScaleOverlay() {
             }
 
             // ==============================================================
-            // C. INDIVIDUAL MIDI FILES (.MID / .MIDI)
+            // C. INDIVIDUAL MULTI-TRACK MIDI FILES (.MID / .MIDI)
             // ==============================================================
             else if (ext === 'mid' || ext === 'midi') {
                 if (typeof Midi === 'undefined') {
@@ -10022,20 +10959,22 @@ function updateScaleOverlay() {
                     continue;
                 }
 
-                // THE FIX: Target Active Track dynamically!
                 const activeDomain = studio.lastSelectedDomain;
-                const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
-                const isLooperDomain = targetTrackIdx < 8;
-                const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
-                const domainObj = isLooperDomain ? looper : arranger;
+                const targetDomainIsLooper = activeDomain === 'looper';
 
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     const parsedMidi = new Midi(arrayBuffer);
-                    
-                    let stretchRatio = 1.0;
+                
+                    // 1. Filter out metadata-only ghost tracks
+                    const activeMidiTracks = parsedMidi.tracks.filter(t => t.notes.length > 0);
+                    if (activeMidiTracks.length === 0) {
+                        showToast("MIDI file contains no note data.");
+                        continue;
+                    }
 
-                    // --- TEMPO EXTRACTION & STRETCHING (STANDALONE MIDI) ---
+                    // 2. Tempo Extraction
+                    let stretchRatio = 1.0;
                     if (parsedMidi.header && parsedMidi.header.tempos && parsedMidi.header.tempos.length > 0) {
                         const importedBpm = parsedMidi.header.tempos[0].bpm;
                         if (mode === 'replace' || isProjectEmpty) {
@@ -10051,39 +10990,91 @@ function updateScaleOverlay() {
                         }
                     }
 
-                    // PLAYHEAD OFFSET LOGIC
-                    const playheadOffset = isLooperDomain ? 0 : (arranger.pauseTime || 0);
-                    let trackMaxDur = 0;
+                    // 3. Playhead Offset
+                    const playheadOffset = targetDomainIsLooper ? 0 : (arranger.pauseTime || 0);
 
-                    parsedMidi.tracks.forEach(track => {
-                        track.notes.forEach(note => {
-                            const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
-                            // Apply Stretch and Playhead Offset
-                            const finalTime = (note.time * (1 / stretchRatio)) + playheadOffset;
-                            const finalDur = (note.duration * (1 / stretchRatio));
+                    // 4. Map each MIDI track to a DAW track
+                    let currentSearchIdx = targetDomainIsLooper ? studio.activeLooperTrack : studio.activeArrangerTrack;
 
-                            const evt = {
-                                id: Math.random(), type: 'play', timeOffset: finalTime, duration: finalDur,
-                                freqs: [freq], velocity: Math.round(note.velocity * 127), stArray: null 
-                            };
-                            domainObj.tracks[localIdx].push(evt);
-                            if (finalTime + finalDur > trackMaxDur) trackMaxDur = finalTime + finalDur;
+                    for (let i = 0; i < activeMidiTracks.length; i++) {
+                        const midiTrack = activeMidiTracks[i];
+                    
+                        let targetTrackIdx = getNextFreeTrack(targetDomainIsLooper, currentSearchIdx, true); // Strict Mode Active!
+
+                        // --- THE AUTO-BANK SPAWNER ---
+                        if (targetTrackIdx === -1 && !targetDomainIsLooper) {
+                            const addBankBtn = document.getElementById('btnAddArrangerBank');
+                            if (addBankBtn) {
+                                addBankBtn.click(); // Spawns 8 new tracks!
+                                targetTrackIdx = getNextFreeTrack(false, currentSearchIdx, true); // Try mapping again
+                            }
+                        }
+
+                        if (targetTrackIdx === -1) {
+                            showToast(`Ran out of tracks! Track ${i + 1} skipped.`);
+                            break; 
+                        }
+
+                        // THE FIX: Calculate local index based on the newly spawned target index!
+                        const isTargetLooper = targetTrackIdx < 8;
+                        const localIdx = isTargetLooper ? targetTrackIdx : targetTrackIdx - 8;
+                        const domainObj = isTargetLooper ? looper : arranger;
+                        const isDrumTrack = (midiTrack.channel === 9); // MIDI Channel 10 = Drums
+
+                        // --- TRACK NAMING LOGIC ---
+                        let finalTrackName = midiTrack.name.trim();
+                        if (!finalTrackName && midiTrack.instrument && midiTrack.instrument.name) finalTrackName = midiTrack.instrument.name;
+                        if (!finalTrackName) {
+                            const cleanFileName = file.name.replace(/\.[^/.]+$/, "");
+                            finalTrackName = activeMidiTracks.length > 1 ? `${cleanFileName} - T${i + 1}` : cleanFileName;
+                        }
+
+                        // --- UI ROUTING ---
+                        studio.trackTypes[targetTrackIdx] = isDrumTrack ? 'drum' : 'voice';
+                        const btn = document.querySelector(`.track-btn[data-track="${targetTrackIdx}"]`);
+                        if (btn) {
+                            btn.classList.remove('type-voice', 'type-drum');
+                            btn.classList.add(isDrumTrack ? 'type-drum' : 'type-voice');
+                        }
+
+                        const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
+                        if (labelEl) labelEl.textContent = finalTrackName.substring(0, 12).toUpperCase();
+
+                        // --- PARSE NOTES ---
+                        let trackMaxDur = 0;
+                        midiTrack.notes.forEach(note => {
+                            const adjustedTime = (note.time * (1 / stretchRatio)) + playheadOffset;
+                            const adjustedDur = note.duration * (1 / stretchRatio);
+                        
+                            if (isDrumTrack) {
+                                let alias = 'click'; 
+                                if (typeof gmDrumMap !== 'undefined' && gmDrumMap[note.midi]) alias = gmDrumMap[note.midi].alias;
+                            
+                                domainObj.tracks[localIdx].push({
+                                    id: Math.random(), type: 'drum', drumType: alias,
+                                    timeOffset: adjustedTime, duration: adjustedDur,
+                                    velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127)))
+                                });
+                            } else {
+                                const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
+                                domainObj.tracks[localIdx].push({
+                                    id: Math.random(), type: 'play', freqs: [freq], stArray: null,
+                                    timeOffset: adjustedTime, duration: adjustedDur,
+                                    velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))),
+                                    synthState: studio.trackSynthStates[targetTrackIdx] // Inherit default state
+                                });
+                            }
+                        
+                            if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
                         });
-                    });
 
-                    if (!isLooperDomain && trackMaxDur > arranger.duration) arranger.duration = trackMaxDur;
-                    if (isLooperDomain && trackMaxDur > looper.trackDurations[localIdx]) looper.trackDurations[localIdx] = trackMaxDur;
+                        // Expand global timeline bounds
+                        if (!isTargetLooper && trackMaxDur > arranger.duration) arranger.duration = trackMaxDur;
+                        if (isTargetLooper && trackMaxDur > looper.trackDurations[localIdx]) looper.trackDurations[localIdx] = trackMaxDur;
 
-                    if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
-                    const btn = document.querySelector(`.track-btn[data-track="${targetTrackIdx}"]`);
-                    if (btn) btn.classList.add('type-voice');
-                    
-                    const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
-                    if (labelEl) {
-                        const midiName = parsedMidi.name ? parsedMidi.name : file.name.replace('.mid', '').replace('.midi', '');
-                        labelEl.textContent = midiName.substring(0, 12).toUpperCase();
+                        currentSearchIdx = targetTrackIdx + 1; // Move cursor so the next loop finds the next track
                     }
-                    
+
                 } catch (err) {
                     console.error("Failed to parse MIDI file:", err);
                     showToast(`Could not read ${file.name}. It may be corrupted.`);
@@ -10209,20 +11200,6 @@ function updateScaleOverlay() {
 
         return new Uint8Array([...headerChunk, ...trackHeader, ...trackData]);
     }
-
-    // Bind the Solo buttons next to the Mute buttons in the Studio Panel
-    document.querySelectorAll('.solo-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const track = parseInt(e.target.dataset.track);
-            const isLooper = track < 8;
-            const domainObj = isLooper ? looper : arranger;
-            const localIdx = isLooper ? track : track - 8;
-
-            domainObj.soloed[localIdx] = !domainObj.soloed[localIdx];
-            e.target.classList.toggle('soloed', domainObj.soloed[localIdx]);
-        });
-    });
 
     // =====================================================================
     // 8-KNOB MACRO DASHBOARD ENGINE

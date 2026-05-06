@@ -1847,6 +1847,32 @@
                 transition: background-color 0.1s ease-out;
             }
 
+        /* --- MASTER DELETE BUTTON ANIMATION --- */
+        #btnClearAllArranger::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.4); /* Dark fill */
+            transform: scaleX(0);
+            transform-origin: left;
+            z-index: -1;
+            transition: transform 0s;
+        }
+
+        #btnClearAllArranger.clearing::before {
+            transform: scaleX(1);
+            transition: transform 2s linear; /* Exactly 2000ms hold */
+        }
+
+        #btnClearAllArranger.cleared-flash {
+            background-color: #000 !important; /* Flash to black on success */
+            color: white !important;
+            transition: background-color 0.1s ease-out;
+        }
+
         /* 11c. SVG Node Overlays */
         .highlight-overlay {
             transition: opacity 0.1s ease-out;
@@ -1879,6 +1905,20 @@
             fill: rgba(130, 119, 23, 0.8) !important;
             stroke: #ff9800 !important;
             filter: drop-shadow(0 0 10px rgba(255, 152, 0, 0.5)) !important;
+        }
+
+        /* --- TONNETZ GHOST DYAD HIGHLIGHT --- */
+        .ghost-highlight {
+            fill: rgba(0, 229, 255, 0.12) !important;
+            stroke: rgba(0, 229, 255, 0.4) !important;
+            stroke-width: 1.5px !important;
+            transition: opacity 0.2s ease, fill 0.2s ease;
+            opacity: 1 !important;
+        }
+
+        .dark-theme .ghost-highlight {
+            fill: rgba(0, 229, 255, 0.08) !important;
+            stroke: rgba(0, 229, 255, 0.25) !important;
         }
 
         /* --- TONNETZ INVERSION / PITCH-CLASS HIGHLIGHT --- */
@@ -3242,6 +3282,12 @@
 
                 <div class="control-row" style="border: none; padding: 0;">
                     <div class="control-group" id="grpOscMix"><label id="lblOscMix">Osc Mix (1-2): 50%</label><input type="range" id="oscMix" min="0" max="1" step="0.01" value="0.5"></div>
+                    <!-- Sample Root Key Input (Hidden by default) -->
+                    <div class="control-group" id="grpSampleRoot" style="display: none;">
+                        <label title="The original pitch of the loaded .wav file">Sampler Root Key (MIDI)</label>
+                        <input type="number" id="sampleRootKey" min="0" max="127" value="60" class="control-input" style="height: 22px; text-align: center;">
+                    </div>
+
                     <input type="file" id="customSampleInput" accept="audio/*" multiple style="display: none;">
                     <div class="control-group">
                         <label style="display:flex; justify-content:space-between; align-items:center;">
@@ -3484,7 +3530,7 @@
 
             <!-- Section A: 3-Bus Sub-Mixer -->
             <div class="control-well" style="padding: 0; margin-bottom: 0; background: transparent; border: none; box-shadow: none;">
-                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">SUB-MIX GROUPS</div>
+                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">SUBMIX & VCA</div>
 
                 <div class="submix-grid three-col" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
@@ -3496,8 +3542,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Drums</label><div class="val-readout" id="valDrumVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
                     </div>
                     <div style="display: flex; flex-direction: column; background: rgba(128,128,128,0.15); padding: 4px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.1);">
-                        <input type="range" id="looperMasterVol" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Looper</label><div class="val-readout" id="valLooperMasterVol" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
+                        <input type="range" id="looperVCA" min="0" max="1.5" step="0.01" value="1.0" style="width: 100%; margin: 0 0 4px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;"><label style="font-size: 0.6rem; color: var(--text-main); margin: 0; line-height: 1;">Looper</label><div class="val-readout" id="valLooperVCA" style="margin: 0; padding: 1px 4px; font-size: 0.6rem; min-width: auto; line-height: 1;">1.00</div></div>
                     </div>
                 </div>
             </div>
@@ -3573,8 +3619,25 @@
                     </div>
                 </div>
 
-                <div class="section-title" style="margin: 8px 0 4px 0; padding: 3px 5px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase;">ARRANGER TRACKS (A1-A8)</div>
-                <div class="mixer-grid-8">
+                <!-- THE 62.5 / 12.5 / 25 SPLIT HEADER -->
+                <div style="display: flex; gap: 4px; margin: 8px 0 4px 0; align-items: stretch; width: 100%;">
+                    <div class="section-title" style="flex: 5; margin: 0; padding: 4px 8px; font-size: 0.65rem; background: var(--text-muted); color: #222; font-weight: bold; line-height: 1; border-radius: 4px; text-transform: uppercase; justify-content: flex-start;">
+                        <span id="arranger-header-text">ARRANGER TRACKS (A1-A8)</span>
+                    </div>
+
+                    <!-- MASTER DELETE BUTTON -->
+                    <button id="btnClearAllArranger" style="flex: 1; margin: 0; padding: 0; height: auto; font-size: 0.85rem; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; position: relative; overflow: hidden; z-index: 1;" title="Hold 2s to Clear All Arranger Tracks">
+                        🗑️
+                    </button>
+
+                    <!-- ADD BANK BUTTON -->
+                    <button id="btnAddArrangerBank" style="flex: 2; margin: 0; padding: 0; height: auto; font-size: 0.65rem; font-weight: bold; background: var(--main-node); color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; position: relative; overflow: hidden; z-index: 1;" title="Add 8 Empty Tracks">
+                        +8 Tracks
+                    </button>
+                </div>
+
+                <!-- WE ADDED AN ID TO THIS GRID SO JS CAN TARGET IT -->
+                <div class="mixer-grid-8" id="arranger-mixer-grid">
                     <!-- ARRANGER TRACK 8 (A1) IS ACTIVE BY DEFAULT -->
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <div class="inst-label" id="inst-label-8" style="text-align: center; font-size: 0.55rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: -2px;">EMPTY</div>
