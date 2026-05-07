@@ -537,6 +537,10 @@
         if (controlsContainer) {
             controlsContainer.classList.toggle('fab-shifted', !!activeLeft);
         }
+
+        // Trigger the collision engine immediately after the CSS vars update
+        // (The 10ms timeout ensures the DOM has fully applied the 'active' classes and animations before measuring)
+        setTimeout(evaluatePanelCollisions, 10);
     }
 
     function updatePianoRange() {
@@ -664,6 +668,97 @@
         }
     }
 
+    // =========================================================
+    // UI COLLISION ENGINE (Piano Roll vs Side Panels)
+    // =========================================================
+    function evaluatePanelCollisions() {
+        const pr = document.getElementById('piano-roll-overlay');
+        const activeLeftPanel = document.querySelector('.overlay.primary.active');
+        const chordUI = document.getElementById('chord-display') || document.getElementById('chord-indicator');
+
+        // Rule 1: Reset everything if we are in Portrait Mode, or if panels are closed
+        if (window.innerWidth <= window.innerHeight || !activeLeftPanel) {
+            document.documentElement.style.setProperty('--pr-left-offset', '0px');
+            document.documentElement.style.setProperty('--chord-left-offset', '15px'); 
+        
+            if (activeLeftPanel) {
+                activeLeftPanel.classList.remove('pr-collided');
+                activeLeftPanel.style.removeProperty('height');
+                activeLeftPanel.style.removeProperty('max-height');
+                activeLeftPanel.style.removeProperty('border-bottom-left-radius');
+                activeLeftPanel.style.removeProperty('border-bottom-right-radius');
+            }
+            return;
+        }
+
+        // --- 1. EVALUATE TRUE PIANO STATE ---
+        const pianoOverlay = document.getElementById('piano-overlay');
+        const isPianoVisible = pianoOverlay && pianoOverlay.classList.contains('active');
+        const pianoH = isPianoVisible ? pianoOverlay.offsetHeight : 0;
+
+        // --- 2. EVALUATE PIANO ROLL TARGET ---
+        const isPrActive = pr && pr.classList.contains('active');
+        let prTargetTop = window.innerHeight;
+        if (isPrActive) {
+            prTargetTop = window.innerHeight - pr.offsetHeight - pianoH;
+        }
+
+        // --- 3. MEASURE STRUCTURAL BOUNDARIES ---
+        // CRITICAL FIX: Use offsetTop/offsetWidth to completely bypass CSS transform animations!
+        const initialTop = activeLeftPanel.offsetTop;
+        const panelWidth = activeLeftPanel.offsetWidth;
+
+        const spaceToFloor = window.innerHeight - initialTop - pianoH;
+        const spaceAbovePR = prTargetTop - initialTop;
+
+        activeLeftPanel.classList.remove('pr-collided');
+        activeLeftPanel.style.removeProperty('height');
+        activeLeftPanel.style.removeProperty('max-height');
+        activeLeftPanel.style.removeProperty('border-bottom-left-radius');
+        activeLeftPanel.style.removeProperty('border-bottom-right-radius');
+
+        // scrollHeight calculates the true internal content height
+        const naturalContentHeight = activeLeftPanel.scrollHeight;
+
+        // --- 4. APPLY COLLISION LOGIC ---
+        if (isPrActive && naturalContentHeight > spaceAbovePR) { 
+            // 1. Move Piano Roll to the right
+            document.documentElement.style.setProperty('--pr-left-offset', `${panelWidth}px`);
+            activeLeftPanel.classList.add('pr-collided');
+        
+            // 2. Force panel to stretch to the floor
+            activeLeftPanel.style.setProperty('max-height', `${spaceToFloor}px`, 'important');
+            activeLeftPanel.style.setProperty('height', `${spaceToFloor}px`, 'important');
+            activeLeftPanel.style.setProperty('border-bottom-left-radius', '0', 'important');
+            activeLeftPanel.style.setProperty('border-bottom-right-radius', '0', 'important');
+
+        } else {
+            document.documentElement.style.setProperty('--pr-left-offset', '0px');
+        
+            if (!isPrActive) {
+                // Allow the panel to reach the floor naturally if PR is closed
+                activeLeftPanel.style.setProperty('max-height', `${spaceToFloor}px`, 'important');
+            } else {
+                activeLeftPanel.style.removeProperty('max-height');
+            }
+        }
+
+        // --- 5. CHORD UI COLLISION ---
+        if (chordUI) {
+            // offsetHeight correctly reports the final physical height AFTER our CSS injections
+            const panelBottom = initialTop + activeLeftPanel.offsetHeight;
+            const chordTopY = window.innerHeight - pianoH - 85; 
+        
+            if (panelBottom > chordTopY) {
+                // CRITICAL FIX: Calculate the right edge using purely structural layout math!
+                const panelRightEdge = activeLeftPanel.offsetLeft + panelWidth;
+                document.documentElement.style.setProperty('--chord-left-offset', `${panelRightEdge + 15}px`);
+            } else {
+                document.documentElement.style.setProperty('--chord-left-offset', '15px'); 
+            }
+        }
+    }
+
     const overlayObserver = new ResizeObserver(() => updateOverlayCSSVars());
     ['settings-overlay', 'synth-overlay', 'pads-overlay', 'drums-overlay', 'looper-overlay'].forEach(id => { const el = document.getElementById(id); if (el) overlayObserver.observe(el); });
 
@@ -699,6 +794,7 @@
                     scaleWarning.style.display = isChromatic ? 'inline' : 'none';
                 }
             }
+            evaluatePanelCollisions();
             return; 
         }
 
@@ -1410,36 +1506,41 @@
         // 5. NUCLEAR AUDIO REBOOT (Fixes Background Throttling)
         // =======================================================
         if (audioCtx) {
-            // Force close the hardware context to clear the clogged audio thread
-            audioCtx.close().then(() => {
-                console.log("AudioContext destroyed. Rebooting engine...");
+            // 1. Tell the hardware to close, but DO NOT await the promise!
+            // If the background thread is dead, this promise will hang forever.
+            try {
+                if (audioCtx.state !== 'closed') {
+                    audioCtx.close().catch(e => console.warn("AudioCtx close error:", e));
+                }
+            } catch (e) { 
+                console.warn("Panic: AudioContext already closing.", e); 
+            }
 
-                // Empty the routing arrays so we don't double-allocate memory!
-                looperGainNodes = []; looperPanners = []; looperEchoSends = []; looperReverbSends = [];
-                linearGainNodes = []; linearPanners = []; linearEchoSends = []; linearReverbSends = [];
-                
-                // --- THE CLOCK FIX ---
-                // Zero out the forward-looking schedulers since the new audioCtx starts at 0.0s!
-                nextMetronomeTick = 0;
-                if (typeof nextMidiPulseTime !== 'undefined') nextMidiPulseTime = 0;
-                lastVisualFrameTime = 0;
-                // ---------------------
+            console.log("AudioContext detached. Rebooting engine synchronously...");
 
-                // Nullify singletons so the engine knows to rebuild them
-                metronomeGain = null;
-                globalLfoOutput = null;
-                lfoPanGain = null;
-                sahShaper = null;
-                workletPromise = null;
+            // 2. SYNCHRONOUS CLEANUP (Rescued from the .then() block)
+            looperGainNodes = []; looperPanners = []; looperEchoSends = []; looperReverbSends = [];
+            linearGainNodes = []; linearPanners = []; linearEchoSends = []; linearReverbSends = [];
+            
+            // --- THE CLOCK FIX ---
+            nextMetronomeTick = 0;
+            if (typeof nextMidiPulseTime !== 'undefined') nextMidiPulseTime = 0;
+            lastVisualFrameTime = 0;
+            // ---------------------
 
-                // Destroy the context reference
-                audioCtx = undefined; 
+            metronomeGain = null;
+            globalLfoOutput = null;
+            lfoPanGain = null;
+            sahShaper = null;
+            workletPromise = null;
 
-                // Boot the engine back up from scratch!
-                initAudio();
-                
-                showToast("Panic: Audio Engine Rebooted & Notes Stopped");
-            });
+            // 3. Destroy the context reference IMMEDIATELY so the next boot works
+            audioCtx = undefined; 
+
+            // 4. Boot the engine back up from scratch!
+            initAudio();
+            
+            showToast("Panic: Audio Engine Rebooted & Notes Stopped");
         } else {
             showToast("Panic: All Notes Stopped");
         }
@@ -2251,15 +2352,8 @@
     // --- HARDWARE SAMPLER MEMORY ---
     let isSamplerMode = false;
     let isSamplerLooping = true;
-    let activeSampleBuffer = null;
-    const builtInSamples = {
-        // A tiny procedural FM Bass generated via Base64
-        sample_fm: "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
-        // A tiny procedural Lo-Fi Choir
-        sample_choir: "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
-    };
-    // (Note: To keep this code functioning, the above base64s are empty dummy headers. We will procedurally generate real waveforms for them on load to save 5MB of text space!)
-
+    const sampleBank = new Map();
+    
     // Pre-allocate memory for Fourier Transform arrays to prevent Garbage Collection stutters!
     const numHarmonics = 8;
     const overtoneReal = new Float32Array(numHarmonics);
@@ -2588,111 +2682,63 @@
     // --- SAMPLER ENGINE UI & DECODING ---
     async function loadSampleToBuffer(id, url) {
         initAudio();
+        
+        // If we already decoded this exact sample, we're good!
+        if (sampleBank.has(id)) return;
+        if (!url) return; 
 
-        // 1. Handle Built-In Procedural Samples
-        if (id === 'sample_fm' || id === 'sample_choir') {
-            const sr = audioCtx.sampleRate;
-
-            if (id === 'sample_fm') {
-                // FM Bass: 2 seconds, no loop, sharp attack and decay
-                const len = sr * 2;
-                activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
-                const data = activeSampleBuffer.getChannelData(0);
-                const freq = 261.625565;
-                for (let i = 0; i < len; i++) {
-                    const t = i / sr;
-                    const env = Math.exp(-t * 5); // Punchy bass decay
-                    const mod = Math.sin(2 * Math.PI * (freq / 2) * t) * 4 * env;
-                    data[i] = Math.sin(2 * Math.PI * freq * t + mod) * env * 0.8;
-                }
-            } else if (id === 'sample_choir') {
-                // Lo-Fi Choir: 2 seconds, perfectly periodic loop
-                const loopDuration = 2;
-                const len = sr * loopDuration;
-                activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
-                const data = activeSampleBuffer.getChannelData(0);
-
-                // THE FIX: Force frequencies to be EXACT integer multiples of the loop frequency (0.5 Hz)
-                // 261.5 Hz completes exactly 523 cycles in 2 seconds. No phase discontinuities!
-                const f1 = 261.5;
-                const f2 = 263.5; // Detuned up
-                const f3 = 259.5; // Detuned down
-
-                for (let i = 0; i < len; i++) {
-                    const t = i / sr;
-                    // Vibrato must also be an exact integer multiple (4.0 Hz)
-                    const vib = Math.sin(2 * Math.PI * 4 * t) * 0.05;
-                    const o1 = Math.sin(2 * Math.PI * f1 * t + vib);
-                    const o2 = Math.sin(2 * Math.PI * f2 * t + vib);
-                    const o3 = Math.sin(2 * Math.PI * f3 * t + vib);
-
-                    const noise = (Math.random() * 2 - 1) * 0.05;
-                    data[i] = (o1 + o2 + o3 + noise) * 0.15;
-                }
-
-                // Micro-crossfade only the edges to make the random breath noise perfectly seamless
-                const fadeSamps = Math.floor(sr * 0.05);
-                for (let i = 0; i < fadeSamps; i++) {
-                    const fade = i / fadeSamps;
-                    const endVal = data[len - fadeSamps + i];
-                    const startVal = data[i];
-                    data[i] = startVal * fade + endVal * (1 - fade);
-                    data[len - fadeSamps + i] = endVal * fade + startVal * (1 - fade);
-                }
-            }
-            showToast(id === 'sample_fm' ? "FM Bass Loaded!" : "Choir Sample Loaded!");
-            return;
-        }
-
-        // 2. Handle Custom User Uploads
         try {
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
-            activeSampleBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            showToast("Custom Sample loaded into RAM!");
+            const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            sampleBank.set(id, decodedBuffer); 
         } catch (e) {
-            showToast("Error loading custom sample.");
+            console.error("Error loading sample:", e);
         }
     }
+
+    document.getElementById('btnLoadCustomSample')?.addEventListener('click', () => {
+        document.getElementById('customSampleInput').click();
+    });
 
     document.getElementById('customSampleInput')?.addEventListener('change', async (e) => {
         const files = e.target.files;
         const presetEl = document.getElementById('instrumentPreset');
+        if (!files || files.length === 0) return;
 
-        if (!files || files.length === 0) {
-            // Safety: Revert dropdown if user cancels the file dialog
-            if (presetEl && presetEl.value === 'sample_custom') {
-                presetEl.selectedIndex = 0;
-                presetEl.dispatchEvent(new Event('change'));
-            }
-            return;
+        // Explicitly wake up the audio context to prevent browser hang bugs
+        if (typeof initAudio === 'function') initAudio();
+        if (audioCtx && audioCtx.state === 'suspended') {
+            await audioCtx.resume();
         }
 
         showToast(`Processing ${files.length} custom sample(s)...`);
         let lastFileName = "";
 
-        // 1. Save ALL selected files to permanent IndexedDB
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            await saveSampleToDB(file);
-            lastFileName = file.name;
-        }
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                lastFileName = file.name;
+                
+                const arrayBuffer = await file.arrayBuffer();
+                const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                
+                const dictKey = `sample_db:${file.name}`;
+                sampleBank.set(dictKey, decodedBuffer);
 
-        // 2. Wait a tiny fraction of a second to guarantee the IndexedDB 
-        // has finished appending the new <option> tags to the HTML DOM
-        setTimeout(() => {
+                if (typeof saveSampleToDB === 'function') await saveSampleToDB(file);
+            }
+
             if (presetEl && lastFileName) {
-                // 3. Set the dropdown to the very last file uploaded
                 presetEl.value = `sample_db:${lastFileName}`;
-
-                // 4. Force the master listener to wake up, load the audio into RAM, 
-                //    zero out the synth filters, and prep it for immediate playing!
                 presetEl.dispatchEvent(new Event('change'));
             }
             showToast(`Successfully loaded ${files.length} sample(s)!`);
-        }, 150);
-
-        // 5. Reset input so the exact same files can be re-uploaded if needed later
+        } catch (err) {
+            console.error(`CRITICAL UPLOAD FAILURE:`, err);
+            showToast("Failed to process one or more audio files.");
+        }
         e.target.value = '';
     });
 
@@ -2700,12 +2746,10 @@
     document.getElementById('instrumentPreset')?.addEventListener('change', e => {
         const val = e.target.value;
         isSamplerMode = val.startsWith('sample_');
-
-        // Check if this is an auto-populated folder sample!
         const isFolderSample = val.startsWith('sample_folder:');
 
-        // Set loop behavior based on instrument
-        isSamplerLooping = (val !== 'sample_fm');
+        // Legacy procedural samples removed. All user wavs default to looping sustain.
+        isSamplerLooping = true; 
 
         // Toggle UI Elements safely
         const grpOscMix = document.getElementById('grpOscMix');
@@ -2719,81 +2763,71 @@
         disabledInSampler.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.disabled = isSamplerMode; // Lock the slider
-                const group = el.closest('.control-group'); // Find the parent div
-                // Dim the slider and its label to 30% opacity if in sampler mode
+                el.disabled = isSamplerMode; 
+                const group = el.closest('.control-group'); 
                 if (group) group.style.opacity = isSamplerMode ? '0.3' : '1';
             }
         });
 
         if (isSamplerMode) {
-            // Force a clean state for samples so old synth LFOs/Filters don't ruin the audio
             syncADSR('attack', 0.01); syncADSR('decay', 1.0); syncADSR('sustain', 0.8); syncADSR('release', 0.4);
 
-            // Zero out synth-specific modulations
             ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato', 'distortion'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { el.value = 0; el.dispatchEvent(new Event('input')); }
             });
 
-            // Open the filter all the way to let the sample shine
             const br = document.getElementById('brightness');
             if (br) { br.value = 8; br.dispatchEvent(new Event('input')); }
             
-            // --- NEW: AUTO-DETECT ROOT KEY FROM FILENAME ---
             const rootInput = document.getElementById('sampleRootKey');
             if (rootInput) {
-                // The filename is hiding right inside the dropdown value (e.g., 'sample_db:MyViolin_F#3.wav')
                 const detectedMidi = extractMidiFromFilename(val);
                 rootInput.value = detectedMidi;
-                
-                // Dispatch the input event so your global tracker and retroactive track updater instantly catch it!
                 rootInput.dispatchEvent(new Event('input')); 
             }
 
-            // --- THE NEW SLEEK ROUTING LOGIC ---
+            // --- STRICT ROUTING LOGIC ---
             if (val === 'sample_custom') {
-                // Instantly open the OS file browser!
                 document.getElementById('customSampleInput').click();
-
-                // Temporarily revert the dropdown UI back to whatever it was before, 
-                // so it doesn't say "Custom Sample..." if they cancel the file dialog.
-                // When they select a file, the customSampleInput listener will update the UI properly!
                 e.target.selectedIndex = 0;
                 e.target.dispatchEvent(new Event('change'));
-
             } else if (isFolderSample) {
-                // Keep existing folder sample logic
                 const filePath = val.replace('sample_folder:', '');
-                loadSampleToBuffer('sample_folder', filePath);
+                loadSampleToBuffer(val, filePath); 
             } else if (val.startsWith('sample_db:')) {
-                // Keep existing IndexedDB logic
                 const filename = val.replace('sample_db:', '');
-                loadSampleFromDB(filename).then(arrayBuffer => {
-                    if (arrayBuffer) {
-                        const blob = new Blob([arrayBuffer], { type: 'audio/wav' });
-                        const url = URL.createObjectURL(blob);
-                        loadSampleToBuffer('sample_db', url);
-                    } else {
-                        showToast("Sample not found in database!");
-                    }
-                });
+                
+                // --- FILE:/// CORS BYPASS ---
+                // Do NOT use URL.createObjectURL or fetch() here! 
+                // Decode the binary array directly to bypass local browser security blocks.
+                if (!sampleBank.has(val)) {
+                    loadSampleFromDB(filename).then(async arrayBuffer => {
+                        if (arrayBuffer) {
+                            try {
+                                const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                                sampleBank.set(val, decodedBuffer);
+                            } catch (err) {
+                                console.error("Failed to decode DB sample:", err);
+                            }
+                        } else {
+                            showToast("Sample not found in database!");
+                        }
+                    });
+                }
             } else {
-                // Keep existing built-in sample logic
-                loadSampleToBuffer(val, null);
+                // Safely ignore legacy procedural samples so they don't trigger fetch(null)
             }
         } else {
             // Load Analog Synth Preset
             const p = presets[val]; if (!p) return;
             currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
 
-            // Update standard range sliders (Added lfoDelay, lfoFade, lfoKeytrack)
             ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones', 'autoPan', 'lfoDelay', 'lfoFade', 'lfoKeytrack'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && p[id] !== undefined) { el.value = p[id]; el.dispatchEvent(new Event('input')); }
             });
 
-            // Update LFO Select Dropdowns (Fallback to defaults if missing)
             const shapeEl = document.getElementById('lfoShape');
             if (shapeEl) { shapeEl.value = p.lfoShape || 'sine'; currentLfoShape = shapeEl.value; }
             
@@ -2803,27 +2837,41 @@
             const polarityEl = document.getElementById('lfoPolarity');
             if (polarityEl) { polarityEl.value = p.lfoPolarity || 'bipolar'; currentLfoPolarity = polarityEl.value; }
             
-            // Rebuild the audio chain exactly ONE time!
             buildLfoChain(); 
             if (typeof updateLfoSpeed === 'function') updateLfoSpeed();
 
-            if (lfoRetrigger) document.getElementById('btnLfoRetrigger')?.click(); // Reset Key Sync to OFF
+            if (lfoRetrigger) document.getElementById('btnLfoRetrigger')?.click(); 
         }
 
         if (typeof drawEnvelope === 'function') drawEnvelope();
 
-        // If the user changes presets while a track is selected, update all recorded notes!
+        // --- ISOLATED TIMELINE NOTE CLONING ---
         if (typeof studio !== 'undefined') {
             const activeTrack = studio.lastSelectedDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
             if (studio.trackTypes[activeTrack] === 'voice' || studio.trackTypes[activeTrack] === null) {
-                syncActiveTrackInstrument();
+                
+                if (!studio.trackSynthStates[activeTrack]) {
+                    studio.trackSynthStates[activeTrack] = typeof captureCurrentSynthState === 'function' ? captureCurrentSynthState() : {};
+                } else {
+                    studio.trackSynthStates[activeTrack] = JSON.parse(JSON.stringify(studio.trackSynthStates[activeTrack]));
+                }
+                
+                studio.trackSynthStates[activeTrack].instrumentPreset = val;
+
+                const trackArray = studio.lastSelectedDomain === 'looper' ? looper.tracks[activeTrack] : arranger.tracks[activeTrack - 8];
+                if (trackArray && Array.isArray(trackArray)) {
+                    trackArray.forEach(evt => {
+                        if (evt.type === 'play' || evt.type === 'stem') {
+                            evt.synthState = JSON.parse(JSON.stringify(studio.trackSynthStates[activeTrack]));
+                        }
+                    });
+                }
+
+                if (typeof syncActiveTrackInstrument === 'function') syncActiveTrackInstrument();
             }
         }
 
-        // Update the piano roll track label to reflect the new instrument name
         if (typeof updatePianoRollTrackLabel === 'function') updatePianoRollTrackLabel();
-        
-        // THE FIX: Explicitly sync the Macro Dashboard!
         if (typeof syncAllMacros === 'function') syncAllMacros();
     });
 
@@ -3137,123 +3185,23 @@ document.getElementById('echo')?.addEventListener('input', e => {
     // --- SAMPLER ENGINE UI & DECODING ---
     async function loadSampleToBuffer(id, url) {
         initAudio();
+        
+        // If we already decoded this exact sample, we're good!
+        if (sampleBank.has(id)) return;
+        
+        // IMMUNITY BLOCK: Prevent 'null' strings from causing CORS console errors
+        if (!url || url === 'null' || url === 'undefined') return; 
 
-        // 1. Handle Built-In Procedural Samples
-        if (id === 'sample_fm' || id === 'sample_choir') {
-            const sr = audioCtx.sampleRate;
-            const freq = 261.625565; // Middle C (Base pitch for Tonnetz)
-
-            if (id === 'sample_fm') {
-                // FM Bass: 2 seconds, no loop, sharp attack and decay
-                const len = sr * 2;
-                activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
-                const data = activeSampleBuffer.getChannelData(0);
-                for (let i = 0; i < len; i++) {
-                    const t = i / sr;
-                    const env = Math.exp(-t * 5); // Punchy bass decay
-                    const mod = Math.sin(2 * Math.PI * (freq / 2) * t) * 4 * env;
-                    data[i] = Math.sin(2 * Math.PI * freq * t + mod) * env * 0.8;
-                }
-            } else if (id === 'sample_choir') {
-                // Lo-Fi Choir: 2 seconds, crossfaded to loop perfectly seamlessly
-                const len = sr * 2;
-                activeSampleBuffer = audioCtx.createBuffer(1, len, sr);
-                const data = activeSampleBuffer.getChannelData(0);
-
-                // Generate 3 seconds of raw audio to allow for a crossfaded loop point
-                const raw = new Float32Array(sr * 3);
-                for (let i = 0; i < raw.length; i++) {
-                    const t = i / sr;
-                    // Proper Phase Modulation for smooth vibrato
-                    const vib = Math.sin(2 * Math.PI * 4 * t) * 0.05;
-                    const o1 = Math.sin(2 * Math.PI * freq * t + vib);
-                    const o2 = Math.sin(2 * Math.PI * (freq * 1.008) * t + vib);
-                    const o3 = Math.sin(2 * Math.PI * (freq * 0.992) * t + vib);
-                    const noise = (Math.random() * 2 - 1) * 0.05; // Breath noise
-                    raw[i] = (o1 + o2 + o3 + noise) * 0.15;
-                }
-
-                // Crossfade the last 0.5s into the first 0.5s
-                const fadeLen = sr * 0.5;
-                for (let i = 0; i < len; i++) {
-                    if (i < fadeLen) {
-                        const fadeOut = raw[len + i] * (1 - (i / fadeLen));
-                        const fadeIn = raw[i] * (i / fadeLen);
-                        data[i] = fadeOut + fadeIn;
-                    } else {
-                        data[i] = raw[i];
-                    }
-                }
-            }
-            showToast(id === 'sample_fm' ? "FM Bass Loaded!" : "Choir Sample Loaded!");
-            return;
-        }
-
-        // 2. Handle Custom User Uploads
         try {
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
-            activeSampleBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            showToast("Custom Sample loaded into RAM!");
+            const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            sampleBank.set(id, decodedBuffer); 
         } catch (e) {
-            showToast("Error loading custom sample.");
+            console.error(`Error loading sample ${id} via network:`, e);
         }
     }
-
-    document.getElementById('btnLoadCustomSample')?.addEventListener('click', () => {
-        document.getElementById('customSampleInput').click();
-    });
-
-    document.getElementById('customSampleInput')?.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const url = URL.createObjectURL(file);
-        loadSampleToBuffer('sample_custom', url);
-    });
-
-    // Intercept the Instrument Dropdown to handle Samplers
-    document.getElementById('instrumentPreset')?.addEventListener('change', e => {
-        const val = e.target.value;
-        isSamplerMode = val.startsWith('sample_');
-
-        // NEW: Set loop behavior based on instrument
-        isSamplerLooping = (val !== 'sample_fm');
-
-        // Toggle UI Elements safely
-        const grpOscMix = document.getElementById('grpOscMix');
-        const grpCustomSample = document.getElementById('grpCustomSample');
-
-        if (grpOscMix) grpOscMix.style.display = isSamplerMode ? 'none' : 'flex';
-        if (grpCustomSample) grpCustomSample.style.display = (val === 'sample_custom') ? 'flex' : 'none';
-
-        if (isSamplerMode) {
-            // Force a default ADSR for samples
-            syncADSR('attack', 0.01); syncADSR('decay', 1.0); syncADSR('sustain', 0.8); syncADSR('release', 0.4);
-
-            // Disable LFOs and Filters so they don't chew up the audio sample
-            ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) { el.value = 0; el.dispatchEvent(new Event('input')); }
-            });
-            const br = document.getElementById('brightness');
-            if (br) { br.value = 8; br.dispatchEvent(new Event('input')); }
-
-            if (val !== 'sample_custom') {
-                loadSampleToBuffer(val, null);
-            }
-            // Note: We leave the 'sample_custom' logic to the dedicated "Load Sample" button, 
-            // as browsers actively block file dialogs triggered by <select> menus!
-        } else {
-            // Load Analog Synth Preset
-            const p = presets[val]; if (!p) return;
-            currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
-            ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones', 'autoPan'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el && p[id] !== undefined) { el.value = p[id]; el.dispatchEvent(new Event('input')); }
-            });
-        }
-        drawEnvelope();
-    });
 
     // ==========================================
     // AI PROGRESSION GENERATOR ENGINE
@@ -6293,6 +6241,18 @@ const btnQuantize = document.getElementById('prActionQuantize');
             // Skip the heavy Tonnetz grid math during fast slides!
             if (isGlissando) return;
 
+            // --- NEW: SVG RENDERING CULLING ---
+            const pr = document.getElementById('piano-roll-overlay');
+            if (pr && pr.classList.contains('active')) {
+                const prRect = pr.getBoundingClientRect();
+                const coverageRatio = prRect.height / window.innerHeight;
+            
+                // Rule: If PR covers 80% or more, completely skip rendering the Tonnetz
+                if (coverageRatio >= 0.8) {
+                    return; // Exit the frame immediately (Massive CPU savings!)
+                }
+            }
+
             // --- HEAVY TONNETZ LOGIC BELOW ---
             // Track Pitch Classes (0-11) for octave-immune matching
             const playingPitchClasses = new Set();
@@ -6721,78 +6681,109 @@ const btnQuantize = document.getElementById('prActionQuantize');
         updateChordDisplayUI(chordNameStr, 1);
     }
 
-    function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null, destination = null, noteVel = null) {
+function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null, destination = null, noteVel = null) {
         const midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
 
-        // --- ANALOG PHASE STAGGER & JITTER BUFFER ---
-        // Cycle from 0 to 5 to guarantee identical notes across tracks never perfectly phase-align!
         globalStaggerCounter = (globalStaggerCounter + 1) % 6; 
-        
-        // If it's a known chord array, use the index. Otherwise, use the global rolling counter!
         const stagger = isChord ? (index * 0.0015) : (globalStaggerCounter * 0.0015);
         const safeStartTime = Math.max(startTime + stagger, audioCtx.currentTime + currentDeclick);
 
-        // Polyphony Capping ("Voice Stealing")
         if (globalVoicePool.length >= maxVoices) {
-            const oldestVoice = globalVoicePool.shift(); 
+            const oldestVoice = globalVoicePool.shift();
             if (oldestVoice && oldestVoice.gainNode) {
-                beginRelease([oldestVoice], true, true); 
+                beginRelease([oldestVoice], true, true);
             }
         }
 
         let isAccent = false;
-        if (!isChord) { isAccent = totalNotes === 3 ? (index % 3 === 0) : (index % totalNotes === 0); }
-        else { isAccent = true; }
+        if (!isChord) {
+            isAccent = totalNotes === 3 ? (index % 3 === 0) : (index % totalNotes === 0);
+        } else {
+            isAccent = true;
+        }
+
         const accentMult = isAccent ? 1.4 : 0.8;
 
-        const s = synthState || {
-            osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult,
-            subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance,
-            brightness: currentBrightness, filterEnv: currentFilterEnv,
-            attack: currentAttack, decay: currentDecay, sustain: currentSustain, release: currentRelease,
-            oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType,
-            sampleRootKey: currentSampleRootKey
+        const s = synthState || { 
+            osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult, 
+            subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance, brightness: currentBrightness, 
+            filterEnv: currentFilterEnv, attack: currentAttack, decay: currentDecay, sustain: currentSustain, 
+            release: currentRelease, oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType, 
+            sampleRootKey: currentSampleRootKey,
+            instrumentPreset: document.getElementById('instrumentPreset')?.value || 'piano' 
         };
 
         const osc1Gain = audioCtx.createGain();
         const osc2Gain = audioCtx.createGain();
-
-        let osc1 = null; let osc2 = null; let sampleSource = null;
+        let osc1 = null;
+        let osc2 = null;
+        let sampleSource = null;
 
         const effectiveGlideTime = isGlidePadOn() ? Math.max(0.15, s.glide) : s.glide;
         const isLegato = activeUserNotes > 1 || sustainedVoices.size > 0;
-        const shouldGlide = lastPlayedFreq && effectiveGlideTime > 0 &&
-            (s.glideMode === 'always' || (s.glideMode === 'legato' && isLegato) || isGlidePadOn());
+        const shouldGlide = lastPlayedFreq && effectiveGlideTime > 0 && (s.glideMode === 'always' || (s.glideMode === 'legato' && isLegato) || isGlidePadOn());
 
-        if (isSamplerMode && activeSampleBuffer) {
-            sampleSource = audioCtx.createBufferSource();
-            sampleSource.buffer = activeSampleBuffer;
-            sampleSource.loop = isSamplerLooping;
-
-            // --- THE FIX: Read the track's specific root key instead of hardcoding 60! ---
-            const rootMidi = s.sampleRootKey !== undefined ? s.sampleRootKey : 60;
-            const baseFreq = 440.0 * Math.pow(2, (rootMidi - 69) / 12);
-            
-            const targetRate = freq / baseFreq;
-
-            if (shouldGlide) {
-                const lastRate = lastPlayedFreq / baseFreq;
-                sampleSource.playbackRate.setValueAtTime(lastRate, safeStartTime);
-                sampleSource.playbackRate.exponentialRampToValueAtTime(targetRate, safeStartTime + effectiveGlideTime);
+        // --- STRICT MULTI-TRACK ROUTING ---
+        const inst = s.instrumentPreset || 'piano';
+        const isTrackSampler = inst.startsWith('sample_');
+        
+        let targetBuffer = null;
+        if (isTrackSampler && typeof sampleBank !== 'undefined') {
+            if (sampleBank.has(inst)) {
+                targetBuffer = sampleBank.get(inst);
             } else {
-                sampleSource.playbackRate.value = targetRate;
+                const cleanName = inst.replace('sample_folder:', '').replace('sample_db:', '');
+                
+                if (sampleBank.has(`sample_folder:${cleanName}`)) {
+                    targetBuffer = sampleBank.get(`sample_folder:${cleanName}`);
+                } else if (sampleBank.has(`sample_db:${cleanName}`)) {
+                    targetBuffer = sampleBank.get(`sample_db:${cleanName}`);
+                } else {
+                    // Only log if the engine completely fails to find the requested audio!
+                    console.warn(`Audio Engine: Failed to locate sample '${inst}' in RAM.`);
+                    
+                    if (typeof loadSampleToBuffer === 'function' && inst.startsWith('sample_folder:')) {
+                        loadSampleToBuffer(inst, cleanName); 
+                    }
+                }
             }
+        }
 
-            osc1Gain.gain.value = 1.0; osc2Gain.gain.value = 0.0;
-            sampleSource.connect(osc1Gain);
+        if (isTrackSampler) {
+            if (targetBuffer) {
+                sampleSource = audioCtx.createBufferSource();
+                sampleSource.buffer = targetBuffer;
+                sampleSource.loop = true; // Legacy checks removed
+
+                const rootMidi = s.sampleRootKey !== undefined ? s.sampleRootKey : 60;
+                const baseFreq = 440.0 * Math.pow(2, (rootMidi - 69) / 12);
+                const targetRate = freq / baseFreq;
+
+                if (shouldGlide) {
+                    const lastRate = lastPlayedFreq / baseFreq;
+                    sampleSource.playbackRate.setValueAtTime(lastRate, safeStartTime);
+                    sampleSource.playbackRate.exponentialRampToValueAtTime(targetRate, safeStartTime + effectiveGlideTime);
+                } else {
+                    sampleSource.playbackRate.value = targetRate;
+                }
+
+                osc1Gain.gain.value = 1.0;
+                osc2Gain.gain.value = 0.0;
+                sampleSource.connect(osc1Gain);
+            } else {
+                // Buffer hasn't loaded yet, or filename is missing. Stay silent!
+                osc1Gain.gain.value = 0.0;
+                osc2Gain.gain.value = 0.0;
+            }
         } else {
-            osc1 = audioCtx.createOscillator(); osc2 = audioCtx.createOscillator();
+            // Analog Synth Generation
+            osc1 = audioCtx.createOscillator();
+            osc2 = audioCtx.createOscillator();
             
             let customWave = null;
             if (s.overtones > 0) {
                 const real = new Float32Array(8);
                 const imag = new Float32Array(8);
-                // THE FIX: Must use the Sine array (imag) so the wave starts at exactly 0.0 phase!
                 imag[1] = 1; 
                 for (let i = 2; i < 8; i++) imag[i] = s.overtones * (1 / i); 
                 customWave = audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
@@ -6819,13 +6810,13 @@ const btnQuantize = document.getElementById('prActionQuantize');
         lastPlayedFreq = freq;
 
         let subOsc = null; let subGain = null;
-        if (s.subOsc > 0) {
+        if (s.subOsc > 0 && !isTrackSampler) { 
             subOsc = audioCtx.createOscillator(); subOsc.type = 'sine'; subOsc.frequency.value = freq / 2;
             subGain = audioCtx.createGain(); subGain.gain.value = s.subOsc;
         }
 
         let noiseSrc = null; let noiseGain = null;
-        if (s.noise > 0 && sharedNoiseBuffer) {
+        if (s.noise > 0 && sharedNoiseBuffer && !isTrackSampler) {
             noiseSrc = audioCtx.createBufferSource(); noiseSrc.buffer = sharedNoiseBuffer; noiseSrc.loop = true;
             noiseGain = audioCtx.createGain(); noiseGain.gain.value = s.noise;
         }
@@ -6837,25 +6828,19 @@ const btnQuantize = document.getElementById('prActionQuantize');
         const targetBaseCutoff = Math.min(freq * s.brightness, 12000);
         const baseCutoff = dampenHeld ? 600 : targetBaseCutoff;
         
-        // --- FILTER ZIPPER FIX ---
-        filter.frequency.value = baseCutoff; // Lock default state safely
+        filter.frequency.value = baseCutoff; 
         filter.frequency.setValueAtTime(baseCutoff, audioCtx.currentTime);
         filter.frequency.setValueAtTime(baseCutoff, safeStartTime);
 
         if (s.filterEnv !== 0 && !dampenHeld) {
             const peakCutoff = s.filterEnv > 0 ? Math.min(baseCutoff * (1 + s.filterEnv), 20000) : Math.max(baseCutoff * (1 + s.filterEnv), 50);
-            
-            // Minimum 25ms slew rate on filter to physically prevent Biquad coefficient snapping
             const safeFilterAttack = Math.max(0.025, Math.max(currentDeclick, s.attack * 0.5));
-            
-            // Using exponentialRamp mimics natural analog capacitors and prevents popping
             filter.frequency.exponentialRampToValueAtTime(peakCutoff, safeStartTime + safeFilterAttack);
             filter.frequency.exponentialRampToValueAtTime(Math.max(0.001, baseCutoff), safeStartTime + safeFilterAttack + s.decay);
         }
 
-        // --- AMPLITUDE ENVELOPE FIX ---
         const gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0; // Explicitly crush 1.0 default
+        gainNode.gain.value = 0; 
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(0, safeStartTime);
 
@@ -6894,7 +6879,6 @@ const btnQuantize = document.getElementById('prActionQuantize');
 
         let finalVoiceOutput = ampLfoGain;
 
-        // --- THE PER-VOICE DISTORTION UPGRADE ---
         if (s.distortion > 0) {
             const voiceDistortion = audioCtx.createWaveShaper();
             voiceDistortion.curve = makeDistortionCurve(s.distortion);
@@ -6904,7 +6888,6 @@ const btnQuantize = document.getElementById('prActionQuantize');
             finalVoiceOutput = voiceDistortion;
         }
 
-        // Route the fully processed voice to the Active Track Mixer
         if (destination) {
             finalVoiceOutput.connect(destination); 
         } else {
@@ -6912,21 +6895,15 @@ const btnQuantize = document.getElementById('prActionQuantize');
         }
 
         const activeVelocity = (noteVel !== null && noteVel !== undefined) ? noteVel : (typeof currentVelocity !== 'undefined' ? currentVelocity : 100);
-        
-        // Normalize to Web Audio scale (0.0 to 1.0)
         const velMult = activeVelocity > 1 ? activeVelocity / 127.0 : Math.max(0.01, activeVelocity);
 
         if (midiOutMode === 'midi') {
-                gainNode.gain.setValueAtTime(0, safeStartTime);
+            gainNode.gain.setValueAtTime(0, safeStartTime);
         } else {
-            // Dynamic Polyphony Scaling to prevent Master Bus clipping
             const polyphonyScale = Math.max(0.3, 1.0 - (globalVoicePool.length * 0.025));
             const baseVolume = isMobileDevice ? 0.045 : 0.085;
-        
-            // velMult is now safely 0.0 to 1.0, restoring your dynamic crescendos!
             const peak = dampenHeld ? 0.015 : (baseVolume * accentMult * velMult * polyphonyScale);
             const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * s.sustain);
-
             const safeAttack = Math.max(currentDeclick, parseFloat(s.attack || 0));
 
             gainNode.gain.linearRampToValueAtTime(peak, safeStartTime + safeAttack);
@@ -6942,7 +6919,6 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (midiOut) {
             const timeToStart = Math.max(0, safeStartTime - audioCtx.currentTime);
             setTimeout(() => {
-                // Ensure MIDI hardware receives the dynamic velocity
                 if (midiOut) midiOut.send([0x90, midiNote, activeVelocity]);
                 if (!isChord) setTimeout(() => { if (midiOut) midiOut.send([0x80, midiNote, 0]); }, 250);
             }, timeToStart * 1000);
@@ -8794,9 +8770,15 @@ const btnQuantize = document.getElementById('prActionQuantize');
         saveOriginalAssets(arranger);
 
         // 2. Save custom sampler instruments loaded into the synth engine
-        if (typeof sampleDatabase !== 'undefined') {
-            for (const [sampleName, buffer] of Object.entries(sampleDatabase)) {
-                saveAudioBufferToZip(sampleName, buffer);
+        if (typeof sampleBank !== 'undefined') {
+            for (const [sampleName, buffer] of sampleBank.entries()) {
+                if (sampleName.startsWith('sample_db:')) {
+                    const cleanName = sampleName.replace('sample_db:', '');
+                    saveAudioBufferToZip(cleanName, buffer);
+                } else if (sampleName.startsWith('sample_folder:')) {
+                    const cleanName = sampleName.replace('sample_folder:', '');
+                    saveAudioBufferToZip(cleanName, buffer);
+                }
             }
         }
 
@@ -10556,7 +10538,6 @@ function updateScaleOverlay() {
             }
 
             // 3. If standard search fails, check the OTHER domain as a last resort
-            // THE FIX: Bypassed during imports so it correctly returns -1 to trigger track spawning!
             if (!strictDomain) {
                 const overflowStart = preferLooper ? 8 : 0;
                 const overflowEnd = preferLooper ? arrangerMax : 8;
@@ -10565,6 +10546,12 @@ function updateScaleOverlay() {
                 }
             }
             return -1; 
+        };
+
+        // --- DEEP CLONE HELPER (Fixes the shared reference bug!) ---
+        const getFreshSynthState = () => {
+            const base = typeof captureCurrentSynthState === 'function' ? captureCurrentSynthState() : {};
+            return JSON.parse(JSON.stringify(base));
         };
 
         // 3. Process all selected files
@@ -10588,7 +10575,6 @@ function updateScaleOverlay() {
                         applyImportedBPM(state.bpm);
 
                         // 1. REBUILD DYNAMIC TRACKS FIRST
-                        // If the saved project had 24 tracks, we need to click the +8 button until we have 24!
                         if (state.currentArrangerTrackCount && state.currentArrangerTrackCount > 8) {
                             const banksNeeded = (state.currentArrangerTrackCount - 8) / 8;
                             const addBankBtn = document.getElementById('btnAddArrangerBank');
@@ -10604,20 +10590,17 @@ function updateScaleOverlay() {
                         arranger.duration = state.exportDuration || arranger.duration;
 
                         // 3. RE-LINK BINARY AUDIO BUFFERS (.WAVs)
-                        // JSON destroys audio buffers. We must decode the WAVs from the zip and inject them back into the events!
                         for (const filename of Object.keys(zip.files)) {
                             if (filename.endsWith('.wav')) {
                                 const fileData = await zip.files[filename].async("arraybuffer");
                                 const audioBuffer = await audioCtx.decodeAudioData(fileData);
                                 const cleanName = filename.split('/').pop();
 
-                                // Search both Looper and Arranger tracks for the missing buffer
                                 const linkAudioToEvent = (domainObj, globalOffset) => {
                                     domainObj.tracks.forEach((track, localIdx) => {
                                         track.forEach(evt => {
                                             if (evt.type === 'stem' && evt.name === cleanName) {
                                                 evt.buffer = audioBuffer;
-                                                // Restore the legacy UI reference
                                                 studio.trackAudioBuffers[localIdx + globalOffset] = audioBuffer; 
                                             }
                                         });
@@ -10637,23 +10620,19 @@ function updateScaleOverlay() {
                             const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
                             const isLooper = i < 8;
 
-                            // Type Colors
                             if (type !== null && btn) {
                                 btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
                             }
 
-                            // Labels
                             if (labelEl && studio.trackSynthStates[i]) {
                                 labelEl.textContent = type === 'drum' ? 'DRUMS' : (studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
                             }
 
-                            // Mutes & Solos
                             if (muteBtn) {
                                 const isMuted = isLooper ? looper.muted[i] : arranger.muted[i - 8];
                                 muteBtn.classList.toggle('muted', isMuted);
                             }
 
-                            // Restore Mixer Faders & Audio Hardware
                             if (state.mixerState) {
                                 const hwGain = isLooper ? looperGainNodes[i] : linearGainNodes[i - 8];
                                 const hwPan = isLooper ? looperPanners[i] : linearPanners[i - 8];
@@ -10686,95 +10665,94 @@ function updateScaleOverlay() {
                         if (sessionFile) showToast("Native Session found. Extracting stems to merge...");
                         else showToast("Foreign DAWproject detected. Scanning for metadata...");
 
-                    let trackMetadata = {}; 
-                    const xmlFile = zip.file("project.xml");
+                        let trackMetadata = {}; 
+                        const xmlFile = zip.file("project.xml");
                     
-                    if (xmlFile) {
-                        try {
-                            const xmlText = await xmlFile.async("string");
-                            const parser = new DOMParser();
-                            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                        if (xmlFile) {
+                            try {
+                                const xmlText = await xmlFile.async("string");
+                                const parser = new DOMParser();
+                                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
 
-                            // BPM EVALUATION...
-                            const transportNode = xmlDoc.querySelector("transport");
-                            if (transportNode && transportNode.getAttribute("tempo")) {
-                                const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
-                                if (mode === 'replace' || isProjectEmpty) applyImportedBPM(importedBpm);
-                                else {
-                                    const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
-                                    if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
-                                        stretchRatio = currentArpBPM / importedBpm;
-                                        showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
-                                    } else showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
-                                }
-                            }
-
-                            // --- UPGRADED: Foreign Track, Volume, and Pan Parser ---
-                            const trackNodes = xmlDoc.querySelectorAll("track");
-                            trackNodes.forEach(track => {
-                                const audioFileNode = track.querySelector("audio-file");
-                                let path = audioFileNode ? audioFileNode.getAttribute("path") : null;
-                                
-                                if (path) {
-                                    if (path.startsWith("./")) path = path.substring(2);
-                                    
-                                    // Dig into the foreign mixer channel
-                                    let mixVol = 1.0; let mixPan = 0.0;
-                                    const channelNode = track.querySelector("channel");
-                                    if (channelNode) {
-                                        const volNode = channelNode.querySelector("volume");
-                                        const panNode = channelNode.querySelector("pan");
-                                        // Some DAWs use 'value', some use 'db'. We assume linear 0.0-1.0 'value' for lightweight parsing
-                                        if (volNode && volNode.getAttribute("value")) mixVol = parseFloat(volNode.getAttribute("value"));
-                                        if (panNode && panNode.getAttribute("value")) mixPan = parseFloat(panNode.getAttribute("value"));
+                                // BPM EVALUATION...
+                                const transportNode = xmlDoc.querySelector("transport");
+                                if (transportNode && transportNode.getAttribute("tempo")) {
+                                    const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
+                                    if (mode === 'replace' || isProjectEmpty) applyImportedBPM(importedBpm);
+                                    else {
+                                        const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
+                                        if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
+                                            stretchRatio = currentArpBPM / importedBpm;
+                                            showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
+                                        } else showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
                                     }
-
-                                    trackMetadata[path] = { 
-                                        name: track.getAttribute("name"), 
-                                        color: track.getAttribute("color"),
-                                        volume: mixVol,
-                                        pan: mixPan
-                                    };
                                 }
-                            });
-                        } catch (xmlErr) { console.warn("Could not parse project.xml", xmlErr); }
-                    }
 
-                    // --- UPGRADED: File iteration and Database Injection ---
-                    for (const filename of Object.keys(zip.files)) {
-                        if (filename.endsWith('.wav') || filename.endsWith('.mid') || filename.endsWith('.midi')) {
-                            
-                            // If it's just raw audio being restored to the sampler DB, decode and continue!
-                            // (We skip adding these to the timeline because the JSON handles timeline placement)
-                            if (sessionFile && filename.startsWith("Raw_Assets/")) {
-                                const fileData = await zip.files[filename].async("arraybuffer");
-                                const audioBuffer = await audioCtx.decodeAudioData(fileData);
-                                const cleanName = filename.split('/').pop();
+                                // --- UPGRADED: Foreign Track, Volume, and Pan Parser ---
+                                const trackNodes = xmlDoc.querySelectorAll("track");
+                                trackNodes.forEach(track => {
+                                    const audioFileNode = track.querySelector("audio-file");
+                                    let path = audioFileNode ? audioFileNode.getAttribute("path") : null;
                                 
-                                // Inject into Sample Database so loaded trackSynthStates instantly find their custom sounds!
-                                if (typeof sampleDatabase !== 'undefined') sampleDatabase[cleanName] = audioBuffer;
-                                continue; 
-                            }
+                                    if (path) {
+                                        if (path.startsWith("./")) path = path.substring(2);
+                                    
+                                        let mixVol = 1.0; let mixPan = 0.0;
+                                        const channelNode = track.querySelector("channel");
+                                        if (channelNode) {
+                                            const volNode = channelNode.querySelector("volume");
+                                            const panNode = channelNode.querySelector("pan");
+                                            if (volNode && volNode.getAttribute("value")) mixVol = parseFloat(volNode.getAttribute("value"));
+                                            if (panNode && panNode.getAttribute("value")) mixPan = parseFloat(panNode.getAttribute("value"));
+                                        }
 
-                            // Do not place the rendered Audio/ stems back onto the timeline during a Native restore!
-                            if (sessionFile && filename.startsWith("Audio/")) continue;
+                                        trackMetadata[path] = { 
+                                            name: track.getAttribute("name"), 
+                                            color: track.getAttribute("color"),
+                                            volume: mixVol,
+                                            pan: mixPan
+                                        };
+                                    }
+                                });
+                            } catch (xmlErr) { console.warn("Could not parse project.xml", xmlErr); }
+                        }
 
-                            let isLooperPrefer = false;
-                            const parts = filename.split('_');
-                            if (parts.length >= 4 && parts[2].startsWith('L')) isLooperPrefer = true;
-
-                            let targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true);
+                        // --- UPGRADED: File iteration and Database Injection ---
+                        for (const filename of Object.keys(zip.files)) {
+                            if (filename.endsWith('.wav') || filename.endsWith('.mid') || filename.endsWith('.midi')) {
                             
-                            if (targetTrackIdx === -1 && !isLooperPrefer) {
-                                document.getElementById('btnAddArrangerBank')?.click();
-                                targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true); 
-                            }
-                            if (targetTrackIdx === -1) continue; 
+                                // If it's just raw audio being restored to the sampler DB, decode and continue!
+                                if (sessionFile && filename.startsWith("Raw_Assets/")) {
+                                    const fileData = await zip.files[filename].async("arraybuffer");
+                                    const audioBuffer = await audioCtx.decodeAudioData(fileData);
+                                    const cleanName = filename.split('/').pop();
 
-                            const isLooperDomain = targetTrackIdx < 8;
-                            const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
-                            const domainObj = isLooperDomain ? looper : arranger;
-                            const fileData = await zip.files[filename].async("arraybuffer");
+                                    // Inject into Sample Bank using BOTH prefixes
+                                    if (typeof sampleBank !== 'undefined') {
+                                        sampleBank.set(`sample_db:${cleanName}`, audioBuffer);
+                                        sampleBank.set(`sample_folder:${cleanName}`, audioBuffer);
+                                    }
+                                    continue;
+                                }
+
+                                if (sessionFile && filename.startsWith("Audio/")) continue;
+
+                                let isLooperPrefer = false;
+                                const parts = filename.split('_');
+                                if (parts.length >= 4 && parts[2].startsWith('L')) isLooperPrefer = true;
+
+                                let targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true);
+                            
+                                if (targetTrackIdx === -1 && !isLooperPrefer) {
+                                    document.getElementById('btnAddArrangerBank')?.click();
+                                    targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true); 
+                                }
+                                if (targetTrackIdx === -1) continue; 
+
+                                const isLooperDomain = targetTrackIdx < 8;
+                                const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
+                                const domainObj = isLooperDomain ? looper : arranger;
+                                const fileData = await zip.files[filename].async("arraybuffer");
 
                                 if (filename.endsWith('.wav')) {
                                     const audioBuffer = await audioCtx.decodeAudioData(fileData);
@@ -10783,17 +10761,16 @@ function updateScaleOverlay() {
                                     const evt = { 
                                         id: Math.random(), 
                                         type: 'stem', 
-                                        timeOffset: 0, // Zips usually start at 0
+                                        timeOffset: 0, 
                                         duration: audioBuffer.duration, 
                                         freqs: [],
                                         buffer: audioBuffer,
                                         stretchRatio: stretchRatio,
                                         peaks: visualPeaks,
-                                        name: filename.split('/').pop() // Extract clean name from zip path
+                                        name: filename.split('/').pop() 
                                     };
                                     domainObj.tracks[localIdx].push(evt);
                                 
-                                    // Legacy pointer for UI empty-checks
                                     if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
                                 
                                     if (!isLooperDomain && audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
@@ -10807,17 +10784,24 @@ function updateScaleOverlay() {
                                     try {
                                         const parsedMidi = new Midi(fileData);
                                         let trackMaxDur = 0;
+
+                                        // --- FIX: SEVER SHARED REFERENCE FOR ZIP MIDI ---
+                                        if (!studio.trackSynthStates[targetTrackIdx]) {
+                                            studio.trackSynthStates[targetTrackIdx] = getFreshSynthState();
+                                        } else {
+                                            studio.trackSynthStates[targetTrackIdx] = JSON.parse(JSON.stringify(studio.trackSynthStates[targetTrackIdx]));
+                                        }
                                     
                                         parsedMidi.tracks.forEach(track => {
                                             track.notes.forEach(note => {
                                                 const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
-                                                // Adjust MIDI timing if stretched
                                                 const adjustedTime = note.time * (1 / stretchRatio);
                                                 const adjustedDur = note.duration * (1 / stretchRatio);
                                             
                                                 const evt = {
                                                     id: Math.random(), type: 'play', timeOffset: adjustedTime,
-                                                    duration: adjustedDur, freqs: [freq], velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))), stArray: null 
+                                                    duration: adjustedDur, freqs: [freq], velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))), stArray: null,
+                                                    synthState: studio.trackSynthStates[targetTrackIdx] // Pass the isolated brain!
                                                 };
                                                 domainObj.tracks[localIdx].push(evt);
                                                 if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
@@ -10836,24 +10820,20 @@ function updateScaleOverlay() {
                                 const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
                                 const meta = trackMetadata[filename];
 
-                                // 1. Apply Base UI (Color & Track Type)
                                 if (btn) {
                                     btn.classList.add('type-voice');
                                     if (meta && meta.color) btn.style.borderBottom = `3px solid ${meta.color}`;
                                 }
                             
-                                // 2. Apply Track Name
                                 if (labelEl) {
                                     if (meta && meta.name) {
                                         labelEl.textContent = meta.name.substring(0, 12).toUpperCase();
                                     } else {
-                                        // Fallback if XML had no name: clean up the filename
                                         let nameMatch = filename.split('/').pop().replace('.wav', '').replace('.mid', '').replace('.midi', '').replace(/^Track_\d+_/i, '');
                                         labelEl.textContent = nameMatch.substring(0, 12).toUpperCase();
                                     }
                                 }
 
-                                // 3. Apply Foreign Volume & Pan Settings
                                 if (meta) {
                                     const volSlider = document.querySelector(`.track-vol[data-track="${targetTrackIdx}"]`);
                                     const panSlider = document.querySelector(`.pan-slider[data-track="${targetTrackIdx}"]`);
@@ -10920,7 +10900,6 @@ function updateScaleOverlay() {
                     finalDuration = Math.min(audioBuffer.duration, loopMaxSecs);
                 }
 
-                // Apply the stretch ratio to the duration visual!
                 const adjustedDuration = finalDuration * (1 / stretchRatio);
 
                 const evt = { 
@@ -10999,14 +10978,13 @@ function updateScaleOverlay() {
                     for (let i = 0; i < activeMidiTracks.length; i++) {
                         const midiTrack = activeMidiTracks[i];
                     
-                        let targetTrackIdx = getNextFreeTrack(targetDomainIsLooper, currentSearchIdx, true); // Strict Mode Active!
+                        let targetTrackIdx = getNextFreeTrack(targetDomainIsLooper, currentSearchIdx, true);
 
-                        // --- THE AUTO-BANK SPAWNER ---
                         if (targetTrackIdx === -1 && !targetDomainIsLooper) {
                             const addBankBtn = document.getElementById('btnAddArrangerBank');
                             if (addBankBtn) {
-                                addBankBtn.click(); // Spawns 8 new tracks!
-                                targetTrackIdx = getNextFreeTrack(false, currentSearchIdx, true); // Try mapping again
+                                addBankBtn.click(); 
+                                targetTrackIdx = getNextFreeTrack(false, currentSearchIdx, true); 
                             }
                         }
 
@@ -11015,11 +10993,18 @@ function updateScaleOverlay() {
                             break; 
                         }
 
-                        // THE FIX: Calculate local index based on the newly spawned target index!
                         const isTargetLooper = targetTrackIdx < 8;
                         const localIdx = isTargetLooper ? targetTrackIdx : targetTrackIdx - 8;
                         const domainObj = isTargetLooper ? looper : arranger;
-                        const isDrumTrack = (midiTrack.channel === 9); // MIDI Channel 10 = Drums
+                        const isDrumTrack = (midiTrack.channel === 9);
+
+                        // --- FIX: SEVER SHARED REFERENCE FOR STANDALONE MIDI ---
+                        // Ensure this newly assigned track gets its very own isolated brain!
+                        if (!studio.trackSynthStates[targetTrackIdx]) {
+                            studio.trackSynthStates[targetTrackIdx] = getFreshSynthState();
+                        } else {
+                            studio.trackSynthStates[targetTrackIdx] = JSON.parse(JSON.stringify(studio.trackSynthStates[targetTrackIdx]));
+                        }
 
                         // --- TRACK NAMING LOGIC ---
                         let finalTrackName = midiTrack.name.trim();
@@ -11061,18 +11046,17 @@ function updateScaleOverlay() {
                                     id: Math.random(), type: 'play', freqs: [freq], stArray: null,
                                     timeOffset: adjustedTime, duration: adjustedDur,
                                     velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))),
-                                    synthState: studio.trackSynthStates[targetTrackIdx] // Inherit default state
+                                    synthState: studio.trackSynthStates[targetTrackIdx] // Pass the isolated brain!
                                 });
                             }
                         
                             if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
                         });
 
-                        // Expand global timeline bounds
                         if (!isTargetLooper && trackMaxDur > arranger.duration) arranger.duration = trackMaxDur;
                         if (isTargetLooper && trackMaxDur > looper.trackDurations[localIdx]) looper.trackDurations[localIdx] = trackMaxDur;
 
-                        currentSearchIdx = targetTrackIdx + 1; // Move cursor so the next loop finds the next track
+                        currentSearchIdx = targetTrackIdx + 1; 
                     }
 
                 } catch (err) {
@@ -11486,33 +11470,67 @@ function assignMacroParam(knobIndex, targetId) {
             document.body.classList.add('is-resizing-pr');
         };
 
-        const doResizePR = (e) => {
+        const doResizePR =(e) => {
             if (!isResizingPR) return;
-        
             const currentY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-            const deltaY = prStartY - currentY; 
-            let newHeight = prStartHeight + deltaY;
-        
-            // 3. COLLAPSE LIMIT: 40px perfectly fits just the toolbar!
-            const minHeight = 40; 
-            const maxHeight = window.innerHeight * 0.85; 
-        
-            if (newHeight < minHeight) newHeight = minHeight;
-            if (newHeight > maxHeight) newHeight = maxHeight;
 
+            // Use the exact HTML IDs from your document!
+            const masterTransport = document.getElementById('master-transport');
+            const canvasControls = document.getElementById('canvas-controls');
+
+            // =========================================================
+            // --- 1. DETECT TOP-LEVEL UI INTERFERENCE ---
+            // =========================================================
+            // If the piano roll is dragged above 140px, dock the headers
+            const interferenceThreshold = 140; 
+            const isPRHigh = currentY < interferenceThreshold;
+
+            if (isPRHigh) {
+                if (masterTransport) masterTransport.classList.add('pr-high');
+                if (canvasControls) canvasControls.classList.add('pr-high-stretched');
+            } else {
+                if (masterTransport) masterTransport.classList.remove('pr-high');
+                if (canvasControls) canvasControls.classList.remove('pr-high-stretched');
+            }
+
+            // =========================================================
+            // --- 2. DYNAMIC STACKING CLAMP ---
+            // =========================================================
+            const isMacroOpen = document.getElementById('macro-overlay')?.classList.contains('active');
+            const isMobile = window.innerWidth <= 768;
+        
+            let safeTopMargin = 0;
+        
+            // Always measure docked headers if Piano Roll is high OR if we are on a narrow mobile device
+            if (isPRHigh || isMobile) {
+                // Read the exact pixel heights of the docked panels (supports dynamic flex-wrapping rows!)
+                const mtHeight = masterTransport ? masterTransport.offsetHeight : 45;
+                const menuHeight = canvasControls ? canvasControls.offsetHeight : 50;
+            
+                // The -2 forces the Piano Roll to tuck flush underneath the header's CSS borders!
+                safeTopMargin = mtHeight + menuHeight - 2; 
+            } else if (isMacroOpen) {
+                safeTopMargin = 90;
+            }
+
+            const pianoH = document.getElementById('piano-overlay').offsetHeight;
+        
+            // Calculate max allowed height based on our new pixel-perfect hard-stop margin
+            const maxHeight = window.innerHeight - pianoH - safeTopMargin;
+
+            // Apply the height and strictly clamp it
+            let newHeight = window.innerHeight - currentY - pianoH;
+            newHeight = Math.max(40, Math.min(newHeight, maxHeight));
+        
             // Write directly to your global CSS variables
             document.documentElement.style.setProperty('--pr-height', `${newHeight}px`);
             document.documentElement.style.setProperty('--pr-actual-h', `${newHeight}px`);
-        
-            // Force the background Tonnetz grid to yield to the new height
-            if (typeof updateOverlayCSSVars === 'function') {
-                updateOverlayCSSVars(); 
-            }
 
-            // Force canvas to resize gracefully (if applicable)
-            if (typeof resizePianoRollCanvas === 'function') {
-                resizePianoRollCanvas();
-            }
+            // --- IMPORTANT: Trigger collision checks dynamically while dragging! ---
+            if (typeof evaluatePanelCollisions === 'function') evaluatePanelCollisions(); 
+
+            if (typeof updateOverlayCSSVars === 'function') updateOverlayCSSVars();
+            if (typeof resizePianoRollCanvas === 'function') resizePianoRollCanvas();
         };
 
         const stopResizePR = () => {
