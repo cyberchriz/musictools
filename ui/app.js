@@ -195,7 +195,7 @@
     let isGenActive = false, isEnvActive = false, isPianoActive = true, isCofActive = false, isInfoActive = false, isSettingsActive = false;
     let isSynthActive = false, isMacroActive = false, isPadsActive = false, isDrumsActive = false, isMixerActive = false;
     let isHumanizeActive = false;
-    
+    let isBounceActive = false;
     let isPianoRollActive = false; 
     let isMacroDragging = false;   // Locks Tonnetz hit-testing
     let currentPlaybackBar = -1;   // Tracks bars for Chord Memory Reset
@@ -214,6 +214,11 @@
     let stepKeysHeldCount = 0;
 
     let currentArrangerTrackCount = 8;
+
+    let isExportActive = false; // UI State
+    let isExporting = false; // Engine State
+    let exportAbortController = null;
+    let exportTimeoutId = null;
 
     // =====================================================================
     // GENERAL MIDI (GM) DRUM MAP & ALIAS ROUTING
@@ -810,6 +815,29 @@
 
             document.getElementById('humanize-overlay')?.classList.toggle('active', isHumanizeActive);
             document.getElementById('btnToggleHumanize')?.classList.toggle('active', isHumanizeActive);
+            return;
+        }
+        if (type === 'bounce') {
+            isBounceActive = !isBounceActive;
+            if (isBounceActive) {
+                if (typeof isGenActive !== 'undefined' && isGenActive) toggleOverlay('gen');
+                if (typeof isHumanizeActive !== 'undefined' && isHumanizeActive) toggleOverlay('humanize');
+                if (typeof isExportActive !== 'undefined' && isExportActive) toggleOverlay('export');
+            }
+            document.getElementById('bounce-overlay')?.classList.toggle('active', isBounceActive);
+            if (typeof evaluatePanelCollisions === 'function') evaluatePanelCollisions();
+            return;
+        }
+    
+        if (type === 'export') {
+            isExportActive = !isExportActive;
+            if (isExportActive) {
+                if (typeof isGenActive !== 'undefined' && isGenActive) toggleOverlay('gen');
+                if (typeof isHumanizeActive !== 'undefined' && isHumanizeActive) toggleOverlay('humanize');
+                if (typeof isBounceActive !== 'undefined' && isBounceActive) toggleOverlay('bounce'); // Close bounce if opening export
+            }
+            document.getElementById('export-overlay')?.classList.toggle('active', isExportActive);
+            if (typeof evaluatePanelCollisions === 'function') evaluatePanelCollisions();
             return;
         }
         if (type === 'piano') {
@@ -6726,24 +6754,31 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         // --- STRICT MULTI-TRACK ROUTING ---
         const inst = s.instrumentPreset || 'piano';
         const isTrackSampler = inst.startsWith('sample_');
-        
         let targetBuffer = null;
+
         if (isTrackSampler && typeof sampleBank !== 'undefined') {
             if (sampleBank.has(inst)) {
                 targetBuffer = sampleBank.get(inst);
             } else {
                 const cleanName = inst.replace('sample_folder:', '').replace('sample_db:', '');
-                
                 if (sampleBank.has(`sample_folder:${cleanName}`)) {
                     targetBuffer = sampleBank.get(`sample_folder:${cleanName}`);
                 } else if (sampleBank.has(`sample_db:${cleanName}`)) {
                     targetBuffer = sampleBank.get(`sample_db:${cleanName}`);
                 } else {
-                    // Only log if the engine completely fails to find the requested audio!
-                    console.warn(`Audio Engine: Failed to locate sample '${inst}' in RAM.`);
+                    // THE FIX: Extension-Agnostic Fallback (e.g. if JSON asked for .flac but RAM only has .wav)
+                    const baseName = cleanName.substring(0, cleanName.lastIndexOf('.')) || cleanName;
+                    const keys = Array.from(sampleBank.keys());
+                    const match = keys.find(k => (k.startsWith('sample_db:') || k.startsWith('sample_folder:')) && k.includes(baseName));
                     
-                    if (typeof loadSampleToBuffer === 'function' && inst.startsWith('sample_folder:')) {
-                        loadSampleToBuffer(inst, cleanName); 
+                    if (match) {
+                        targetBuffer = sampleBank.get(match);
+                    } else {
+                        // Only log if the engine completely fails to find the audio data!
+                        console.warn(`Audio Engine: Failed to locate sample '${inst}' in RAM.`);
+                        if (typeof loadSampleToBuffer === 'function' && inst.startsWith('sample_folder:')) {
+                            loadSampleToBuffer(inst, cleanName);
+                        }
                     }
                 }
             }
@@ -7745,9 +7780,24 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             const newTime = (parseFloat(e.target.value) / 100) * maxDuration;
             const beatSecs = 60 / currentArpBPM;
             const totalBeats = Math.max(0, newTime / beatSecs);
-            const bars = Math.floor(totalBeats / 4) + 1;
-            const beats = Math.floor(totalBeats % 4) + 1;
-            if (globalTimeDisplay) globalTimeDisplay.textContent = `${bars}.${beats}`;
+        
+            // BUGFIX: Use beatsPerBar instead of hardcoded 4 for odd time signatures!
+            const bars = Math.floor(totalBeats / beatsPerBar) + 1; 
+            const beats = Math.floor(totalBeats % beatsPerBar) + 1;
+
+            if (globalTimeDisplay) {
+                globalTimeDisplay.style.whiteSpace = 'nowrap';
+                const validTime = isNaN(newTime) || newTime < 0 ? 0 : newTime;
+                const mins = Math.floor(validTime / 60).toString().padStart(2, '0');
+                const secs = Math.floor(validTime % 60).toString().padStart(2, '0');
+                const tenths = Math.floor((validTime % 1) * 10);
+            
+                globalTimeDisplay.innerHTML = `
+                <span style="font-weight: bold; color: #fff;">${bars}.${beats}</span> 
+                <span style="opacity: 0.5; margin: 0 4px;">|</span> 
+                <span style="color: #aaa; font-size: 0.85em;">${mins}:${secs}.${tenths}</span>
+            `;
+            }
 
             // Temporarily update engine time so the Piano Roll tracks the drag live!
             if (!arranger.isPlaying && !looper.isPlaying) {
@@ -8135,10 +8185,22 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             else phase = arranger.pauseTime;
 
             const beatSecs = 60 / currentArpBPM;
-            const totalBeats = Math.max(0, phase / beatSecs); 
+            const totalBeats = Math.max(0, phase / beatSecs);
             const bars = Math.floor(totalBeats / beatsPerBar) + 1;
             const beats = Math.floor(totalBeats % beatsPerBar) + 1;
-            globalTimeDisplay.textContent = `${bars}.${beats}`;
+
+            // Prevent wrapping and calculate absolute time down to 1/10th of a second
+            globalTimeDisplay.style.whiteSpace = 'nowrap';
+            const validPhase = isNaN(phase) || phase < 0 ? 0 : phase;
+            const mins = Math.floor(validPhase / 60).toString().padStart(2, '0');
+            const secs = Math.floor(validPhase % 60).toString().padStart(2, '0');
+            const tenths = Math.floor((validPhase % 1) * 10);
+            
+            globalTimeDisplay.innerHTML = `
+                <span style="font-weight: bold; color: #fff;">${bars}.${beats}</span> 
+                <span style="opacity: 0.5; margin: 0 4px;">|</span> 
+                <span style="color: #aaa; font-size: 0.85em;">${mins}:${secs}.${tenths}</span>
+            `;
 
             // THE FIX: Reset the Chord Recognition rolling memory on the Downbeat!
             if ((arranger.isPlaying || looper.isPlaying) && bars !== currentPlaybackBar) {
@@ -8368,132 +8430,210 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         }
     }
 
-    // --- MASTER OUTPUT RECORDING ---
+    // =====================================================================
+    // --- NEW MASTER OUTPUT BOUNCING PANEL ---
+    // =====================================================================
+    let isBouncing = false;
+    let bounceTimeoutId = null;
+    let pendingBounceBlob = null;
+    let pendingBounceExt = "";
+    let pendingBounceName = "";
+    
+    // NEW: Audio Routing Safeguards
+    let bounceDummySink = null;
+    let wasMutedForBounce = false;
+
     let mediaRecorder;
     let recordedChunks = [];
     let isCustomWavRecording = false;
-    let wavRecordingBuffers = [];
-
+    let wavRecordingBuffers = [[], []];
     let recorderWorkletNode = null;
     let workletPromise = null;
 
-    let masterBlob = null;
-    let masterAudioUrl = null;
-
     // AUDIO WORKLET: This code runs on a completely isolated background CPU thread!
     const recorderWorkletCode = `
-                        class RecorderProcessor extends AudioWorkletProcessor {
-                            process(inputs, outputs, parameters) {
-                                const input = inputs[0];
-                                if (input && input.length >= 2) {
-                                    // Send a copy of the Left and Right channel arrays back to the main thread
-                                    this.port.postMessage({
-                                        left: new Float32Array(input[0]),
-                                        right: new Float32Array(input[1])
-                                    });
-                                }
+        class RecorderProcessor extends AudioWorkletProcessor {
+            process(inputs, outputs, parameters) {
+                const input = inputs[0];
+                if (input && input.length >= 2) {
+                    this.port.postMessage({
+                        left: new Float32Array(input[0]),
+                        right: new Float32Array(input[1])
+                    });
+                }
+                if (input && outputs[0]) {
+                    for (let channel = 0; channel < input.length; ++channel) {
+                        if (outputs[0][channel]) outputs[0][channel].set(input[channel]);
+                    }
+                }
+                return true; 
+            }
+        }
+        registerProcessor('recorder-processor', RecorderProcessor);
+    `;
 
-                                // Pass audio through seamlessly
-                                if (input && outputs[0]) {
-                                    for (let channel = 0; channel < input.length; ++channel) {
-                                        if (outputs[0][channel]) outputs[0][channel].set(input[channel]);
-                                    }
-                                }
-                                return true; // Keep the processor alive
-                            }
-                        }
-                        registerProcessor('recorder-processor', RecorderProcessor);
-                        `;
+    // 1. Open the Panel
+    document.getElementById('btn-master-save')?.addEventListener('click', () => {
+        toggleOverlay('bounce');
+        const progressText = document.getElementById('bounce-progress-text');
+        if (progressText) progressText.style.display = 'none';
+        
+        if (!pendingBounceBlob && !isBouncing) {
+            const btn = document.getElementById('btn-start-bounce');
+            if (btn) {
+                btn.textContent = "🚀 BOUNCE";
+                btn.style.backgroundColor = "#4CAF50"; 
+            }
+        }
+    });
 
-    const btnMasterRec = document.getElementById('btn-master-rec');
-    const btnMasterSave = document.getElementById('btn-master-save');
-    const exportFormatSel = document.getElementById('export-format');
-    const exportBitrateSel = document.getElementById('export-bitrate');
+    // 2. Real-time Mute Toggle (Safely unplugs speakers without affecting recording)
+    document.getElementById('bounce-mute-speakers')?.addEventListener('change', (e) => {
+        if (!isBouncing) return;
+        
+        if (e.target.checked) {
+            try { safetyClipper.disconnect(audioCtx.destination); } catch (err) { }
+            if (recorderWorkletNode && bounceDummySink) {
+                try { recorderWorkletNode.disconnect(audioCtx.destination); } catch (err) { }
+                recorderWorkletNode.connect(bounceDummySink);
+            }
+        } else {
+            try { safetyClipper.connect(audioCtx.destination); } catch (err) { }
+            if (recorderWorkletNode) {
+                try { recorderWorkletNode.disconnect(bounceDummySink); } catch (err) { }
+                recorderWorkletNode.connect(audioCtx.destination);
+            }
+        }
+    });
 
-    const masterPlayer = document.getElementById('masterAudioPlayer');
-    const btnRecPlay = document.getElementById('btn-rec-play');
-    const btnRecRw = document.getElementById('btn-rec-rw');
-    const btnRecFf = document.getElementById('btn-rec-ff');
-    const lblRecTime = document.getElementById('lbl-rec-time');
-
-    let recTimerInterval;
-    let recStartTime;
-
-    // Helper: Loads the generated Blob into the UI for playback & saving
-    function setupPlaybackAndUnlock(blob) {
-        masterBlob = blob;
-        if (masterAudioUrl) URL.revokeObjectURL(masterAudioUrl);
-        masterAudioUrl = URL.createObjectURL(blob);
-        masterPlayer.src = masterAudioUrl;
-
-        // Wait for audio to load to avoid "NaN" duration
-        masterPlayer.onloadedmetadata = () => {
-            const m = Math.floor(masterPlayer.duration / 60).toString().padStart(2, '0');
-            const s = Math.floor(masterPlayer.duration % 60).toString().padStart(2, '0');
-            if (lblRecTime) lblRecTime.textContent = `00:00 / ${m}:${s}`;
-        };
-
-        [btnMasterSave, btnRecPlay, btnRecRw, btnRecFf, lblRecTime].forEach(el => el.disabled = false);
-        btnRecPlay.textContent = '▶ PLAY';
-        if (masterSeeker) masterSeeker.disabled = false;
-        showToast("Master recording finished! You can now review and save.");
-    }
-
-    btnMasterRec?.addEventListener('click', async () => {
-        initAudio();
-        if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-        // === STOP RECORDING LOGIC ===
-        if (btnMasterRec.classList.contains('recording')) {
-            clearInterval(recTimerInterval); // Stop the live stopwatch
-
-            const format = exportFormatSel.value;
+    // 3. Cancel Flow
+    const closeBouncePanel = () => {
+        if (isBouncing) {
+            if (bounceTimeoutId) clearTimeout(bounceTimeoutId);
+            isBouncing = false;
+            
+            looper.isPlaying = arranger.isPlaying = false;
+            updateStudioUI();
+            
+            // --- RESTORE SPEAKER CONNECTIONS ---
+            if (wasMutedForBounce) {
+                try { safetyClipper.connect(audioCtx.destination); } catch (e) { }
+                if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
+                    try { importedAudioMasterGainNode.connect(audioCtx.destination); } catch (e) { }
+                }
+                if (bounceDummySink) {
+                    bounceDummySink.disconnect();
+                    bounceDummySink = null;
+                }
+                wasMutedForBounce = false;
+            }
+            
             if (isCustomWavRecording && recorderWorkletNode) {
                 recorderWorkletNode.disconnect();
                 safetyClipper.disconnect(recorderWorkletNode);
                 if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
                     try { importedAudioMasterGainNode.disconnect(recorderWorkletNode); } catch (e) { }
                 }
-                isCustomWavRecording = false;
-                recorderWorkletNode = null; // Clear from memory
-                setupPlaybackAndUnlock(exportWAV(wavRecordingBuffers, audioCtx.sampleRate));
+                recorderWorkletNode = null;
             } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                await new Promise(resolve => {
-                    mediaRecorder.onstop = () => {
-                        setupPlaybackAndUnlock(new Blob(recordedChunks, { type: mediaRecorder.mimeType || format }));
-                        resolve();
-                    };
-                    mediaRecorder.stop();
-                });
+                mediaRecorder.stop();
             }
+            
+            const btn = document.getElementById('btn-start-bounce');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "🚀 BOUNCE";
+                btn.style.backgroundColor = "#4CAF50"; 
+            }
+            showToast("Bounce Canceled.");
+        }
+        if (isBounceActive) toggleOverlay('bounce');
+    };
 
-            btnMasterRec.disabled = false;
-            btnMasterRec.textContent = '●';
-            btnMasterRec.classList.remove('recording');
+    document.getElementById('btn-cancel-bounce')?.addEventListener('click', closeBouncePanel);
+
+    // 4. Execution Logic (Start Bounce / Finalize Save)
+    document.getElementById('btn-start-bounce')?.addEventListener('click', async () => {
+        const btnStart = document.getElementById('btn-start-bounce');
+
+        if (pendingBounceBlob) {
+            btnStart.textContent = "💾 SAVING...";
+            await finalizeSave(pendingBounceBlob, pendingBounceExt, pendingBounceName, "🚀 BOUNCE");
+            pendingBounceBlob = null;
+            btnStart.style.backgroundColor = "#4CAF50"; 
+            if (isBounceActive) toggleOverlay('bounce');
             return;
         }
 
-        // === START RECORDING LOGIC ===
+        if (isBouncing) return;
+
+        const hasLooperData = looper.tracks.some(t => t.length > 0);
+        const hasArrangerData = arranger.tracks.some(t => t.length > 0);
+        if (!hasLooperData && !hasArrangerData) {
+            showToast("No data to bounce!");
+            return;
+        }
+
+        isBouncing = true;
+        const format = document.getElementById('bounce-format')?.value || 'audio/wav';
+        const bitrate = parseInt(document.getElementById('bounce-bitrate')?.value || 192000);
+        const rawName = document.getElementById('bounce-filename')?.value.replace(/[^a-zA-Z0-9_\- ]/g, '') || 'TonnetzPro_Master';
+        
+        pendingBounceExt =  format.includes("wav") ? ".wav" : 
+                            format.includes("ogg") ? ".ogg" : 
+                            format.includes("mp4") ? ".mp4" : ".webm";
+        pendingBounceName = `${rawName}_${Date.now()}${pendingBounceExt}`;
+
+        btnStart.disabled = true;
+        btnStart.style.backgroundColor = "#666"; 
+        btnStart.textContent = "⏳ BOUNCING...";
+        const progressText = document.getElementById('bounce-progress-text');
+        if (progressText) progressText.style.display = 'block';
+
+        initAudio();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+        const lenEl = document.getElementById('looperLength');
+        const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
+        const maxLoopSec = Math.max(...looper.trackDurations.map(d => d || 0));
+        let exportSec = Math.max(arranger.duration, maxLoopSec, globalLoopSec) + 1.5;
+
         recordedChunks = [];
-        const format = exportFormatSel.value;
-        const bitrate = parseInt(exportBitrateSel.value);
+        
+        // --- THE AUDIO ROUTING FIX ---
+        wasMutedForBounce = document.getElementById('bounce-mute-speakers')?.checked;
+        if (wasMutedForBounce) {
+            // 1. Physically unplug the output from the speakers
+            try { safetyClipper.disconnect(audioCtx.destination); } catch (e) { }
+            if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
+                try { importedAudioMasterGainNode.disconnect(audioCtx.destination); } catch (e) { }
+            }
+            
+            // 2. Create a "Black Hole" so the browser doesn't garbage-collect the graph
+            bounceDummySink = audioCtx.createGain();
+            bounceDummySink.gain.value = 0; 
+            bounceDummySink.connect(audioCtx.destination);
+        }
 
         if (format === 'audio/wav') {
             isCustomWavRecording = true;
-            wavRecordingBuffers = [[], []]; // L & R channels
+            wavRecordingBuffers = [[], []];
 
-            // Guarantee the background thread is loaded before proceeding
+            if (!workletPromise) {
+                const blob = new Blob([recorderWorkletCode], { type: 'application/javascript' });
+                workletPromise = audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+            }
             await workletPromise;
 
             recorderWorkletNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
             safetyClipper.connect(recorderWorkletNode);
-
             if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
                 try { importedAudioMasterGainNode.connect(recorderWorkletNode); } catch (e) { }
             }
-            recorderWorkletNode.connect(audioCtx.destination);
-
-            // Listen for the batches of audio coming from the background thread
+            
+            // Route worklet output to Black Hole or Speakers
+            recorderWorkletNode.connect(wasMutedForBounce ? bounceDummySink : audioCtx.destination);
+            
             recorderWorkletNode.port.onmessage = (e) => {
                 if (isCustomWavRecording) {
                     wavRecordingBuffers[0].push(e.data.left);
@@ -8504,153 +8644,169 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             isCustomWavRecording = false;
             try {
                 mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream, { mimeType: format, audioBitsPerSecond: bitrate });
-            } catch (e) {
+            } catch (err) {
                 console.warn(`Requested codec ${format} unsupported, falling back to browser default.`);
                 mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream);
             }
-            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            // Ensure graph is pulled for MediaRecorder
+            if (wasMutedForBounce) safetyClipper.connect(bounceDummySink);
+            
+            mediaRecorder.ondataavailable = (ev) => { if (ev.data.size > 0) recordedChunks.push(ev.data); };
             mediaRecorder.start();
         }
 
-        btnMasterRec.textContent = '■';
-        btnMasterRec.classList.add('recording');
+        looper.isPlaying = arranger.isPlaying = true;
+        looper.startTime = arranger.startTime = audioCtx.currentTime;
+        if (hasLooperData) looper.lastPhases.fill(0);
+        if (hasArrangerData) arranger.pauseTime = 0;
+        updateStudioUI();
 
-        // Start the Live Stopwatch!
-        recStartTime = Date.now();
-        if (lblRecTime) {
-            lblRecTime.textContent = "REC 00:00";
-            recTimerInterval = setInterval(() => {
-                const secs = Math.floor((Date.now() - recStartTime) / 1000);
-                const m = Math.floor(secs / 60).toString().padStart(2, '0');
-                const s = (secs % 60).toString().padStart(2, '0');
-                lblRecTime.textContent = `REC ${m}:${s}`;
-            }, 1000);
-        }
-
-        // Lock UI while recording
-        [btnMasterSave, btnRecPlay, btnRecRw, btnRecFf].forEach(el => el.disabled = true);
-        if (!masterPlayer.paused) masterPlayer.pause();
-    });
-
-    // --- Playback Review Controls ---
-    btnRecPlay?.addEventListener('click', () => {
-        if (!masterAudioUrl) return;
-        if (masterPlayer.paused) { masterPlayer.play(); btnRecPlay.textContent = '⏸ PAUSE'; }
-        else { masterPlayer.pause(); btnRecPlay.textContent = '▶ PLAY'; }
-    });
-
-    btnRecRw?.addEventListener('click', () => { if (masterAudioUrl) masterPlayer.currentTime = Math.max(0, masterPlayer.currentTime - 5); });
-    btnRecFf?.addEventListener('click', () => { if (masterAudioUrl) masterPlayer.currentTime = Math.min(masterPlayer.duration, masterPlayer.currentTime + 5); });
-
-    masterPlayer?.addEventListener('timeupdate', () => {
-        if (!lblRecTime) return;
-        const fmt = (t) => {
-            if (isNaN(t) || !isFinite(t)) return "00:00";
-            return `${Math.floor(t / 60).toString().padStart(2, '0')}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
-        };
-        lblRecTime.textContent = `${fmt(masterPlayer.currentTime)} / ${fmt(masterPlayer.duration)}`;
-    });
-    masterPlayer?.addEventListener('ended', () => { btnRecPlay.textContent = '▶ PLAY'; });
-
-    // Update the slider as the song plays
-    const masterSeeker = document.getElementById('master-seeker');
-    masterPlayer?.addEventListener('timeupdate', () => {
-        if (masterSeeker && !isNaN(masterPlayer.duration) && masterPlayer.duration > 0) {
-            masterSeeker.value = (masterPlayer.currentTime / masterPlayer.duration) * 100;
-        }
-    });
-
-    // Let the user drag the slider to change the time
-    masterSeeker?.addEventListener('input', (e) => {
-        if (masterPlayer && !isNaN(masterPlayer.duration)) {
-            masterPlayer.currentTime = (e.target.value / 100) * masterPlayer.duration;
-            // Instantly update UI text while dragging
-            if (lblRecTime) {
-                const fmt = (t) => `${Math.floor(t / 60).toString().padStart(2, '0')}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
-                lblRecTime.textContent = `${fmt(masterPlayer.currentTime)} / ${fmt(masterPlayer.duration)}`;
+        bounceTimeoutId = setTimeout(() => {
+            looper.isPlaying = arranger.isPlaying = false;
+            updateStudioUI();
+            
+            // --- RESTORE SPEAKER CONNECTIONS ---
+            if (wasMutedForBounce) {
+                try { safetyClipper.connect(audioCtx.destination); } catch (e) { }
+                if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
+                    try { importedAudioMasterGainNode.connect(audioCtx.destination); } catch (e) { }
+                }
+                if (bounceDummySink) {
+                    bounceDummySink.disconnect();
+                    bounceDummySink = null;
+                }
+                wasMutedForBounce = false;
             }
+            
+            if (progressText) progressText.style.display = 'none';
+
+            if (isCustomWavRecording && recorderWorkletNode) {
+                recorderWorkletNode.disconnect();
+                safetyClipper.disconnect(recorderWorkletNode);
+                if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
+                    try { importedAudioMasterGainNode.disconnect(recorderWorkletNode); } catch (e) { }
+                }
+                isCustomWavRecording = false;
+                recorderWorkletNode = null;
+                pendingBounceBlob = exportWAV(wavRecordingBuffers, audioCtx.sampleRate);
+                stageBounceSave();
+            } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.onstop = () => {
+                    pendingBounceBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || format });
+                    stageBounceSave();
+                };
+                mediaRecorder.stop();
+            }
+        }, exportSec * 1000);
+    });
+
+    function stageBounceSave() {
+        isBouncing = false;
+        const btnStart = document.getElementById('btn-start-bounce');
+        if (!btnStart) return;
+
+        if (!pendingBounceBlob) {
+            showToast("Bounce failed.");
+            btnStart.disabled = false;
+            btnStart.textContent = "🚀 BOUNCE";
+            btnStart.style.backgroundColor = "#4CAF50";
+            return;
+        }
+        
+        btnStart.textContent = "✅ SAVE MIX";
+        btnStart.style.backgroundColor = "#2196F3"; // Switch to an inviting blue to signify success
+        btnStart.disabled = false;
+        showToast("Bounce complete! Click 'Save Mix' to download.");
+    }
+
+    // --- DYNAMICALLY DISABLE UNSUPPORTED BOUNCE FORMATS ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const formatDropdown = document.getElementById('bounce-format');
+        if (formatDropdown && typeof MediaRecorder !== 'undefined') {
+            Array.from(formatDropdown.options).forEach(option => {
+                // We skip WAV because we use our custom AudioWorklet for it, not MediaRecorder!
+                if (option.value === 'audio/wav') return; 
+            
+                if (!MediaRecorder.isTypeSupported(option.value)) {
+                    option.disabled = true;
+                    option.textContent = option.textContent.replace(')', ' - Unsupported by browser)');
+                }
+            });
         }
     });
 
-    // --- Advanced Save As Logic ---
-    btnMasterSave?.addEventListener('click', async () => {
-        if (!masterBlob) return;
+    async function finalizeSave(blob, ext, defaultName, originalText) {
+        const btnStart = document.getElementById('btn-start-bounce');
+        if (btnStart) {
+            btnStart.innerHTML = originalText;
+            btnStart.style.backgroundColor = ""; 
+        }
 
-        const format = exportFormatSel.value;
-        let ext = ".webm";
-        if (format.includes("mp4")) ext = ".mp4";
-        if (format.includes("mpeg")) ext = ".mp3";
-        if (format.includes("wav")) ext = ".wav";
+        if (!blob) {
+            showToast("Bounce failed.");
+            return;
+        }
 
-        let defaultName = `TonnetzPro_Master${ext}`;
-
-        // =========================================================
-        // TIER 1: TAURI NATIVE DESKTOP APP
-        // =========================================================
+        // A. Try Tauri Native
         if (window.__TAURI__) {
             try {
-                // Assuming the Tauri Dialog and FS APIs are enabled
-                const tauriDialog = window.__TAURI__.dialog || window.__TAURI__.core?.dialog;
-                const tauriFs = window.__TAURI__.fs || window.__TAURI__.core?.fs;
-
-                if (tauriDialog && tauriFs) {
-                    const filePath = await tauriDialog.save({
-                        defaultPath: defaultName,
-                        filters: [{ name: 'Audio File', extensions: [ext.replace('.', '')] }]
-                    });
-
-                    if (filePath) {
-                        const arrayBuffer = await masterBlob.arrayBuffer();
-                        await tauriFs.writeBinaryFile(filePath, new Uint8Array(arrayBuffer));
-                        showToast("Mixdown saved natively!");
-                    }
-                    return; // Exit out, we are done!
+                const path = await window.__TAURI__.dialog.save({ defaultPath: defaultName });
+                if (path) {
+                    const uint8 = new Uint8Array(await blob.arrayBuffer());
+                    await window.__TAURI__.fs.writeBinaryFile(path, uint8);
+                    showToast("Saved natively!");
+                    return;
                 }
-            } catch (err) {
-                console.error("Tauri native save failed, falling back to web methods:", err);
-            }
+            } catch (err) { console.error("Tauri save failed", err); }
         }
 
-        // =========================================================
-        // TIER 2: CHROMIUM-BASED BROWSERS (Chrome, Edge, Opera)
-        // Uses the modern File System Access API for a native-like window
-        // =========================================================
-        if (window.showSaveFilePicker) {
+        // --- THE FIX: Guarantee a valid MIME type for the strict File System API ---
+        let safeMime = blob.type;
+        if (!safeMime) {
+            if (ext === '.wav') safeMime = 'audio/wav';
+            else if (ext === '.webm') safeMime = 'audio/webm';
+            else if (ext === '.ogg') safeMime = 'audio/ogg';
+            else if (ext === '.mp4') safeMime = 'audio/mp4';
+            else safeMime = 'application/octet-stream';
+        }
+
+        // B. Try Modern File System API (Chrome/Edge/Desktop)
+        if ('showSaveFilePicker' in window) {
             try {
                 const handle = await window.showSaveFilePicker({
                     suggestedName: defaultName,
-                    types: [{ description: 'Audio File', accept: { [masterBlob.type || 'audio/*']: [ext] } }]
+                    types: [{ description: 'Audio File', accept: { [safeMime]: [ext] } }]
                 });
                 const writable = await handle.createWritable();
-                await writable.write(masterBlob);
+                await writable.write(blob);
                 await writable.close();
-                showToast("Mixdown saved successfully!");
-                return; // Exit out, we are done!
-            } catch (err) {
-                if (err.name !== 'AbortError') console.error(err);
-                return; // User canceled the dialog
+                showToast("Saved successfully!");
+                return;
+            } catch (err) { 
+                // ONLY abort if the user explicitly clicked "Cancel" in the OS save dialog
+                if (err.name === 'AbortError') return; 
+                
+                // THE FIX: If the API crashes for technical reasons, DO NOT RETURN!
+                // Let it naturally fall through to the classic download method below.
+                console.warn("Modern File Picker failed, using classic fallback...", err);
             }
         }
 
-        // =========================================================
-        // TIER 3: FIREFOX, SAFARI & MOBILE BROWSERS (The Universal Fallback)
-        // Creates a temporary download link and "clicks" it programmatically
-        // =========================================================
-        let fileName = prompt("Enter a filename for your mixdown:", defaultName);
-        if (!fileName) return; // User canceled the prompt
-        if (!fileName.endsWith(ext)) fileName += ext;
+        // C. Fallback (Firefox/Safari/Mobile/HTTP / Fallback from API Crash)
+        const fileName = prompt("Filename:", defaultName);
+        if (!fileName) return;
 
         const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = masterAudioUrl;
-        a.download = fileName;
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName.endsWith(ext) ? fileName : fileName + ext;
         document.body.appendChild(a);
         a.click();
-
-        // Clean up the DOM after the download triggers
-        setTimeout(() => document.body.removeChild(a), 100);
-        showToast("Mixdown download started!");
-    });
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }, 1000);
+    }
 
     // --- DAWPROJECT XML GENERATOR ---
     function generateProjectXML(activeTracks, bpm) {
@@ -8685,358 +8841,357 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         return xml;
     }
 
-    // --- PARALLEL 16-TRACK STEM BOUNCER (JSZIP) ---
-    document.getElementById('btn-export-stems')?.addEventListener('click', async () => {
+    // --- NON-DESTRUCTIVE PROJECT EXPORTER (.dawproject) ---
+
+    // 1. Show/Hide Panel via the top nav button
+    document.getElementById('btn-export-stems')?.addEventListener('click', () => {
+        toggleOverlay('export');
+        const progressText = document.getElementById('export-progress-text');
+        if (progressText) progressText.style.display = 'none';
+    });
+
+    // 2. Cancel Button / Abort Export
+    document.getElementById('btn-cancel-export')?.addEventListener('click', () => {
+        // Abort background export tasks if they are running
+        if (isExporting) {
+            if (exportAbortController) exportAbortController.abort(); 
+            if (exportTimeoutId) clearTimeout(exportTimeoutId);
+            isExporting = false;
+            
+            // Instantly stop audio if we were recording stems
+            looper.isPlaying = arranger.isPlaying = false;
+            updateStudioUI();
+            
+            // Restore Master Volume
+            const masterVolSlider = document.getElementById('masterVol') || document.getElementById('master-vol');
+            if (masterGain) masterGain.gain.setTargetAtTime(parseFloat(masterVolSlider?.value || 1.0), audioCtx.currentTime, 0.05);
+            
+            showToast("Export Canceled.");
+        }
+        
+        // Hide the panel using the official router
+        if (isExportActive) toggleOverlay('export');
+    });
+
+    // 3. Execution Logic
+    document.getElementById('btn-start-export')?.addEventListener('click', async () => {
+        if (isExporting) return;
         if (typeof JSZip === 'undefined') {
-            showToast("JSZip library is loading. Please try again in a moment.");
+            showToast("JSZip library is loading...");
             return;
         }
 
-        // Ensure the currently focused track saves its UI state to memory before bouncing!
+        isExporting = true;
+        exportAbortController = new AbortController();
+        const signal = exportAbortController.signal;
+
+        const includeStems = document.getElementById('export-audio-stems')?.checked;
+        const rawFilename = document.getElementById('export-filename')?.value.replace(/[^a-zA-Z0-9_\- ]/g, '') || 'TonnetzPro_Project';
+        const filename = `${rawFilename}_${currentArpBPM}BPM.dawproject`;
+        const progressText = document.getElementById('export-progress-text');
+
+        // 1. Prepare State
         if (studio.lastSelectedDomain === 'looper') {
             studio.trackSynthStates[studio.activeLooperTrack] = captureCurrentSynthState();
         } else {
             studio.trackSynthStates[studio.activeArrangerTrack] = captureCurrentSynthState();
         }
 
-        // 1. Check if there is actually any music recorded in either engine
         const hasLooperData = looper.tracks.some(t => t.length > 0);
         const hasArrangerData = arranger.tracks.some(t => t.length > 0);
-
         if (!hasLooperData && !hasArrangerData) {
-            showToast("No track data to export! Record something first.");
+            showToast("No data to export!");
+            isExporting = false;
             return;
         }
 
         initAudio();
         if (audioCtx.state === 'suspended') await audioCtx.resume();
-        await workletPromise; // Ensure our WAV recorder background thread is loaded
 
-        const btnStems = document.getElementById('btn-export-stems');
-        btnStems.disabled = true;
-        btnStems.innerHTML = "⏳ BOUNCING...";
+        // 2. Setup Zip Structure
+        const sessionZip = new JSZip(); 
+        const audioFolder = sessionZip.folder("Audio");
+        const midiFolder = sessionZip.folder("MIDI");
+        const rawAssetsFolder = sessionZip.folder("Raw_Assets");
+        sessionZip.folder("Plugins");
 
-        // 2. Calculate the exact required duration for the export
+        // 3. Timing Calculation
         const lenEl = document.getElementById('looperLength');
         const globalLoopSec = (lenEl ? parseInt(lenEl.value) : 4) * 4 * (60 / currentArpBPM);
-
-        // Find the longest looping track
         const maxLoopSec = Math.max(...looper.trackDurations.map(d => d || 0));
+        let exportSec = Math.max(arranger.duration, maxLoopSec, globalLoopSec) + 1.5;
 
-        // The final export length is the Arranger length OR the longest loop, plus 1 second for reverb/echo tails
-        let exportSec = Math.max(arranger.duration, maxLoopSec);
-        if (exportSec === 0) exportSec = globalLoopSec;
-        exportSec += 1.0;
+        if (progressText) {
+            progressText.style.display = 'block';
+            progressText.textContent = "Packaging Project Data...";
+        }
 
-        showToast(`Bouncing 16 Stems silently... (${Math.round(exportSec)}s)`);
-
-        let stemBuffers = Array.from({ length: 16 }, () => [[], []]);
-        let stemWorklets = [];
-
-        // 3. Create a silent destination so the Web Audio graph processes, but the user hears nothing!
-        const dummySilencer = audioCtx.createGain();
-        dummySilencer.gain.value = 0;
-        dummySilencer.connect(audioCtx.destination);
-
-        // Temporarily mute the actual master speakers
-        const previousMasterVol = masterGain.gain.value;
-        masterGain.gain.value = 0;
-
-        // --- PACK RAW ASSETS & SAMPLER INSTRUMENTS ---
-        // Ensures 100% non-destructive recovery by saving the original, un-rendered audio
-        const rawAssetsFolder = zip.folder("Raw_Assets");
+        // 4. Raw Assets (The "Non-Destructive" part)
         const savedAssets = new Set();
-                    
         const saveAudioBufferToZip = (name, buffer) => {
             if (name && buffer && !savedAssets.has(name)) {
                 savedAssets.add(name);
-                const chanData = [];
-                for (let c = 0; c < buffer.numberOfChannels; c++) chanData.push(buffer.getChannelData(c));
-                if (chanData.length === 1) chanData.push(chanData[0]); // Duplicate mono to stereo safely
-                const rawWav = exportWAV(chanData, buffer.sampleRate);
-                rawAssetsFolder.file(name, rawWav);
+                const chanData = [
+                    buffer.getChannelData(0), 
+                    buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : buffer.getChannelData(0)
+                ];
+                rawAssetsFolder.file(name, exportWAV(chanData, buffer.sampleRate));
             }
         };
 
-        // 1. Save timeline clips
-        const saveOriginalAssets = (domainObj) => {
-            domainObj.tracks.forEach(track => {
-                track.forEach(evt => {
-                    if (evt.type === 'stem') saveAudioBufferToZip(evt.name, evt.buffer);
-                });
-            });
-        };
-        saveOriginalAssets(looper);
-        saveOriginalAssets(arranger);
+        [looper, arranger].forEach(domain => domain.tracks.forEach(tr => tr.forEach(ev => {
+            if (ev.type === 'stem') saveAudioBufferToZip(ev.name, ev.buffer);
+        })));
 
-        // 2. Save custom sampler instruments loaded into the synth engine
         if (typeof sampleBank !== 'undefined') {
-            for (const [sampleName, buffer] of sampleBank.entries()) {
-                if (sampleName.startsWith('sample_db:')) {
-                    const cleanName = sampleName.replace('sample_db:', '');
-                    saveAudioBufferToZip(cleanName, buffer);
-                } else if (sampleName.startsWith('sample_folder:')) {
-                    const cleanName = sampleName.replace('sample_folder:', '');
-                    saveAudioBufferToZip(cleanName, buffer);
-                }
+            for (const [key, buffer] of sampleBank.entries()) {
+                saveAudioBufferToZip(key.split(':').pop(), buffer);
             }
         }
 
-        // 4. Wire up independent microphones to ALL dynamic tracks (Now with Aux FX included!)
-        const isLooperSoloExp = looper.soloed.some(s => s);
-        const isArrangerSoloExp = arranger.soloed.some(s => s);
-                    
-        // --- THE FIX: Calculate the true dynamic track limit! ---
-        const totalBouncingTracks = 8 + currentArrangerTrackCount; 
+        // 5. Generate Master FX payload
+        const masterState = {
+            masterVolume: document.getElementById('masterVol')?.value || 1.0,
+            eqLow: document.getElementById('eqLow')?.value || 0,
+            eqMid: document.getElementById('eqMid')?.value || 0,
+            eqHigh: document.getElementById('eqHigh')?.value || 0,
+            declickDelay: document.getElementById('declick')?.value || 10,
+            busComp: document.getElementById('busComp')?.value || 0,
+            limiter: document.getElementById('limiterMode')?.value || 'none'
+        };
 
-        for (let i = 0; i < totalBouncingTracks; i++) {
+        // THE FIX: Capture the 16-track mixer faders
+        const mixerState = {
+            volumes: Array.from(document.querySelectorAll('.track-vol')).map(el => parseFloat(el.value) || 1.0),
+            pans: Array.from(document.querySelectorAll('.pan-slider')).map(el => parseFloat(el.value) || 0.0),
+            echoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => parseFloat(el.value) || 0.0),
+            reverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => parseFloat(el.value) || 0.0)
+        };
+
+        const sessionData = {
+            bpm: currentArpBPM,
+            currentArrangerTrackCount,
+            studioState: studio,
+            looperState: looper,
+            arrangerState: arranger,
+            exportDuration: exportSec,
+            masterState: masterState,
+            mixerState: mixerState // Added to payload!
+        };
+
+        const totalTracks = 8 + currentArrangerTrackCount;
+        let generatedTrackIds = [];
+        
+        for (let i = 0; i < totalTracks; i++) {
             const isLooper = i < 8;
             const localIdx = isLooper ? i : i - 8;
             const trackType = studio.trackTypes[i];
-                        
-            if (trackType === null) continue; // Skip empty tracks
+            if (trackType === null) continue;
 
-            // Handle Solo/Mute logic during bounce
-            const isSoloed = isLooper ? looper.soloed[localIdx] : arranger.soloed[localIdx];
-            const isMuted = isLooper ? looper.muted[localIdx] : arranger.muted[localIdx];
-            const isSoloActive = isLooper ? isLooperSoloExp : isArrangerSoloExp;
-            if (isMuted || (isSoloActive && !isSoloed)) continue;
+            const domainObj = isLooper ? looper : arranger;
+            const trackEvents = domainObj.tracks[localIdx];
+            
+            if (trackEvents && trackEvents.length > 0) {
+                generatedTrackIds.push(i);
+                const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
+                const instName = (document.getElementById(`inst-label-${i}`)?.textContent || 'Track').replace(/[^a-zA-Z0-9]/g, '_');
+                const typeLabel = studio.trackTypes[i] === 'drum' ? 'Drums' : 'Synth';
+                const fileName = `Track_${(i + 1).toString().padStart(2, '0')}_${prefix}_${typeLabel}_${instName}`;
 
-            // Identify the correct hardware nodes for this track
-            const pannerNode = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
-            const hwEcho = isLooper ? looperEchoSends[localIdx] : linearEchoSends[localIdx];
-            const hwReverb = isLooper ? looperReverbSends[localIdx] : linearReverbSends[localIdx];
-
-            if (pannerNode) {
-                // Calculate sample length based on duration and global sample rate
-                const length = Math.max(1, audioCtx.sampleRate * exportSec);
-                            
-                // Initialize an Offline Render Context specifically for this track
-                const offlineCtx = new OfflineAudioContext(2, length, audioCtx.sampleRate);
-                            
-                // 1. Create a receiver node in the offline context
-                const offlineReceiver = offlineCtx.createGain();
-                offlineReceiver.gain.value = 1.0;
-
-                // 2. Re-create the Aux FX Chain virtually inside the offline context
-                const offlineEcho = offlineCtx.createGain();
-                offlineEcho.gain.value = hwEcho ? hwEcho.gain.value : 0;
-                            
-                const offlineDelay = offlineCtx.createDelay(1.0);
-                const currentBPM = currentArpBPM || 120;
-                offlineDelay.delayTime.value = (60 / currentBPM) * 0.75; // Dotted 8th note
-                            
-                const offlineReverb = offlineCtx.createGain();
-                offlineReverb.gain.value = hwReverb ? hwReverb.gain.value : 0;
-                            
-                // If mobile convolver logic is active, use a delay line, else use real impulse response
-                let offlineConvolver;
-                if (typeof convolver !== 'undefined' && convolver && convolver.buffer) {
-                    offlineConvolver = offlineCtx.createConvolver();
-                    offlineConvolver.buffer = convolver.buffer;
-                } else {
-                    offlineConvolver = offlineCtx.createDelay(0.1);
-                    offlineConvolver.delayTime.value = 0.04;
-                }
-
-                // 3. Connect the Virtual Chain
-                offlineReceiver.connect(offlineCtx.destination); // Dry Signal
-                            
-                offlineReceiver.connect(offlineEcho);
-                offlineEcho.connect(offlineDelay);
-                offlineDelay.connect(offlineCtx.destination); // Echo Return
-                            
-                offlineReceiver.connect(offlineReverb);
-                offlineReverb.connect(offlineConvolver);
-                offlineConvolver.connect(offlineCtx.destination); // Reverb Return
-
-                // 4. Tap the live physical graph into the virtual receiver
-                const mediaStreamDest = audioCtx.createMediaStreamDestination();
-                pannerNode.connect(mediaStreamDest);
-                            
-                // 5. Send the live audio feed into the offline context for recording!
-                const liveSource = offlineCtx.createMediaStreamSource(mediaStreamDest.stream);
-                liveSource.connect(offlineReceiver);
-                            
-                // Push the promise into the array so we can `await` all 16 rendering simultaneously
-                stemWorklets.push(
-                    offlineCtx.startRendering().then(renderedBuffer => {
-                        // Disconnect the live tap when finished
-                        pannerNode.disconnect(mediaStreamDest);
-                                    
-                        // Convert the Float32 AudioBuffer to a physical .WAV file Blob
-                        const wavBlob = exportWAV([renderedBuffer.getChannelData(0), renderedBuffer.getChannelData(1)], audioCtx.sampleRate);
-                                    
-                        // Generate the clean file name for the ZIP archive
-                        const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
-                        const instName = document.getElementById(`inst-label-${i}`)?.textContent || 'Track';
-                        const cleanName = instName.replace(/[^a-zA-Z0-9]/g, '_');
-                        const typeLabel = trackType === 'drum' ? 'Drums' : 'Synth';
-                        const fileName = `Track_${(i + 1).toString().padStart(2, '0')}_${prefix}_${typeLabel}_${cleanName}.wav`;
-                                    
-                        zip.folder("Audio").file(fileName, wavBlob);
-                    })
-                );
+                const isDrum = studio.trackTypes[i] === 'drum';
+                const midiBinary = createMIDIFile(trackEvents, currentArpBPM, isDrum);
+                midiFolder.file(`${fileName}.mid`, midiBinary);
             }
         }
 
-        // 5. Reset both engines to exactly 0, and hit play!
-        looper.isPlaying = false;
-        arranger.isPlaying = false;
+        sessionZip.file("project.xml", generateProjectXML(generatedTrackIds, currentArpBPM));
+        sessionZip.file("tonnetz_session.json", JSON.stringify(sessionData, null, 2));
 
-        setTimeout(() => {
-            const now = audioCtx.currentTime;
+        // 6. Branch: Instant Download or Real-time Rendering
+        if (!includeStems) {
+            // INSTANT EXPORT
+            if (progressText) progressText.textContent = "Zipping file...";
+            const blob = await sessionZip.generateAsync({ type: "blob" });
+            if (signal.aborted) return;
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            
+            document.getElementById('export-panel')?.classList.add('hidden');
+            showToast("Instant Export Complete!");
+            isExporting = false;
+            if (isExportActive) toggleOverlay('export');
+            return;
+        }
 
-            if (hasLooperData) {
-                looper.isPlaying = true;
-                looper.startTime = now;
-                looper.lastPhases.fill(0);
-                lastLoopPhase = -0.1;
-            }
+        // 7. Setup Real-time Rendering
+        if (progressText) progressText.textContent = "Recording Real-time Audio Stems...";
+        const stemPromises = [];
+        const isLooperSolo = looper.soloed.some(s => s);
+        const isArrangerSolo = arranger.soloed.some(s => s);
+    
+        let tracksToProcess = 0;
+        let tracksFinished = 0;
 
-            if (hasArrangerData) {
-                arranger.isPlaying = true;
-                arranger.startTime = now;
-                arranger.pauseTime = 0;
-                lastArrangerPhase = -0.1;
-            }
+        // Mute Master for user comfort during silent render
+        const prevVol = masterGain.gain.value;
+        masterGain.gain.value = 0;
 
-            updateStudioUI();
+        for (let i = 0; i < totalTracks; i++) {
+            const isLooper = i < 8;
+            const localIdx = isLooper ? i : i - 8;
+            const trackType = studio.trackTypes[i];
+            if (trackType === null) continue;
 
-            // 6. Wait for the exact duration of the song to finish processing
-            setTimeout(async () => {
-                looper.isPlaying = false;
-                arranger.isPlaying = false;
-                masterGain.gain.value = previousMasterVol; // Unmute master speakers
-                updateStudioUI();
+            const isSoloed = isLooper ? looper.soloed[localIdx] : arranger.soloed[localIdx];
+            const isMuted = isLooper ? looper.muted[localIdx] : arranger.muted[localIdx];
+            const soloActive = isLooper ? isLooperSolo : isArrangerSolo;
+            if (isMuted || (soloActive && !isSoloed)) continue;
 
-                showToast("Packaging .dawproject... Please wait.");
-                const zip = new JSZip();
+            const pannerNode = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
+            if (pannerNode) {
+                tracksToProcess++;
 
-                // Create the mandatory DAWproject folder structure
-                const audioFolder = zip.folder("Audio");
-                const midiFolder = zip.folder("MIDI"); // <--- Now active!
-                zip.folder("Plugins"); // Empty, but required for the spec
+                const trackRecorderNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
+                const trackBuffers = [[], []];
 
-                let exportedCount = 0;
-                let activeTrackIndices = [];
+                pannerNode.connect(trackRecorderNode);
 
-                // 1. Build the WAV and MIDI files!
-                for (let i = 0; i < 16; i++) {
-                    if (stemWorklets[i]) {
-                        activeTrackIndices.push(i);
-                        const isLooper = i < 8;
-                        const localIdx = isLooper ? i : i - 8;
-                        const domainObj = isLooper ? looper : arranger;
-                        const panner = isLooper ? looperPanners[localIdx] : linearPanners[localIdx];
-
-                        if (panner) panner.disconnect(stemWorklets[i]);
-                        stemWorklets[i].disconnect();
-
-                        const wavBlob = exportWAV(stemBuffers[i], audioCtx.sampleRate);
-
-                        // Format Names
-                        const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
-                        const instName = document.getElementById(`inst-label-${i}`)?.textContent || 'Track';
-                        const cleanName = instName.replace(/[^a-zA-Z0-9]/g, '_');
-                        const typeLabel = studio.trackTypes[i] === 'drum' ? 'Drums' : 'Synth';
-                        const padNum = (i + 1).toString().padStart(2, '0');
-
-                        const baseFileName = `Track_${padNum}_${prefix}_${typeLabel}_${cleanName}`;
-
-                        // Save Audio
-                        audioFolder.file(`${baseFileName}.wav`, wavBlob);
-
-                        // --- NEW: Encode and Save MIDI! ---
-                        const trackEvents = domainObj.tracks[localIdx];
-                        if (trackEvents && trackEvents.length > 0) {
-                            const isDrum = studio.trackTypes[i] === 'drum';
-                            const midiBinary = createMIDIFile(trackEvents, currentArpBPM, isDrum);
-                            midiFolder.file(`${baseFileName}.mid`, midiBinary);
-                        }
-
-                        exportedCount++;
-                    }
-                }
-
-                // 2. Generate the XML Manifest
-                const xmlContent = generateProjectXML(activeTrackIndices, currentArpBPM);
-                zip.file("project.xml", xmlContent);
-
-                // 3. Hybrid Session Importer (Embedded State)
-                const sessionData = {
-                    bpm: currentArpBPM,
-                    currentArrangerTrackCount: currentArrangerTrackCount, // Save dynamic track limits!
-                    mixerState: {
-                        volumes: Array.from(document.querySelectorAll('.track-vol')).map(el => parseFloat(el.value)),
-                        pans: Array.from(document.querySelectorAll('.pan-slider')).map(el => parseFloat(el.value)),
-                        echoSends: Array.from(document.querySelectorAll('.echo-send')).map(el => parseFloat(el.value)),
-                        reverbSends: Array.from(document.querySelectorAll('.reverb-send')).map(el => parseFloat(el.value))
-                    },
-                    studioState: studio,
-                    looperState: looper,
-                    arrangerState: arranger,
-                    exportDuration: exportSec
+                trackRecorderNode.port.onmessage = (e) => {
+                    if (signal.aborted) return;
+                    trackBuffers[0].push(e.data.left);
+                    trackBuffers[1].push(e.data.right);
                 };
-                zip.file("tonnetz_session.json", JSON.stringify(sessionData, null, 2));
 
-                // 4. Trigger the Download as a .dawproject!
-                if (exportedCount > 0) {
-                    const content = await zip.generateAsync({ type: "blob" });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(content);
-                    a.download = `TonnetzPro_Session_${currentArpBPM}BPM.dawproject`;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                    showToast(`Successfully exported Project with ${exportedCount} tracks!`);
-                } else {
-                    showToast("Failed to export project.");
-                }
+                stemPromises.push(new Promise(resolve => {
+                    exportTimeoutId = setTimeout(() => {
+                        if (signal.aborted) return resolve(null);
 
-                btnStems.disabled = false;
-                btnStems.innerHTML = "📦 OUT";
-                setTimeout(() => { dummySilencer.disconnect(); }, 1000);
+                        pannerNode.disconnect(trackRecorderNode);
+                        trackRecorderNode.disconnect();
 
-            }, exportSec * 1000);
-        }, 100); // 100ms buffer to ensure graph is fully zeroed out before starting
+                        const wavBlob = exportWAV(trackBuffers, audioCtx.sampleRate);
+                    
+                        const prefix = isLooper ? `L${localIdx + 1}` : `A${localIdx + 1}`;
+                        const instName = (document.getElementById(`inst-label-${i}`)?.textContent || 'Track').replace(/[^a-zA-Z0-9]/g, '_');
+                        const typeLabel = studio.trackTypes[i] === 'drum' ? 'Drums' : 'Synth';
+                        const fileName = `Track_${(i + 1).toString().padStart(2, '0')}_${prefix}_${typeLabel}_${instName}`;
+
+                        audioFolder.file(`${fileName}.wav`, wavBlob);
+
+                        tracksFinished++;
+                        if (progressText) progressText.innerHTML = `Recording Stems... ${tracksFinished}/${tracksToProcess}`;
+                    
+                        resolve(i);
+                    }, exportSec * 1000);
+                }));
+            }
+        }
+
+        // Trigger Real-time playback
+        looper.isPlaying = arranger.isPlaying = true;
+        looper.startTime = arranger.startTime = audioCtx.currentTime;
+        if (hasLooperData) looper.lastPhases.fill(0);
+        if (hasArrangerData) arranger.pauseTime = 0;
+        updateStudioUI();
+
+        // 8. Cleanup & Download
+        const results = await Promise.all(stemPromises);
+        if (signal.aborted) return;
+
+        looper.isPlaying = arranger.isPlaying = false;
+        masterGain.gain.value = prevVol;
+        updateStudioUI();
+
+        if (progressText) progressText.textContent = "Zipping audio stems...";
+
+        const blob = await sessionZip.generateAsync({ type: "blob" });
+        if (signal.aborted) return;
+
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        document.getElementById('export-panel')?.classList.add('hidden');
+        showToast(`Exported ${tracksFinished} stems successfully!`);
+        isExporting = false;
+        if (isExportActive) toggleOverlay('export');
     });
 
     // --- Custom WAV Exporter to guarantee lossless native WAV export ---
     function exportWAV(buffers, sampleRate) {
         const numChannels = 2;
-        const bufferLength = buffers[0].reduce((acc, b) => acc + b.length, 0);
-        const length = bufferLength * numChannels * 2 + 44;
-        const buffer = new ArrayBuffer(length);
-        const view = new DataView(buffer);
+        // Hardened Length Calculation: handle both AudioBuffer objects and raw chunk arrays
+        let totalFrameCount = 0;
+        if (buffers[0] instanceof Float32Array) {
+            totalFrameCount = buffers[0].length;
+        } else {
+            totalFrameCount = buffers[0].reduce((acc, b) => acc + b.length, 0);
+        }
 
-        const writeString = (view, offset, string) => { for (let i = 0; i < string.length; i++) { view.setUint8(offset + i, string.charCodeAt(i)); } };
+        const bytesPerSample = 2; // 16-bit PCM
+        const blockAlign = numChannels * bytesPerSample;
+        const dataSize = totalFrameCount * blockAlign;
+        const headerSize = 44;
+        const totalByteLength = headerSize + dataSize;
 
+        const arrayBuffer = new ArrayBuffer(totalByteLength);
+        const view = new DataView(arrayBuffer);
+
+        const writeString = (v, offset, str) => {
+            for (let i = 0; i < str.length; i++) {
+                v.setUint8(offset + i, str.charCodeAt(i));
+            }
+        };
+
+        // RIFF Header
         writeString(view, 0, 'RIFF');
-        view.setUint32(4, 36 + bufferLength * numChannels * 2, true);
+        view.setUint32(4, 36 + dataSize, true);
         writeString(view, 8, 'WAVE');
+    
+        // FMT Sub-chunk
         writeString(view, 12, 'fmt ');
         view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true); // PCM
+        view.setUint16(20, 1, true); // PCM format
         view.setUint16(22, numChannels, true);
         view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * numChannels * 2, true);
-        view.setUint16(32, numChannels * 2, true);
-        view.setUint16(34, 16, true); // 16-bit
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, 16, true);
+    
+        // Data Sub-chunk
         writeString(view, 36, 'data');
-        view.setUint32(40, bufferLength * numChannels * 2, true);
+        view.setUint32(40, dataSize, true);
 
+        // Write PCM Data
         let offset = 44;
-        for (let i = 0; i < buffers[0].length; i++) {
-            const left = buffers[0][i];
-            const right = buffers[1][i];
-            for (let j = 0; j < left.length; j++) {
-                const l = Math.max(-1, Math.min(1, left[j]));
-                const r = Math.max(-1, Math.min(1, right[j]));
-                view.setInt16(offset, l < 0 ? l * 0x8000 : l * 0x7FFF, true); offset += 2;
-                view.setInt16(offset, r < 0 ? r * 0x8000 : r * 0x7FFF, true); offset += 2;
+        const writeChunks = (left, right) => {
+            for (let i = 0; i < left.length; i++) {
+                // Clamp to [-1, 1] to prevent digital clipping/distortion
+                let l = Math.max(-1, Math.min(1, left[i]));
+                let r = Math.max(-1, Math.min(1, right[i]));
+                // Convert to 16-bit PCM
+                view.setInt16(offset, l < 0 ? l * 0x8000 : l * 0x7FFF, true);
+                offset += 2;
+                view.setInt16(offset, r < 0 ? r * 0x8000 : r * 0x7FFF, true);
+                offset += 2;
+            }
+        };
+
+        if (buffers[0] instanceof Float32Array) {
+            writeChunks(buffers[0], buffers[1]);
+        } else {
+            // Handle array of chunks (e.g. from AudioWorklet)
+            for (let i = 0; i < buffers[0].length; i++) {
+                writeChunks(buffers[0][i], buffers[1][i]);
             }
         }
-        return new Blob([view], { type: 'audio/wav' });
+
+        return new Blob([arrayBuffer], { type: 'audio/wav' });
     }
 
     function writeString(view, offset, string) {
@@ -10454,7 +10609,7 @@ function updateScaleOverlay() {
         looper.tracks.forEach(t => totalEvents += t.length);
         arranger.tracks.forEach(t => totalEvents += t.length);
         const hasAudioData = studio.trackAudioBuffers.some(b => b !== null);
-    
+
         const isProjectEmpty = (totalEvents === 0 && !hasAudioData);
         let mode = 'add'; // Default to Add so we never ruin the user's UI selection!
 
@@ -10480,7 +10635,7 @@ function updateScaleOverlay() {
                 btn.classList.remove('type-voice', 'type-drum', 'active');
                 btn.style.borderBottom = ''; 
             });
-        
+    
             // Force the sequencer back to A1 ONLY if we are starting a completely fresh project
             studio.activeArrangerTrack = 8;
             studio.activeLooperTrack = 0;
@@ -10494,13 +10649,13 @@ function updateScaleOverlay() {
             if (!isNaN(bpm) && bpm >= 40 && bpm <= 240) {
                 currentArpBPM = bpm;
                 if (typeof anchorBPM !== 'undefined') anchorBPM = bpm; // Fixes Time-Stretch!
-            
+        
                 const mainBpmSlider = document.getElementById('arpBpm');
                 const drumBpmSlider = document.getElementById('drumBpmSlider');
                 const mainBpmLbl = document.getElementById('lblArpBpm');
                 const drumBpmLbl = document.getElementById('drumBpmValue');
                 const globalBpmDisp = document.getElementById('global-bpm-display');
-            
+        
                 if (mainBpmSlider) mainBpmSlider.value = bpm;
                 if (drumBpmSlider) drumBpmSlider.value = bpm;
                 if (mainBpmLbl) mainBpmLbl.textContent = `Arp/Metron: ${bpm} BPM`;
@@ -10530,7 +10685,7 @@ function updateScaleOverlay() {
             for (let i = startIdx; i < primaryEnd; i++) {
                 if (isTrackEmpty(i)) return i;
             }
-        
+    
             // 2. Wrap around and check from the beginning of that domain
             const primaryStart = preferLooper ? 0 : 8;
             for (let i = primaryStart; i < startIdx; i++) {
@@ -10554,6 +10709,18 @@ function updateScaleOverlay() {
             return JSON.parse(JSON.stringify(base));
         };
 
+        // --- PREFIX CLEANER HELPER (Added to keep UI clean) ---
+        const cleanLabelName = (name) => {
+            if (!name) return "";
+            return name.replace(/^sample_db:/i, '')
+                .replace(/^sample_folder:/i, '')
+                .replace(/\.wav$/i, '')
+                .replace(/\.mid$/i, '')
+                .replace(/\.midi$/i, '')
+                .substring(0, 12)
+                .toUpperCase();
+        };
+
         // 3. Process all selected files
         for (const file of files) {
             const ext = file.name.split('.').pop().toLowerCase();
@@ -10563,300 +10730,262 @@ function updateScaleOverlay() {
             // ==============================================================
             if (ext === 'zip' || ext === 'dawproject') {
                 try {
+                    console.log("DEBUG [1]: ZIP/DAWPROJECT detected. Initializing JSZip...");
                     const zip = await JSZip.loadAsync(file);
+            
                     const sessionFile = zip.file("tonnetz_session.json");
+                    const fileKeys = Object.keys(zip.files).filter(k => !zip.files[k].dir);
+            
+                    console.log("DEBUG [2]: ZIP loaded. Session file exists:", !!sessionFile);
+
+                    let trackMetadata = {}; 
+                    let isNativeProject = false;
                     let stretchRatio = 1.0;
 
-                    if (sessionFile && mode === 'replace') {
-                        showToast("Native Session found! Restoring studio state...");
+                    // --- 1. SESSION RESTORATION (THE BRAIN) ---
+                    if (sessionFile) {
+                        console.log("DEBUG [3]: Native Session found. Restoring studio state...");
+                        isNativeProject = true;
                         const sessionText = await sessionFile.async("string");
                         const state = JSON.parse(sessionText);
 
                         applyImportedBPM(state.bpm);
 
-                        // 1. REBUILD DYNAMIC TRACKS FIRST
+                        // Expand track banks if necessary
                         if (state.currentArrangerTrackCount && state.currentArrangerTrackCount > 8) {
                             const banksNeeded = (state.currentArrangerTrackCount - 8) / 8;
                             const addBankBtn = document.getElementById('btnAddArrangerBank');
-                            if (addBankBtn) {
-                                for (let b = 0; b < banksNeeded; b++) addBankBtn.click();
-                            }
+                            if (addBankBtn) for (let b = 0; b < banksNeeded; b++) addBankBtn.click();
                         }
 
-                        // 2. RESTORE DATA ARRAYS
+                        // Physical restoration of MIDI notes, Synth Brains, and types
                         Object.assign(looper, state.looperState);
                         Object.assign(arranger, state.arrangerState);
                         Object.assign(studio, state.studioState);
                         arranger.duration = state.exportDuration || arranger.duration;
-
-                        // 3. RE-LINK BINARY AUDIO BUFFERS (.WAVs)
-                        for (const filename of Object.keys(zip.files)) {
-                            if (filename.endsWith('.wav')) {
-                                const fileData = await zip.files[filename].async("arraybuffer");
-                                const audioBuffer = await audioCtx.decodeAudioData(fileData);
-                                const cleanName = filename.split('/').pop();
-
-                                const linkAudioToEvent = (domainObj, globalOffset) => {
-                                    domainObj.tracks.forEach((track, localIdx) => {
-                                        track.forEach(evt => {
-                                            if (evt.type === 'stem' && evt.name === cleanName) {
-                                                evt.buffer = audioBuffer;
-                                                studio.trackAudioBuffers[localIdx + globalOffset] = audioBuffer; 
-                                            }
-                                        });
-                                    });
-                                };
-                                linkAudioToEvent(looper, 0);
-                                linkAudioToEvent(arranger, 8);
-                            }
-                        }
-
-                        // 4. RESTORE TRACK UI, LABELS, & MIXER FADERS
-                        const totalTracks = 8 + currentArrangerTrackCount;
-                        for (let i = 0; i < totalTracks; i++) {
-                            const type = studio.trackTypes[i];
-                            const btn = document.querySelector(`.track-btn[data-track="${i}"]`);
-                            const labelEl = document.getElementById(`inst-label-${i}`);
-                            const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
-                            const isLooper = i < 8;
-
-                            if (type !== null && btn) {
-                                btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
-                            }
-
-                            if (labelEl && studio.trackSynthStates[i]) {
-                                labelEl.textContent = type === 'drum' ? 'DRUMS' : (studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
-                            }
-
-                            if (muteBtn) {
-                                const isMuted = isLooper ? looper.muted[i] : arranger.muted[i - 8];
-                                muteBtn.classList.toggle('muted', isMuted);
-                            }
-
-                            if (state.mixerState) {
-                                const hwGain = isLooper ? looperGainNodes[i] : linearGainNodes[i - 8];
-                                const hwPan = isLooper ? looperPanners[i] : linearPanners[i - 8];
-                                const hwEcho = isLooper ? looperEchoSends[i] : linearEchoSends[i - 8];
-                                const hwReverb = isLooper ? looperReverbSends[i] : linearReverbSends[i - 8];
-
-                                const updateSlider = (className, hwNode, valArray, param) => {
-                                    const slider = document.querySelector(`.${className}[data-track="${i}"]`);
-                                    if (slider && valArray[i] !== undefined) {
-                                        slider.value = valArray[i];
-                                        if (hwNode && audioCtx) {
-                                            if (param === 'pan') hwNode.pan.value = valArray[i];
-                                            else hwNode.gain.setTargetAtTime(valArray[i], audioCtx.currentTime, 0.015);
-                                        }
-                                    }
-                                };
-
-                                updateSlider('track-vol', hwGain, state.mixerState.volumes, 'gain');
-                                updateSlider('pan-slider', hwPan, state.mixerState.pans, 'pan');
-                                updateSlider('echo-send', hwEcho, state.mixerState.echoSends, 'gain');
-                                updateSlider('reverb-send', hwReverb, state.mixerState.reverbSends, 'gain');
-                            }
-                        }
-
-                        // 5. Restore active track synth UI
-                        applySynthStateToUI(studio.trackSynthStates[studio.activeLooperTrack]);
-                        document.querySelector(`.track-btn[data-track="${studio.activeLooperTrack}"]`)?.classList.add('active');
-                    }
-                    else {
-                        if (sessionFile) showToast("Native Session found. Extracting stems to merge...");
-                        else showToast("Foreign DAWproject detected. Scanning for metadata...");
-
-                        let trackMetadata = {}; 
-                        const xmlFile = zip.file("project.xml");
-                    
-                        if (xmlFile) {
-                            try {
-                                const xmlText = await xmlFile.async("string");
-                                const parser = new DOMParser();
-                                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-
-                                // BPM EVALUATION...
-                                const transportNode = xmlDoc.querySelector("transport");
-                                if (transportNode && transportNode.getAttribute("tempo")) {
-                                    const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
+                        console.log("DEBUG [4]: Native Engine State restored.");
+                    } 
+            
+                    // Always parse XML for metadata (helps with foreign projects and track colors)
+                    const xmlFile = zip.file("project.xml");
+                    if (xmlFile) {
+                        try {
+                            const xmlText = await xmlFile.async("string");
+                            const parser = new DOMParser();
+                            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                            const transportNode = xmlDoc.querySelector("transport");
+                            if (transportNode && transportNode.getAttribute("tempo")) {
+                                const importedBpm = parseFloat(transportNode.getAttribute("tempo"));
+                                if (!isNativeProject) {
                                     if (mode === 'replace' || isProjectEmpty) applyImportedBPM(importedBpm);
                                     else {
                                         const bpmDiff = Math.abs(currentArpBPM - importedBpm) / importedBpm;
                                         if (bpmDiff <= MAX_BPM_STRETCH_RATIO) {
                                             stretchRatio = currentArpBPM / importedBpm;
-                                            showToast(`Time-Stretching audio by ${Math.round(stretchRatio * 100)}% to match DAW tempo.`);
-                                        } else showToast("BPM difference > 15%. Audio imported without time-stretching.", "warning");
-                                    }
-                                }
-
-                                // --- UPGRADED: Foreign Track, Volume, and Pan Parser ---
-                                const trackNodes = xmlDoc.querySelectorAll("track");
-                                trackNodes.forEach(track => {
-                                    const audioFileNode = track.querySelector("audio-file");
-                                    let path = audioFileNode ? audioFileNode.getAttribute("path") : null;
-                                
-                                    if (path) {
-                                        if (path.startsWith("./")) path = path.substring(2);
-                                    
-                                        let mixVol = 1.0; let mixPan = 0.0;
-                                        const channelNode = track.querySelector("channel");
-                                        if (channelNode) {
-                                            const volNode = channelNode.querySelector("volume");
-                                            const panNode = channelNode.querySelector("pan");
-                                            if (volNode && volNode.getAttribute("value")) mixVol = parseFloat(volNode.getAttribute("value"));
-                                            if (panNode && panNode.getAttribute("value")) mixPan = parseFloat(panNode.getAttribute("value"));
                                         }
-
-                                        trackMetadata[path] = { 
-                                            name: track.getAttribute("name"), 
-                                            color: track.getAttribute("color"),
-                                            volume: mixVol,
-                                            pan: mixPan
-                                        };
-                                    }
-                                });
-                            } catch (xmlErr) { console.warn("Could not parse project.xml", xmlErr); }
-                        }
-
-                        // --- UPGRADED: File iteration and Database Injection ---
-                        for (const filename of Object.keys(zip.files)) {
-                            if (filename.endsWith('.wav') || filename.endsWith('.mid') || filename.endsWith('.midi')) {
-                            
-                                // If it's just raw audio being restored to the sampler DB, decode and continue!
-                                if (sessionFile && filename.startsWith("Raw_Assets/")) {
-                                    const fileData = await zip.files[filename].async("arraybuffer");
-                                    const audioBuffer = await audioCtx.decodeAudioData(fileData);
-                                    const cleanName = filename.split('/').pop();
-
-                                    // Inject into Sample Bank using BOTH prefixes
-                                    if (typeof sampleBank !== 'undefined') {
-                                        sampleBank.set(`sample_db:${cleanName}`, audioBuffer);
-                                        sampleBank.set(`sample_folder:${cleanName}`, audioBuffer);
-                                    }
-                                    continue;
-                                }
-
-                                if (sessionFile && filename.startsWith("Audio/")) continue;
-
-                                let isLooperPrefer = false;
-                                const parts = filename.split('_');
-                                if (parts.length >= 4 && parts[2].startsWith('L')) isLooperPrefer = true;
-
-                                let targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true);
-                            
-                                if (targetTrackIdx === -1 && !isLooperPrefer) {
-                                    document.getElementById('btnAddArrangerBank')?.click();
-                                    targetTrackIdx = getNextFreeTrack(isLooperPrefer, -1, true); 
-                                }
-                                if (targetTrackIdx === -1) continue; 
-
-                                const isLooperDomain = targetTrackIdx < 8;
-                                const localIdx = isLooperDomain ? targetTrackIdx : targetTrackIdx - 8;
-                                const domainObj = isLooperDomain ? looper : arranger;
-                                const fileData = await zip.files[filename].async("arraybuffer");
-
-                                if (filename.endsWith('.wav')) {
-                                    const audioBuffer = await audioCtx.decodeAudioData(fileData);
-                                    const visualPeaks = extractAudioPeaks(audioBuffer); 
-                                
-                                    const evt = { 
-                                        id: Math.random(), 
-                                        type: 'stem', 
-                                        timeOffset: 0, 
-                                        duration: audioBuffer.duration, 
-                                        freqs: [],
-                                        buffer: audioBuffer,
-                                        stretchRatio: stretchRatio,
-                                        peaks: visualPeaks,
-                                        name: filename.split('/').pop() 
-                                    };
-                                    domainObj.tracks[localIdx].push(evt);
-                                
-                                    if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
-                                
-                                    if (!isLooperDomain && audioBuffer.duration > arranger.duration) arranger.duration = audioBuffer.duration;
-                                    if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
-                                }
-                                else if (filename.endsWith('.mid') || filename.endsWith('.midi')) {
-                                    if (typeof Midi === 'undefined') {
-                                        console.warn(`MIDI parser not loaded! Skipping ${filename}.`);
-                                        continue;
-                                    }
-                                    try {
-                                        const parsedMidi = new Midi(fileData);
-                                        let trackMaxDur = 0;
-
-                                        // --- FIX: SEVER SHARED REFERENCE FOR ZIP MIDI ---
-                                        if (!studio.trackSynthStates[targetTrackIdx]) {
-                                            studio.trackSynthStates[targetTrackIdx] = getFreshSynthState();
-                                        } else {
-                                            studio.trackSynthStates[targetTrackIdx] = JSON.parse(JSON.stringify(studio.trackSynthStates[targetTrackIdx]));
-                                        }
-                                    
-                                        parsedMidi.tracks.forEach(track => {
-                                            track.notes.forEach(note => {
-                                                const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
-                                                const adjustedTime = note.time * (1 / stretchRatio);
-                                                const adjustedDur = note.duration * (1 / stretchRatio);
-                                            
-                                                const evt = {
-                                                    id: Math.random(), type: 'play', timeOffset: adjustedTime,
-                                                    duration: adjustedDur, freqs: [freq], velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))), stArray: null,
-                                                    synthState: studio.trackSynthStates[targetTrackIdx] // Pass the isolated brain!
-                                                };
-                                                domainObj.tracks[localIdx].push(evt);
-                                                if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
-                                            });
-                                        });
-
-                                        if (!isLooperDomain && trackMaxDur > arranger.duration) arranger.duration = trackMaxDur;
-                                        if (isLooperDomain && trackMaxDur > looper.trackDurations[localIdx]) looper.trackDurations[localIdx] = trackMaxDur;
-                                        if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
-                                    } catch (err) {
-                                        console.error(`Failed to parse MIDI file ${filename} from ZIP:`, err);
-                                    }
-                                }
-
-                                const btn = document.querySelector(`.track-btn[data-track="${targetTrackIdx}"]`);
-                                const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
-                                const meta = trackMetadata[filename];
-
-                                if (btn) {
-                                    btn.classList.add('type-voice');
-                                    if (meta && meta.color) btn.style.borderBottom = `3px solid ${meta.color}`;
-                                }
-                            
-                                if (labelEl) {
-                                    if (meta && meta.name) {
-                                        labelEl.textContent = meta.name.substring(0, 12).toUpperCase();
-                                    } else {
-                                        let nameMatch = filename.split('/').pop().replace('.wav', '').replace('.mid', '').replace('.midi', '').replace(/^Track_\d+_/i, '');
-                                        labelEl.textContent = nameMatch.substring(0, 12).toUpperCase();
-                                    }
-                                }
-
-                                if (meta) {
-                                    const volSlider = document.querySelector(`.track-vol[data-track="${targetTrackIdx}"]`);
-                                    const panSlider = document.querySelector(`.pan-slider[data-track="${targetTrackIdx}"]`);
-                            
-                                    if (volSlider && meta.volume !== undefined) {
-                                        volSlider.value = meta.volume;
-                                        const hwGain = isLooperDomain ? looperGainNodes[localIdx] : linearGainNodes[localIdx];
-                                        if (hwGain) hwGain.gain.value = meta.volume;
-                                    }
-                                    if (panSlider && meta.pan !== undefined) {
-                                        panSlider.value = meta.pan;
-                                        const hwPan = isLooperDomain ? looperPanners[localIdx] : linearPanners[localIdx];
-                                        if (hwPan) hwPan.pan.value = meta.pan;
                                     }
                                 }
                             }
+                            xmlDoc.querySelectorAll("track").forEach(track => {
+                                const audioFileNode = track.querySelector("audio-file");
+                                let path = audioFileNode ? audioFileNode.getAttribute("path") : null;
+                                if (path) {
+                                    if (path.startsWith("./")) path = path.substring(2);
+                                    trackMetadata[path] = { 
+                                        name: track.getAttribute("name"), 
+                                        volume: 1.0, pan: 0.0 
+                                    };
+                                }
+                            });
+                            console.log("DEBUG [5]: Metadata parsed.");
+                        } catch (e) { console.error("XML Error", e); }
+                    }
+
+                    // --- 2. ASSET PASS (SAMPLER RAM & TIMELINE LINKING) ---
+                    console.log("DEBUG [7]: Starting Asset Pass...");
+                    for (const filename of fileKeys) {
+                        const fileData = await zip.files[filename].async("arraybuffer");
+
+                        // A. RESTORE SAMPLER RAM (RAW ASSETS)
+                        // FIXED: Removed the `.endsWith('.wav')` restriction so .flac, .mp3, etc. load into RAM!
+                        if (filename.startsWith("Raw_Assets/")) {
+                            const audioBuffer = await audioCtx.decodeAudioData(fileData);
+                            const cleanName = filename.split('/').pop();
+                            if (typeof sampleBank !== 'undefined') {
+                                sampleBank.set(`sample_db:${cleanName}`, audioBuffer);
+                                sampleBank.set(`sample_folder:${cleanName}`, audioBuffer);
+                            }
+                    
+                            if (isNativeProject) {
+                                const link = (domain, offset) => {
+                                    domain.tracks.forEach((track, lIdx) => {
+                                        track.forEach(evt => {
+                                            if (evt.type === 'stem' && evt.name === cleanName) {
+                                                evt.buffer = audioBuffer;
+                                                studio.trackAudioBuffers[lIdx + offset] = audioBuffer;
+                                            }
+                                        });
+                                    });
+                                };
+                                link(looper, 0); link(arranger, 8);
+                            }
+                            continue;
+                        }
+
+                        // B. FOREIGN MIDI IMPORT (Only if not a Native Project)
+                        if ((filename.endsWith('.mid') || filename.endsWith('.midi')) && !isNativeProject) {
+                            console.log("DEBUG [8]: Importing Foreign MIDI:", filename);
+                            let isLooperPrefer = filename.includes('_L');
+                            let targetIdx = getNextFreeTrack(isLooperPrefer, -1, true);
+                            if (targetIdx === -1) continue;
+
+                            try {
+                                const parsedMidi = new Midi(fileData);
+                                const isL = targetIdx < 8;
+                                const localIdx = isL ? targetIdx : targetIdx - 8;
+                                const domainObj = isL ? looper : arranger;
+                                if (!studio.trackSynthStates[targetIdx]) studio.trackSynthStates[targetIdx] = getFreshSynthState();
+
+                                parsedMidi.tracks.forEach(track => {
+                                    track.notes.forEach(note => {
+                                        domainObj.tracks[localIdx].push({
+                                            id: Math.random(), type: 'play', timeOffset: note.time * (1 / stretchRatio),
+                                            duration: note.duration * (1 / stretchRatio), freqs: [masterTune * Math.pow(2, (note.midi - 69) / 12)], 
+                                            velocity: Math.round(note.velocity * 127),
+                                            synthState: studio.trackSynthStates[targetIdx]
+                                        });
+                                    });
+                                });
+                                studio.trackTypes[targetIdx] = 'voice';
+                                const labelEl = document.getElementById(`inst-label-${targetIdx}`);
+                                if (labelEl) labelEl.textContent = cleanLabelName(filename.split('/').pop());
+                            } catch (e) { console.error("MIDI Parse Error", e); }
                         }
                     }
+
+                    // --- 3. STEM PASS (FOREIGN BACKUP ONLY) ---
+                    console.log("DEBUG [9]: Starting Stem Pass...");
+                    for (const filename of fileKeys) {
+                        if (filename.endsWith('.wav') && filename.startsWith("Audio/")) {
+                            if (isNativeProject) {
+                                console.log("DEBUG [10]: Native Project - Skipping redundant Audio Stem:", filename);
+                                continue; 
+                            }
+
+                            console.log("DEBUG [11]: Importing Foreign Audio Stem:", filename);
+                            const fileData = await zip.files[filename].async("arraybuffer");
+                            const audioBuffer = await audioCtx.decodeAudioData(fileData);
+                    
+                            let isLooperPrefer = filename.includes('_L');
+                            let targetIdx = getNextFreeTrack(isLooperPrefer, -1, true);
+                            if (targetIdx === -1) continue;
+
+                            const isL = targetIdx < 8;
+                            const domainObj = isL ? looper : arranger;
+                            const localIdx = isL ? targetIdx : targetIdx - 8;
+
+                            domainObj.tracks[localIdx].push({
+                                id: Math.random(), type: 'stem', timeOffset: 0,
+                                duration: audioBuffer.duration * (1 / stretchRatio), buffer: audioBuffer,
+                                stretchRatio: stretchRatio, peaks: extractAudioPeaks(audioBuffer), name: filename.split('/').pop()
+                            });
+                            studio.trackAudioBuffers[targetIdx] = audioBuffer;
+                            studio.trackTypes[targetIdx] = 'voice';
+                            const labelEl = document.getElementById(`inst-label-${targetIdx}`);
+                            if (labelEl) labelEl.textContent = cleanLabelName(filename.split('/').pop());
+                        }
+                    }
+
+                    // --- 4. HARDWARE SYNC & UI REFRESH (NATIVE ONLY) ---
+                    if (isNativeProject) {
+                        console.log("DEBUG [12]: Applying Mixer & UI settings...");
+                        const sessionText = await sessionFile.async("string");
+                        const state = JSON.parse(sessionText);
+                        const totalTracksCount = 8 + (state.currentArrangerTrackCount || 8);
+
+                        for (let i = 0; i < totalTracksCount; i++) {
+                            const type = studio.trackTypes[i];
+                            const btn = document.querySelector(`.track-btn[data-track="${i}"]`);
+                            const labelEl = document.getElementById(`inst-label-${i}`);
+                            const muteBtn = document.querySelector(`.mute-btn[data-track="${i}"]`);
+
+                            if (type !== null) {
+                                if (btn) {
+                                    btn.classList.remove('type-voice', 'type-drum');
+                                    btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
+                                }
+                        
+                                if (labelEl && studio.trackSynthStates[i]) {
+                                    labelEl.textContent = type === 'drum' ? 'DRUMS' : cleanLabelName(studio.trackSynthStates[i].instrumentPreset || 'SYNTH');
+                                }
+
+                                if (muteBtn) {
+                                    const isM = (i < 8) ? looper.muted[i] : arranger.muted[i - 8];
+                                    muteBtn.classList.toggle('muted', !!isM);
+                                }
+
+                                // Apply to Hardware Audio Nodes
+                                if (state.mixerState) {
+                                    const hwG = (i < 8) ? looperGainNodes[i] : linearGainNodes[i - 8];
+                                    const hwP = (i < 8) ? looperPanners[i] : linearPanners[i - 8];
+                                    const hwE = (i < 8) ? looperEchoSends[i] : linearEchoSends[i - 8];
+                                    const hwR = (i < 8) ? looperReverbSends[i] : linearReverbSends[i - 8];
+
+                                    if (hwG && state.mixerState.volumes) hwG.gain.setTargetAtTime(state.mixerState.volumes[i], audioCtx.currentTime, 0.015);
+                                    if (hwP && state.mixerState.pans) hwP.pan.setTargetAtTime(state.mixerState.pans[i], audioCtx.currentTime, 0.015);
+                                    if (hwE && state.mixerState.echoSends) hwE.gain.setTargetAtTime(state.mixerState.echoSends[i], audioCtx.currentTime, 0.015);
+                                    if (hwR && state.mixerState.reverbSends) hwR.gain.setTargetAtTime(state.mixerState.reverbSends[i], audioCtx.currentTime, 0.015);
+                            
+                                    const vVol = document.querySelector(`.track-vol[data-track="${i}"]`);
+                                    const vPan = document.querySelector(`.pan-slider[data-track="${i}"]`);
+                                    const vEcho = document.querySelector(`.echo-send[data-track="${i}"]`);
+                                    const vReverb = document.querySelector(`.reverb-send[data-track="${i}"]`);
+
+                                    if (vVol && state.mixerState.volumes) vVol.value = state.mixerState.volumes[i];
+                                    if (vPan && state.mixerState.pans) vPan.value = state.mixerState.pans[i];
+                                    if (vEcho && state.mixerState.echoSends) vEcho.value = state.mixerState.echoSends[i];
+                                    if (vReverb && state.mixerState.reverbSends) vReverb.value = state.mixerState.reverbSends[i];
+                                }
+                            } else {
+                                if (labelEl) {
+                                    const prefix = i < 8 ? 'L' : 'A';
+                                    const num = i < 8 ? i + 1 : i - 7;
+                                    labelEl.textContent = `${prefix}${num}`;
+                                }
+                                if (btn) btn.classList.remove('type-voice', 'type-drum');
+                            }
+                        }
+                        applySynthStateToUI(studio.trackSynthStates[studio.activeLooperTrack]);
+
+                        // NEW: MASTER FX & GLOBAL STATE RESTORATION
+                        if (state.masterState) {
+                            const applyGlobal = (id, val) => {
+                                const el = document.getElementById(id);
+                                if (el && val !== undefined) {
+                                    el.value = val;
+                                    el.dispatchEvent(new Event('input')); // Triggers physical routing
+                                    el.dispatchEvent(new Event('change')); // Updates the UI label text
+                                }
+                            };
+
+                            // THE FIX: Uses actual DOM IDs from your HTML
+                            applyGlobal('masterVol', state.masterState.masterVolume);
+                            applyGlobal('eqLow', state.masterState.eqLow);
+                            applyGlobal('eqMid', state.masterState.eqMid);
+                            applyGlobal('eqHigh', state.masterState.eqHigh);
+                            applyGlobal('declick', state.masterState.declickDelay);
+                            applyGlobal('busComp', state.masterState.busComp);
+                            applyGlobal('limiterMode', state.masterState.limiter);
+                        }
+                    }
+
+                    console.log("DEBUG [13]: Project Restoration Complete.");
                 } catch (e) {
-                    showToast(`Error unpacking ${file.name}`);
+                    console.error("DEBUG [FATAL]:", e);
+                    showToast("Error unpacking .dawproject archive.");
                 }
             }
-        
+
             // ==============================================================
             // B. INDIVIDUAL AUDIO FILES (.WAV / .MP3 / .FLAC)
             // ==============================================================
@@ -10870,11 +10999,10 @@ function updateScaleOverlay() {
                 const arrayBuffer = await file.arrayBuffer();
                 const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                 const visualPeaks = extractAudioPeaks(audioBuffer); 
-            
-                // --- FILENAME BPM DETECTION & STRETCHING ---
+    
                 let stretchRatio = 1.0;
                 const bpmMatch = file.name.match(/(\d{2,3})\s*bpm/i); 
-            
+    
                 if (bpmMatch) {
                     const importedBpm = parseFloat(bpmMatch[1]);
                     if (mode === 'replace' || isProjectEmpty) {
@@ -10890,10 +11018,7 @@ function updateScaleOverlay() {
                     }
                 }
 
-                // PLAYHEAD OFFSET LOGIC
                 const playheadOffset = isLooperDomain ? 0 : (arranger.pauseTime || 0);
-            
-                // LOOPER HARD-CLIP
                 let finalDuration = audioBuffer.duration;
                 if (isLooperDomain) {
                     const loopMaxSecs = (60 / currentArpBPM) * 16; 
@@ -10901,30 +11026,20 @@ function updateScaleOverlay() {
                 }
 
                 const adjustedDuration = finalDuration * (1 / stretchRatio);
-
-                const evt = { 
-                    id: Math.random(), 
-                    type: 'stem', 
-                    timeOffset: playheadOffset, 
-                    duration: adjustedDuration, 
-                    freqs: [],
-                    buffer: audioBuffer,
-                    stretchRatio: stretchRatio,
-                    peaks: visualPeaks, 
-                    name: file.name 
-                };
-                domainObj.tracks[localIdx].push(evt);
-            
+                domainObj.tracks[localIdx].push({ 
+                    id: Math.random(), type: 'stem', timeOffset: playheadOffset, 
+                    duration: adjustedDuration, buffer: audioBuffer, stretchRatio: stretchRatio,
+                    peaks: visualPeaks, name: file.name 
+                });
+    
                 if (!studio.trackAudioBuffers[targetTrackIdx]) studio.trackAudioBuffers[targetTrackIdx] = audioBuffer;
-
                 if (!isLooperDomain && (playheadOffset + adjustedDuration > arranger.duration)) {
                     arranger.duration = playheadOffset + adjustedDuration;
                 }
-
-                if (studio.trackTypes[targetTrackIdx] === null) studio.trackTypes[targetTrackIdx] = 'voice';
+                studio.trackTypes[targetTrackIdx] = 'voice';
 
                 const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
-                if (labelEl) labelEl.textContent = file.name.substring(0, 12).toUpperCase();
+                if (labelEl) labelEl.textContent = cleanLabelName(file.name);
                 const btn = document.querySelector(`.track-btn[data-track="${targetTrackIdx}"]`);
                 if (btn) btn.classList.add('type-voice');
             }
@@ -10944,15 +11059,12 @@ function updateScaleOverlay() {
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     const parsedMidi = new Midi(arrayBuffer);
-                
-                    // 1. Filter out metadata-only ghost tracks
                     const activeMidiTracks = parsedMidi.tracks.filter(t => t.notes.length > 0);
                     if (activeMidiTracks.length === 0) {
                         showToast("MIDI file contains no note data.");
                         continue;
                     }
 
-                    // 2. Tempo Extraction
                     let stretchRatio = 1.0;
                     if (parsedMidi.header && parsedMidi.header.tempos && parsedMidi.header.tempos.length > 0) {
                         const importedBpm = parsedMidi.header.tempos[0].bpm;
@@ -10969,15 +11081,11 @@ function updateScaleOverlay() {
                         }
                     }
 
-                    // 3. Playhead Offset
                     const playheadOffset = targetDomainIsLooper ? 0 : (arranger.pauseTime || 0);
-
-                    // 4. Map each MIDI track to a DAW track
                     let currentSearchIdx = targetDomainIsLooper ? studio.activeLooperTrack : studio.activeArrangerTrack;
 
                     for (let i = 0; i < activeMidiTracks.length; i++) {
                         const midiTrack = activeMidiTracks[i];
-                    
                         let targetTrackIdx = getNextFreeTrack(targetDomainIsLooper, currentSearchIdx, true);
 
                         if (targetTrackIdx === -1 && !targetDomainIsLooper) {
@@ -10998,23 +11106,18 @@ function updateScaleOverlay() {
                         const domainObj = isTargetLooper ? looper : arranger;
                         const isDrumTrack = (midiTrack.channel === 9);
 
-                        // --- FIX: SEVER SHARED REFERENCE FOR STANDALONE MIDI ---
-                        // Ensure this newly assigned track gets its very own isolated brain!
                         if (!studio.trackSynthStates[targetTrackIdx]) {
                             studio.trackSynthStates[targetTrackIdx] = getFreshSynthState();
                         } else {
                             studio.trackSynthStates[targetTrackIdx] = JSON.parse(JSON.stringify(studio.trackSynthStates[targetTrackIdx]));
                         }
 
-                        // --- TRACK NAMING LOGIC ---
-                        let finalTrackName = midiTrack.name.trim();
-                        if (!finalTrackName && midiTrack.instrument && midiTrack.instrument.name) finalTrackName = midiTrack.instrument.name;
+                        let finalTrackName = midiTrack.name.trim() || (midiTrack.instrument ? midiTrack.instrument.name : "");
                         if (!finalTrackName) {
                             const cleanFileName = file.name.replace(/\.[^/.]+$/, "");
                             finalTrackName = activeMidiTracks.length > 1 ? `${cleanFileName} - T${i + 1}` : cleanFileName;
                         }
 
-                        // --- UI ROUTING ---
                         studio.trackTypes[targetTrackIdx] = isDrumTrack ? 'drum' : 'voice';
                         const btn = document.querySelector(`.track-btn[data-track="${targetTrackIdx}"]`);
                         if (btn) {
@@ -11023,42 +11126,39 @@ function updateScaleOverlay() {
                         }
 
                         const labelEl = document.getElementById(`inst-label-${targetTrackIdx}`);
-                        if (labelEl) labelEl.textContent = finalTrackName.substring(0, 12).toUpperCase();
+                        if (labelEl) labelEl.textContent = cleanLabelName(finalTrackName);
 
-                        // --- PARSE NOTES ---
                         let trackMaxDur = 0;
                         midiTrack.notes.forEach(note => {
                             const adjustedTime = (note.time * (1 / stretchRatio)) + playheadOffset;
                             const adjustedDur = note.duration * (1 / stretchRatio);
-                        
+                
                             if (isDrumTrack) {
                                 let alias = 'click'; 
                                 if (typeof gmDrumMap !== 'undefined' && gmDrumMap[note.midi]) alias = gmDrumMap[note.midi].alias;
-                            
                                 domainObj.tracks[localIdx].push({
                                     id: Math.random(), type: 'drum', drumType: alias,
                                     timeOffset: adjustedTime, duration: adjustedDur,
                                     velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127)))
                                 });
                             } else {
-                                const freq = masterTune * Math.pow(2, (note.midi - 69) / 12);
                                 domainObj.tracks[localIdx].push({
-                                    id: Math.random(), type: 'play', freqs: [freq], stArray: null,
-                                    timeOffset: adjustedTime, duration: adjustedDur,
+                                    id: Math.random(), 
+                                    type: 'play', 
+                                    freqs: [masterTune * Math.pow(2, (note.midi - 69) / 12)],
+                                    timeOffset: adjustedTime, 
+                                    duration: adjustedDur,
                                     velocity: Math.max(1, Math.min(127, Math.round(note.velocity * 127))),
-                                    synthState: studio.trackSynthStates[targetTrackIdx] // Pass the isolated brain!
+                                    synthState: studio.trackSynthStates[targetTrackIdx] // Isolates the track brain
                                 });
                             }
-                        
                             if (adjustedTime + adjustedDur > trackMaxDur) trackMaxDur = adjustedTime + adjustedDur;
                         });
 
                         if (!isTargetLooper && trackMaxDur > arranger.duration) arranger.duration = trackMaxDur;
                         if (isTargetLooper && trackMaxDur > looper.trackDurations[localIdx]) looper.trackDurations[localIdx] = trackMaxDur;
-
                         currentSearchIdx = targetTrackIdx + 1; 
                     }
-
                 } catch (err) {
                     console.error("Failed to parse MIDI file:", err);
                     showToast(`Could not read ${file.name}. It may be corrupted.`);
@@ -11069,7 +11169,7 @@ function updateScaleOverlay() {
         updateStudioUI();
         if (typeof drawPianoRoll === 'function') drawPianoRoll();
         showToast("Import complete!");
-        e.target.value = ''; // Reset input
+        e.target.value = '';
     });
 
     // --- TAURI NATIVE OS INTEGRATION ---
