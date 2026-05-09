@@ -2382,6 +2382,40 @@
     let isSamplerLooping = true;
     const sampleBank = new Map();
     
+    // --- NEW: GAIN STAGING MEMORY ---
+    const sampleGainCompensation = new Map();
+    const TARGET_RMS = 0.1; 
+
+    function getBufferRMS(audioBuffer) {
+        const channelData = audioBuffer.getChannelData(0); 
+        let sumSquares = 0;
+        const step = 10; // Sample every 10th frame to save CPU
+        let count = 0;
+        
+        for (let i = 0; i < channelData.length; i += step) {
+            sumSquares += channelData[i] * channelData[i];
+            count++;
+        }
+        return Math.sqrt(sumSquares / count);
+    }
+
+    // This single helper performs the math and safely stores the buffer in RAM
+    function registerSample(instName, audioBuffer) {
+        if (!audioBuffer) return;
+        
+        const actualRms = getBufferRMS(audioBuffer);
+        let compensationMultiplier = 1.0;
+        
+        if (actualRms > 0.001) { 
+            compensationMultiplier = TARGET_RMS / actualRms;
+        }
+        // Cap the boost at 4.0x (+12dB) so background hiss isn't deafening
+        compensationMultiplier = Math.min(compensationMultiplier, 4.0); 
+
+        sampleGainCompensation.set(instName, compensationMultiplier);
+        sampleBank.set(instName, audioBuffer);
+    }
+    
     // Pre-allocate memory for Fourier Transform arrays to prevent Garbage Collection stutters!
     const numHarmonics = 8;
     const overtoneReal = new Float32Array(numHarmonics);
@@ -2719,8 +2753,7 @@
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
             const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            
-            sampleBank.set(id, decodedBuffer); 
+            registerSample(id, decodedBuffer);
         } catch (e) {
             console.error("Error loading sample:", e);
         }
@@ -2751,9 +2784,8 @@
                 
                 const arrayBuffer = await file.arrayBuffer();
                 const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                
                 const dictKey = `sample_db:${file.name}`;
-                sampleBank.set(dictKey, decodedBuffer);
+                registerSample(dictKey, decodedBuffer);
 
                 if (typeof saveSampleToDB === 'function') await saveSampleToDB(file);
             }
@@ -2834,7 +2866,7 @@
                         if (arrayBuffer) {
                             try {
                                 const decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                                sampleBank.set(val, decodedBuffer);
+                                registerSample(val, decodedBuffer);
                             } catch (err) {
                                 console.error("Failed to decode DB sample:", err);
                             }
@@ -8431,7 +8463,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
     }
 
     // =====================================================================
-    // --- NEW MASTER OUTPUT BOUNCING PANEL ---
+    // --- NEW MASTER OUTPUT BOUNCING PANEL (WITH DEBUG LOGGING) ---
     // =====================================================================
     let isBouncing = false;
     let bounceTimeoutId = null;
@@ -8450,7 +8482,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
     let recorderWorkletNode = null;
     let workletPromise = null;
 
-    // AUDIO WORKLET: This code runs on a completely isolated background CPU thread!
+    // AUDIO WORKLET
     const recorderWorkletCode = `
         class RecorderProcessor extends AudioWorkletProcessor {
             process(inputs, outputs, parameters) {
@@ -8487,10 +8519,10 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         }
     });
 
-    // 2. Real-time Mute Toggle (Safely unplugs speakers without affecting recording)
+    // 2. Real-time Mute Toggle
     document.getElementById('bounce-mute-speakers')?.addEventListener('change', (e) => {
         if (!isBouncing) return;
-        
+        console.log(`[BOUNCE DEBUG] Mute speakers toggled: ${e.target.checked}`);
         if (e.target.checked) {
             try { safetyClipper.disconnect(audioCtx.destination); } catch (err) { }
             if (recorderWorkletNode && bounceDummySink) {
@@ -8509,6 +8541,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
     // 3. Cancel Flow
     const closeBouncePanel = () => {
         if (isBouncing) {
+            console.log("[BOUNCE DEBUG] User canceled bounce process.");
             if (bounceTimeoutId) clearTimeout(bounceTimeoutId);
             isBouncing = false;
             
@@ -8556,7 +8589,9 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
     document.getElementById('btn-start-bounce')?.addEventListener('click', async () => {
         const btnStart = document.getElementById('btn-start-bounce');
 
+        // ==== PHASE 2: FINAL SAVE ====
         if (pendingBounceBlob) {
+            console.log("[BOUNCE DEBUG] Phase 2 initiated: Attempting to save blob...", pendingBounceBlob);
             btnStart.textContent = "💾 SAVING...";
             await finalizeSave(pendingBounceBlob, pendingBounceExt, pendingBounceName, "🚀 BOUNCE");
             pendingBounceBlob = null;
@@ -8565,6 +8600,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             return;
         }
 
+        // ==== PHASE 1: START RECORDING ====
         if (isBouncing) return;
 
         const hasLooperData = looper.tracks.some(t => t.length > 0);
@@ -8579,10 +8615,12 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         const bitrate = parseInt(document.getElementById('bounce-bitrate')?.value || 192000);
         const rawName = document.getElementById('bounce-filename')?.value.replace(/[^a-zA-Z0-9_\- ]/g, '') || 'TonnetzPro_Master';
         
-        pendingBounceExt =  format.includes("wav") ? ".wav" : 
-                            format.includes("ogg") ? ".ogg" : 
-                            format.includes("mp4") ? ".mp4" : ".webm";
+        pendingBounceExt = format.includes("wav") ? ".wav" :  
+            format.includes("ogg") ? ".ogg" :  
+                format.includes("mp4") ? ".mp4" : ".webm";
         pendingBounceName = `${rawName}_${Date.now()}${pendingBounceExt}`;
+
+        console.log(`[BOUNCE DEBUG] Starting Phase 1. Format: ${format}, Target file: ${pendingBounceName}`);
 
         btnStart.disabled = true;
         btnStart.style.backgroundColor = "#666"; 
@@ -8598,18 +8636,19 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         const maxLoopSec = Math.max(...looper.trackDurations.map(d => d || 0));
         let exportSec = Math.max(arranger.duration, maxLoopSec, globalLoopSec) + 1.5;
 
+        console.log(`[BOUNCE DEBUG] Calculated bounce duration: ${exportSec} seconds.`);
+
         recordedChunks = [];
         
         // --- THE AUDIO ROUTING FIX ---
         wasMutedForBounce = document.getElementById('bounce-mute-speakers')?.checked;
         if (wasMutedForBounce) {
-            // 1. Physically unplug the output from the speakers
+            console.log("[BOUNCE DEBUG] Muting speakers via dummy sink routing.");
             try { safetyClipper.disconnect(audioCtx.destination); } catch (e) { }
             if (typeof importedAudioMasterGainNode !== 'undefined' && importedAudioMasterGainNode) {
                 try { importedAudioMasterGainNode.disconnect(audioCtx.destination); } catch (e) { }
             }
             
-            // 2. Create a "Black Hole" so the browser doesn't garbage-collect the graph
             bounceDummySink = audioCtx.createGain();
             bounceDummySink.gain.value = 0; 
             bounceDummySink.connect(audioCtx.destination);
@@ -8624,6 +8663,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                 workletPromise = audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
             }
             await workletPromise;
+            console.log("[BOUNCE DEBUG] AudioWorklet injected correctly.");
 
             recorderWorkletNode = new AudioWorkletNode(audioCtx, 'recorder-processor');
             safetyClipper.connect(recorderWorkletNode);
@@ -8631,7 +8671,6 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                 try { importedAudioMasterGainNode.connect(recorderWorkletNode); } catch (e) { }
             }
             
-            // Route worklet output to Black Hole or Speakers
             recorderWorkletNode.connect(wasMutedForBounce ? bounceDummySink : audioCtx.destination);
             
             recorderWorkletNode.port.onmessage = (e) => {
@@ -8644,11 +8683,11 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             isCustomWavRecording = false;
             try {
                 mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream, { mimeType: format, audioBitsPerSecond: bitrate });
+                console.log("[BOUNCE DEBUG] MediaRecorder created successfully.");
             } catch (err) {
-                console.warn(`Requested codec ${format} unsupported, falling back to browser default.`);
+                console.warn(`[BOUNCE DEBUG] Requested codec ${format} unsupported, falling back to browser default.`);
                 mediaRecorder = new MediaRecorder(window.mediaStreamDest.stream);
             }
-            // Ensure graph is pulled for MediaRecorder
             if (wasMutedForBounce) safetyClipper.connect(bounceDummySink);
             
             mediaRecorder.ondataavailable = (ev) => { if (ev.data.size > 0) recordedChunks.push(ev.data); };
@@ -8661,7 +8700,10 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         if (hasArrangerData) arranger.pauseTime = 0;
         updateStudioUI();
 
+        console.log("[BOUNCE DEBUG] Playback engine started, waiting for timeout...");
+
         bounceTimeoutId = setTimeout(() => {
+            console.log("[BOUNCE DEBUG] Timeout reached! Compiling audio...");
             looper.isPlaying = arranger.isPlaying = false;
             updateStudioUI();
             
@@ -8676,6 +8718,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                     bounceDummySink = null;
                 }
                 wasMutedForBounce = false;
+                console.log("[BOUNCE DEBUG] Speaker connections restored.");
             }
             
             if (progressText) progressText.style.display = 'none';
@@ -8688,12 +8731,26 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                 }
                 isCustomWavRecording = false;
                 recorderWorkletNode = null;
-                pendingBounceBlob = exportWAV(wavRecordingBuffers, audioCtx.sampleRate);
-                stageBounceSave();
+
+                try {
+                    console.log(`[BOUNCE DEBUG] Creating WAV blob. Left buffer chunks: ${wavRecordingBuffers[0].length}`);
+                    pendingBounceBlob = exportWAV(wavRecordingBuffers, audioCtx.sampleRate);
+                    console.log(`[BOUNCE DEBUG] WAV blob created successfully: ${pendingBounceBlob.size} bytes`);
+                    stageBounceSave();
+                } catch (e) {
+                    console.error("[BOUNCE FATAL ERROR] exportWAV function crashed!", e);
+                    showToast("Error creating WAV. See console.");
+                    stageBounceSave(); // Will fail cleanly due to null blob
+                }
             } else if (mediaRecorder && mediaRecorder.state !== "inactive") {
                 mediaRecorder.onstop = () => {
-                    pendingBounceBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || format });
-                    stageBounceSave();
+                    try {
+                        pendingBounceBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || format });
+                        console.log(`[BOUNCE DEBUG] Compressed blob created successfully: ${pendingBounceBlob.size} bytes`);
+                        stageBounceSave();
+                    } catch (e) {
+                        console.error("[BOUNCE FATAL ERROR] Blob generation crashed!", e);
+                    }
                 };
                 mediaRecorder.stop();
             }
@@ -8701,12 +8758,14 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
     });
 
     function stageBounceSave() {
+        console.log("[BOUNCE DEBUG] Staging bounce for Phase 2...");
         isBouncing = false;
         const btnStart = document.getElementById('btn-start-bounce');
         if (!btnStart) return;
 
-        if (!pendingBounceBlob) {
-            showToast("Bounce failed.");
+        if (!pendingBounceBlob || pendingBounceBlob.size === 0) {
+            console.error("[BOUNCE DEBUG] Staging failed: Blob is null or 0 bytes.");
+            showToast("Bounce failed (Empty audio data).");
             btnStart.disabled = false;
             btnStart.textContent = "🚀 BOUNCE";
             btnStart.style.backgroundColor = "#4CAF50";
@@ -8714,7 +8773,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         }
         
         btnStart.textContent = "✅ SAVE MIX";
-        btnStart.style.backgroundColor = "#2196F3"; // Switch to an inviting blue to signify success
+        btnStart.style.backgroundColor = "#2196F3"; 
         btnStart.disabled = false;
         showToast("Bounce complete! Click 'Save Mix' to download.");
     }
@@ -8724,7 +8783,6 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         const formatDropdown = document.getElementById('bounce-format');
         if (formatDropdown && typeof MediaRecorder !== 'undefined') {
             Array.from(formatDropdown.options).forEach(option => {
-                // We skip WAV because we use our custom AudioWorklet for it, not MediaRecorder!
                 if (option.value === 'audio/wav') return; 
             
                 if (!MediaRecorder.isTypeSupported(option.value)) {
@@ -8736,6 +8794,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
     });
 
     async function finalizeSave(blob, ext, defaultName, originalText) {
+        console.log(`[BOUNCE DEBUG] finalizeSave called. Ext: ${ext}, Size: ${blob.size}`);
         const btnStart = document.getElementById('btn-start-bounce');
         if (btnStart) {
             btnStart.innerHTML = originalText;
@@ -8749,6 +8808,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
 
         // A. Try Tauri Native
         if (window.__TAURI__) {
+            console.log("[BOUNCE DEBUG] Attempting Tauri save...");
             try {
                 const path = await window.__TAURI__.dialog.save({ defaultPath: defaultName });
                 if (path) {
@@ -8757,10 +8817,9 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                     showToast("Saved natively!");
                     return;
                 }
-            } catch (err) { console.error("Tauri save failed", err); }
+            } catch (err) { console.error("[BOUNCE DEBUG] Tauri save failed", err); }
         }
 
-        // --- THE FIX: Guarantee a valid MIME type for the strict File System API ---
         let safeMime = blob.type;
         if (!safeMime) {
             if (ext === '.wav') safeMime = 'audio/wav';
@@ -8772,6 +8831,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
 
         // B. Try Modern File System API (Chrome/Edge/Desktop)
         if ('showSaveFilePicker' in window) {
+            console.log("[BOUNCE DEBUG] Attempting modern showSaveFilePicker API...");
             try {
                 const handle = await window.showSaveFilePicker({
                     suggestedName: defaultName,
@@ -8783,26 +8843,31 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                 showToast("Saved successfully!");
                 return;
             } catch (err) { 
-                // ONLY abort if the user explicitly clicked "Cancel" in the OS save dialog
-                if (err.name === 'AbortError') return; 
-                
-                // THE FIX: If the API crashes for technical reasons, DO NOT RETURN!
-                // Let it naturally fall through to the classic download method below.
-                console.warn("Modern File Picker failed, using classic fallback...", err);
+                if (err.name === 'AbortError') {
+                    console.log("[BOUNCE DEBUG] User clicked Cancel in native OS dialog.");
+                    return; 
+                }
+                console.warn("[BOUNCE DEBUG] Modern File Picker failed, falling back to classic...", err);
             }
+        } else {
+            console.log("[BOUNCE DEBUG] showSaveFilePicker not supported in this browser (Likely Firefox). Falling back...");
         }
 
         // C. Fallback (Firefox/Safari/Mobile/HTTP / Fallback from API Crash)
-        const fileName = prompt("Filename:", defaultName);
-        if (!fileName) return;
+        console.log("[BOUNCE DEBUG] Triggering classic HTML download fallback...");
+        
+        // THE FIX: We removed the blocked prompt() and just use the name we already passed in!
+        const finalFileName = defaultName.endsWith(ext) ? defaultName : defaultName + ext;
 
+        console.log(`[BOUNCE DEBUG] Creating virtual download link for: ${finalFileName}`);
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = fileName.endsWith(ext) ? fileName : fileName + ext;
+        a.download = finalFileName;
         document.body.appendChild(a);
         a.click();
         
         setTimeout(() => {
+            console.log("[BOUNCE DEBUG] Cleaning up virtual download link.");
             document.body.removeChild(a);
             URL.revokeObjectURL(a.href);
         }, 1000);
@@ -10812,8 +10877,8 @@ function updateScaleOverlay() {
                             const audioBuffer = await audioCtx.decodeAudioData(fileData);
                             const cleanName = filename.split('/').pop();
                             if (typeof sampleBank !== 'undefined') {
-                                sampleBank.set(`sample_db:${cleanName}`, audioBuffer);
-                                sampleBank.set(`sample_folder:${cleanName}`, audioBuffer);
+                                registerSample(`sample_db:${cleanName}`, audioBuffer);
+                                registerSample(`sample_folder:${cleanName}`, audioBuffer);
                             }
                     
                             if (isNativeProject) {
