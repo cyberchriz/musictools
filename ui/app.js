@@ -1491,7 +1491,7 @@
     const isNativeApp = window.Capacitor && window.Capacitor.isNative;
     const btnFs = document.getElementById('btnFullscreen');
 
-    function executePanic() {
+    async function executePanic() {
         wakeNav();
 
         // 1. Instantly kill all active audio nodes and clear arrays
@@ -1520,7 +1520,7 @@
                 feedbackGain.gain.cancelScheduledValues(audioCtx.currentTime);
                 feedbackGain.gain.setValueAtTime(0, audioCtx.currentTime);
                 feedbackGain.gain.setTargetAtTime(fbVol, audioCtx.currentTime + 0.5, 0.05);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // 4. Send MIDI 'All Notes Off' (CC 123) to all 16 channels
@@ -1567,6 +1567,16 @@
 
             // 4. Boot the engine back up from scratch!
             initAudio();
+
+            // THE FIX: Explicitly wake the newly spawned engine while still inside the user's click event!
+            if (audioCtx && audioCtx.state === 'suspended') {
+                try {
+                    await audioCtx.resume();
+                    console.log("Panic: Audio Engine forcefully awakened after reboot.");
+                } catch (e) {
+                    console.error("Panic: Failed to wake audio engine:", e);
+                }
+            }
             
             showToast("Panic: Audio Engine Rebooted & Notes Stopped");
         } else {
@@ -6038,7 +6048,7 @@ const btnQuantize = document.getElementById('prActionQuantize');
         audioCtx.onstatechange = () => {
             if (audioCtx.state === 'suspended') {
                 if (typeof globalTimeDisplay !== 'undefined' && globalTimeDisplay) {
-                    globalTimeDisplay.textContent = "Zzz... (Click to Wake)";
+                    globalTimeDisplay.textContent = "Zzz...";
                 }
                 const arrStatus = document.getElementById('arranger-status-text');
                 if (arrStatus) arrStatus.textContent = "AUDIO SUSPENDED";
@@ -7438,7 +7448,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             // THE FIX: Use standard geometric circle (&#x25CF;) instead of Media Record symbol
             if (isAnyArmed) { tpRecBtn.classList.add('armed'); tpRecBtn.innerHTML = '&#x23F2;&#xFE0E;'; }
             else if (isAnyRecording) { tpRecBtn.classList.add('recording'); tpRecBtn.innerHTML = '&#x25CF;'; }
-            else { tpRecBtn.innerHTML = '&#x25CF;'; }
+            else { tpRecBtn.innerHTML = '&#x2B24;'; }
         }
     }
 
@@ -7579,6 +7589,35 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                 applySynthStateToUI(studio.trackSynthStates[track]);
             }
         });
+    });
+
+    // =========================================================
+    // --- JUMP TO SYNTH SHORTCUT (Event Delegation) ---
+    // =========================================================
+    document.addEventListener('click', (e) => {
+        // Check if the user clicked on a track label
+        if (e.target && e.target.classList.contains('inst-label')) {
+            // Extract the track number from the ID (e.g., 'inst-label-12' -> 12)
+            const idMatch = e.target.id.match(/inst-label-(\d+)/);
+            if (idMatch) {
+                const trackIndex = parseInt(idMatch[1], 10);
+            
+                // 1. Programmatically click the actual track button (L1, A1, etc.)
+                // This guarantees your native selection logic, highlighting, and engine sync run perfectly!
+                const trackBtn = document.querySelector(`.track-btn[data-track="${trackIndex}"]`);
+                if (trackBtn) trackBtn.click();
+            
+                // 2. Open the Synth Panel (if it isn't already active)
+                const synthOverlay = document.getElementById('synth-overlay');
+                if (synthOverlay && !synthOverlay.classList.contains('active')) {
+                    if (typeof toggleOverlay === 'function') {
+                        toggleOverlay('synth');
+                    } else {
+                        document.getElementById('btnToggleSynth')?.click();
+                    }
+                }
+            }
+        }
     });
 
     // =======================================================
@@ -8203,7 +8242,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
 
         // Detect if the browser has deep-slept the audio hardware
         if (audioCtx.state === 'suspended' && (looper.isPlaying || arranger.isPlaying)) {
-            if (globalTimeDisplay) globalTimeDisplay.textContent = "Zzz... (Click to Wake)";
+            if (globalTimeDisplay) globalTimeDisplay.textContent = "Zzz...";
             if (document.getElementById('arranger-status-text')) document.getElementById('arranger-status-text').textContent = "BROWSER AUDIO SUSPENDED";
             return; // Halt the sequencer until the user clicks the screen
         }
@@ -11646,13 +11685,14 @@ function assignMacroParam(knobIndex, targetId) {
             // =========================================================
             // --- 1. DETECT TOP-LEVEL UI INTERFERENCE ---
             // =========================================================
-            // If the piano roll is dragged above 140px, dock the headers
             const interferenceThreshold = 140; 
             const isPRHigh = currentY < interferenceThreshold;
+            const isMobile = window.innerWidth <= 768;
 
             if (isPRHigh) {
                 if (masterTransport) masterTransport.classList.add('pr-high');
-                if (canvasControls) canvasControls.classList.add('pr-high-stretched');
+                // ONLY stretch the D-Pad if we are NOT on a mobile device
+                if (canvasControls && !isMobile) canvasControls.classList.add('pr-high-stretched');
             } else {
                 if (masterTransport) masterTransport.classList.remove('pr-high');
                 if (canvasControls) canvasControls.classList.remove('pr-high-stretched');
@@ -11661,24 +11701,25 @@ function assignMacroParam(knobIndex, targetId) {
             // =========================================================
             // --- 2. DYNAMIC STACKING CLAMP ---
             // =========================================================
-            const isMacroOpen = document.getElementById('macro-overlay')?.classList.contains('active');
-            const isMobile = window.innerWidth <= 768;
+            const macroOverlay = document.getElementById('macro-overlay');
+            const isMacroOpen = macroOverlay?.classList.contains('active');
         
             let safeTopMargin = 0;
         
-            // Always measure docked headers if Piano Roll is high OR if we are on a narrow mobile device
+            // 1. Measure top docked headers (Transport + D-Pad)
             if (isPRHigh || isMobile) {
-                // Read the exact pixel heights of the docked panels (supports dynamic flex-wrapping rows!)
                 const mtHeight = masterTransport ? masterTransport.offsetHeight : 45;
                 const menuHeight = canvasControls ? canvasControls.offsetHeight : 50;
+                safeTopMargin += (mtHeight + menuHeight - 2); 
+            }
             
-                // The -2 forces the Piano Roll to tuck flush underneath the header's CSS borders!
-                safeTopMargin = mtHeight + menuHeight - 2; 
-            } else if (isMacroOpen) {
-                safeTopMargin = 90;
+            // 2. Measure the Macro Panel if it is active! (Removes the fatal 'else')
+            if (isMacroOpen) {
+                // Dynamically read its height so it supports wrapping on small screens
+                safeTopMargin += macroOverlay ? macroOverlay.offsetHeight : 90;
             }
 
-            const pianoH = document.getElementById('piano-overlay').offsetHeight;
+            const pianoH = document.getElementById('piano-overlay') ? document.getElementById('piano-overlay').offsetHeight : 0;
         
             // Calculate max allowed height based on our new pixel-perfect hard-stop margin
             const maxHeight = window.innerHeight - pianoH - safeTopMargin;
@@ -11690,6 +11731,10 @@ function assignMacroParam(knobIndex, targetId) {
             // Write directly to your global CSS variables
             document.documentElement.style.setProperty('--pr-height', `${newHeight}px`);
             document.documentElement.style.setProperty('--pr-actual-h', `${newHeight}px`);
+
+            // If the Piano Roll covers more than 60% of the screen height, eliminate the Tonnetz peephole
+            const isCoveringScreen = newHeight / window.innerHeight > 0.60;
+            document.body.classList.toggle('pr-maximized', isCoveringScreen);
 
             // --- IMPORTANT: Trigger collision checks dynamically while dragging! ---
             if (typeof evaluatePanelCollisions === 'function') evaluatePanelCollisions(); 
