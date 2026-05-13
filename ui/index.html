@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
     <script>
-        window.onerror = function (msg, url, line) {
+        window.onerror = function(msg, url, line) {
+            if (typeof msg === 'string' && (
+                msg.includes('ResizeObserver loop limit exceeded') ||
+                msg.includes('ResizeObserver loop completed with undelivered notifications')
+            )) {
+                return true; // Tell the browser we safely handled it
+            }
+
             const boot = document.getElementById('boot-status');
             if (boot) {
                 boot.style.backgroundColor = "#d32f2f";
@@ -10,6 +17,7 @@
                 boot.innerHTML = `❌ FATAL JS CRASH:<br>${msg}<br>Line: ${line}`;
             }
         };
+
         window.addEventListener('unhandledrejection', function (e) {
             const boot = document.getElementById('boot-status');
             if (boot) {
@@ -605,9 +613,10 @@
         }
 
         /* =========================================================
-           7. MULTITRACK MIXER & EQ COMPONENTS
+           7. MULTITRACK MIXER & EQ COMPONENTS (UNIFIED)
            ========================================================= */
 
+        /* --- A. MIXER GRIDS & CONTAINERS --- */
         .looper-controls {
             display: flex;
             flex-direction: column;
@@ -616,22 +625,125 @@
             box-sizing: border-box;
         }
 
+        .mixer-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 4px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .mixer-grid-8 {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 4px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+            /* Allow the column wrapper itself to shrink below its content size */
+            .mixer-grid-8 > div {
+                min-width: 0;
+            }
+
+        /* Strip the heavy border/bg from the control wells in the Mixer */
+        .control-well {
+            padding: 0;
+            margin-bottom: 0;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- B. MIXER CHANNELS & LABELS --- */
+        .mixer-channel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0,0,0,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 2px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .dark-theme .mixer-channel {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .mixer-channel.master-channel {
+            background: rgba(255, 152, 0, 0.05);
+            border-color: rgba(255, 152, 0, 0.3);
+        }
+
+        .mixer-channel label {
+            font-size: 0.6rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        /* The Unified Instrument Label (Contains the Shortcut Hover Fixes) */
         .inst-label {
+            /* Layout & Box */
+            width: 100%;
+            min-width: 0;
+            display: block;
+            height: 10px;
+            margin-top: -2px;
+            margin-bottom: -2px;
+            /* Typography */
             font-size: 0.55rem;
             color: var(--text-muted);
             text-transform: uppercase;
             font-weight: bold;
             text-align: center;
+            line-height: 1;
+            /* Truncation */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            height: 10px;
-            margin-top: -2px;
-            margin-bottom: -2px;
-            pointer-events: none;
+            /* The Interactive Fix: Rise above the track button to allow clicks */
+            pointer-events: auto !important;
+            cursor: pointer !important;
+            text-decoration: underline !important;
+            text-underline-offset: 2px !important;
+            transition: color 0.2s ease !important;
+            position: relative !important;
+            z-index: 10 !important;
         }
 
+            .inst-label:hover {
+                color: #fff !important;
+            }
+
+        .val-readout {
+            font-size: 0.55rem;
+            font-family: monospace;
+            margin-top: 6px;
+            background: #111;
+            color: #00ff41;
+            padding: 3px 0px;
+            border-radius: 3px;
+            border: 1px solid #333;
+            width: 90%;
+            text-align: center;
+            box-sizing: border-box;
+            line-height: 1;
+        }
+
+        /* --- C. TRACK BUTTONS & LONG-PRESS LOGIC --- */
         .track-btn {
+            /* Base Styles */
             width: 100%;
             height: 30px;
             border-radius: 4px;
@@ -642,10 +754,13 @@
             font-size: clamp(0.65rem, 2.5vw, 0.75rem);
             transition: all 0.15s;
             padding: 0;
+            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
             box-sizing: border-box;
+            /* Long-Press Stack Context */
+            position: relative;
+            z-index: 1;
         }
 
             .track-btn.active {
@@ -677,6 +792,59 @@
                 animation: pulse-fast 0.5s infinite alternate;
             }
 
+            /* Long-Press Fill Animation */
+            .track-btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background-color: rgba(244, 67, 54, 0.4);
+                transform: scaleX(0);
+                transform-origin: left;
+                z-index: -1;
+                transition: transform 0s;
+            }
+
+            .track-btn.clearing::before {
+                transform: scaleX(1);
+                transition: transform 3s linear;
+            }
+
+            .track-btn.cleared-flash {
+                background-color: #f44336 !important;
+                color: white !important;
+                transition: background-color 0.1s ease-out;
+            }
+
+        /* Master Delete Button Animation */
+        #btnClearAllArranger::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+            transform: scaleX(0);
+            transform-origin: left;
+            z-index: -1;
+            transition: transform 0s;
+        }
+
+        #btnClearAllArranger.clearing::before {
+            transform: scaleX(1);
+            transition: transform 2s linear;
+        }
+
+        #btnClearAllArranger.cleared-flash {
+            background-color: #000 !important;
+            color: white !important;
+            transition: background-color 0.1s ease-out;
+        }
+
+        /* --- D. MUTE & LOOPER ACTIONS --- */
         .mute-btn {
             width: 100%;
             height: 20px;
@@ -767,8 +935,91 @@
             }
         }
 
-        /* --- REDESIGNED MIXER CONTAINER STYLES --- */
+        /* --- E. AUX SENDS, SLIDERS & THUMBS --- */
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--main-node);
+            cursor: pointer;
+            height: 22px;
+            margin: 0;
+            box-sizing: border-box;
+        }
 
+            input[type=range].aux-send {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 85%;
+                height: 16px !important;
+                margin: 2px 0 4px 0;
+                background: rgba(0,0,0,0.1);
+                border-radius: 8px;
+                cursor: pointer;
+                outline: none;
+            }
+
+        .dark-theme input[type=range].aux-send {
+            background: rgba(255,255,255,0.1);
+        }
+
+        input[type=range].aux-send::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        input[type=range].aux-send::-moz-range-thumb {
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        /* Echo (Cyan E) */
+        input[type=range].echo-send::-webkit-slider-thumb {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%2300bcd4" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">E</text></svg>') center no-repeat;
+        }
+
+        input[type=range].echo-send::-moz-range-thumb {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%2300bcd4" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">E</text></svg>') center no-repeat;
+        }
+
+        /* Reverb (Pink R) */
+        input[type=range].reverb-send::-webkit-slider-thumb {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23e91e63" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">R</text></svg>') center no-repeat;
+        }
+
+        input[type=range].reverb-send::-moz-range-thumb {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23e91e63" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">R</text></svg>') center no-repeat;
+        }
+
+        /* Pan (White P) */
+        input[type=range].pan-slider {
+            margin-bottom: 6px;
+        }
+
+            input[type=range].pan-slider::-webkit-slider-thumb {
+                background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23ffffff" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">P</text></svg>') center no-repeat;
+            }
+
+            input[type=range].pan-slider::-moz-range-thumb {
+                background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23ffffff" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">P</text></svg>') center no-repeat;
+            }
+
+        input[type=range].v-slider {
+            writing-mode: vertical-lr;
+            direction: rtl;
+            width: 24px;
+            height: var(--mixer-fader-height);
+            cursor: pointer;
+            margin: 0;
+            background: transparent;
+        }
+
+        /* --- F. GENERAL CONTROLS & SECTIONS (Dropdowns, Titles) --- */
         .controls-section {
             display: flex;
             flex-direction: column;
@@ -784,7 +1035,6 @@
             background: rgba(255,255,255,0.02);
         }
 
-        /* General Section Titles for non-mixer panels */
         .section-title {
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -813,19 +1063,6 @@
                 padding-bottom: 0;
             }
 
-        /* Strip the heavy border/bg from the control wells in the Mixer */
-        .control-well {
-            padding: 0;
-            margin-bottom: 0;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            width: 100%;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-        }
-
         .control-group {
             display: flex;
             flex-direction: column;
@@ -846,15 +1083,6 @@
                 margin: 0 0 3px 0;
                 padding: 0;
             }
-
-        input[type=range] {
-            width: 100%;
-            accent-color: var(--main-node);
-            cursor: pointer;
-            height: 22px;
-            margin: 0;
-            box-sizing: border-box;
-        }
 
         select, button {
             padding: 0 5px;
@@ -910,10 +1138,6 @@
             height: 26px;
         }
 
-        /* ==============================================================
-           MIXER PANEL OPTIMIZATIONS
-           ============================================================== */
-
         #mixer-overlay .mixer-content-wrapper {
             background: transparent !important;
             box-shadow: none !important;
@@ -922,7 +1146,6 @@
             margin: 0 !important;
         }
 
-        /* Top Row: Perfect 4-Element Grid */
         .mixer-top-row {
             display: grid;
             grid-template-columns: auto 1fr auto 1fr;
@@ -944,7 +1167,6 @@
                 margin: 0;
             }
 
-        /* Looper Progress Bar */
         #looper-progress-container {
             margin: 2px 0 6px 0 !important;
             height: 4px;
@@ -952,11 +1174,38 @@
             border-radius: 2px;
         }
 
-        /* Submix Grid */
         .submix-grid.three-col {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
+        }
+
+        /* --- G. PORTRAIT MODE SPECIFICS FOR MIXER --- */
+        @media (orientation: portrait) {
+            input[type=range].v-slider {
+                height: var(--mixer-fader-height);
+                width: 20px;
+            }
+
+            .mixer-grid-8 {
+                gap: 2px;
+            }
+
+            .mixer-channel {
+                padding: 4px 1px;
+            }
+
+                .mixer-channel label {
+                    font-size: 0.5rem;
+                    margin-bottom: 4px;
+                }
+
+            .val-readout {
+                font-size: 0.5rem;
+                width: 95%;
+                padding: 2px 0;
+                margin-top: 4px;
+            }
         }
 
         /* =========================================================
@@ -1637,247 +1886,6 @@
         .dark-theme .piano-key.white-key.in-scale:not(.is-root)::after {
             background: rgba(0, 0, 0, 0.5); /* Heavier dark gray */
             box-shadow: 0 1px 1px rgba(255, 255, 255, 0.3); /* Softer white under-highlight */
-        }
-
-        /* 11b. MIXER CONSOLE STYLES */
-        .mixer-grid-4 {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 4px;
-            width: 100%;
-            margin-top: 4px;
-        }
-
-        .mixer-grid-8 {
-            display: grid;
-            grid-template-columns: repeat(8, minmax(0, 1fr));
-            gap: 4px;
-            width: 100%;
-            margin-top: 4px;
-        }
-            /* Also ensure the column wrapper itself is allowed to shrink below its content size */
-            .mixer-grid-8 > div {
-                min-width: 0;
-            }
-
-        /* Ensure track labels apply the ellipsis (...) properly */
-        .inst-label {
-            width: 100%;
-            min-width: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: block;
-        }
-
-        .mixer-channel {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: rgba(0,0,0,0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 6px 2px;
-            height: 100%;
-            box-sizing: border-box;
-        }
-
-        .dark-theme .mixer-channel {
-            background: rgba(255,255,255,0.03);
-        }
-
-        .mixer-channel.master-channel {
-            background: rgba(255, 152, 0, 0.05);
-            border-color: rgba(255, 152, 0, 0.3);
-        }
-
-        .mixer-channel label {
-            font-size: 0.6rem;
-            font-weight: bold;
-            color: var(--text-muted);
-            text-align: center;
-            margin-bottom: 6px;
-            white-space: nowrap;
-            text-transform: uppercase;
-            line-height: 1;
-        }
-
-        .val-readout {
-            font-size: 0.55rem;
-            font-family: monospace;
-            margin-top: 6px;
-            background: #111;
-            color: #00ff41;
-            padding: 3px 0px;
-            border-radius: 3px;
-            border: 1px solid #333;
-            width: 90%;
-            text-align: center;
-            box-sizing: border-box;
-            line-height: 1;
-        }
-
-        /* Aux Send Sliders */
-        input[type=range].aux-send {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 85%;
-            height: 16px !important;
-            margin: 2px 0 4px 0;
-            background: rgba(0,0,0,0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            outline: none;
-        }
-
-        .dark-theme input[type=range].aux-send {
-            background: rgba(255,255,255,0.1);
-        }
-
-        input[type=range].aux-send::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            border: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-        }
-
-        input[type=range].aux-send::-moz-range-thumb {
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            border: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-        }
-
-        /* Echo (Cyan E) */
-        input[type=range].echo-send::-webkit-slider-thumb {
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%2300bcd4" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">E</text></svg>') center no-repeat;
-        }
-
-        input[type=range].echo-send::-moz-range-thumb {
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%2300bcd4" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">E</text></svg>') center no-repeat;
-        }
-
-        /* Reverb (Pink R) */
-        input[type=range].reverb-send::-webkit-slider-thumb {
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23e91e63" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">R</text></svg>') center no-repeat;
-        }
-
-        input[type=range].reverb-send::-moz-range-thumb {
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23e91e63" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">R</text></svg>') center no-repeat;
-        }
-
-        /* Pan (White P) */
-        input[type=range].pan-slider {
-            margin-bottom: 6px;
-        }
-
-            input[type=range].pan-slider::-webkit-slider-thumb {
-                background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23ffffff" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">P</text></svg>') center no-repeat;
-            }
-
-            input[type=range].pan-slider::-moz-range-thumb {
-                background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="8" fill="%23222"/><text x="50%" y="54%" fill="%23ffffff" font-family="sans-serif" font-size="11" font-weight="bold" dominant-baseline="middle" text-anchor="middle">P</text></svg>') center no-repeat;
-            }
-
-        input[type=range].v-slider {
-            writing-mode: vertical-lr;
-            direction: rtl;
-            width: 24px;
-            height: var(--mixer-fader-height);
-            cursor: pointer;
-            margin: 0;
-            background: transparent;
-        }
-
-        @media (orientation: portrait) {
-            input[type=range].v-slider {
-                height: var(--mixer-fader-height);
-                width: 20px;
-            }
-
-            .mixer-grid-8 {
-                gap: 2px;
-            }
-
-            .mixer-channel {
-                padding: 4px 1px;
-            }
-
-                .mixer-channel label {
-                    font-size: 0.5rem;
-                    margin-bottom: 4px;
-                }
-
-            .val-readout {
-                font-size: 0.5rem;
-                width: 95%;
-                padding: 2px 0;
-                margin-top: 4px;
-            }
-        }
-
-        /* --- TRACK SELECTORS: LONG-PRESS VISUAL FEEDBACK (=CLEAR TRACK) --- */
-        .track-btn {
-            position: relative;
-            overflow: hidden; /* Keeps the animation inside the button edges */
-            z-index: 1;
-        }
-
-            /* The red "fill" bar waiting in the background */
-            .track-btn::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                right: 0;
-                background-color: rgba(244, 67, 54, 0.4); /* Faint Red */
-                transform: scaleX(0); /* Hidden by default */
-                transform-origin: left; /* Fills from left to right */
-                z-index: -1;
-                transition: transform 0s; /* Snaps back to zero instantly when released */
-            }
-
-            /* When the user is holding the button (triggered by JS) */
-            .track-btn.clearing::before {
-                transform: scaleX(1); /* Fills to 100% */
-                transition: transform 3s linear; /* Takes exactly 3 seconds */
-            }
-
-            /* The success flash when the track is deleted */
-            .track-btn.cleared-flash {
-                background-color: #f44336 !important; /* Solid Red */
-                color: white !important;
-                transition: background-color 0.1s ease-out;
-            }
-
-        /* --- MASTER DELETE BUTTON ANIMATION --- */
-        #btnClearAllArranger::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background-color: rgba(0, 0, 0, 0.4); /* Dark fill */
-            transform: scaleX(0);
-            transform-origin: left;
-            z-index: -1;
-            transition: transform 0s;
-        }
-
-        #btnClearAllArranger.clearing::before {
-            transform: scaleX(1);
-            transition: transform 2s linear; /* Exactly 2000ms hold */
-        }
-
-        #btnClearAllArranger.cleared-flash {
-            background-color: #000 !important; /* Flash to black on success */
-            color: white !important;
-            transition: background-color 0.1s ease-out;
         }
 
         /* 11c. SVG Node Overlays */
