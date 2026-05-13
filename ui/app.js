@@ -9441,7 +9441,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         }, timeToPlay * 1000);
     }
 
-    function playDrum(type, time, velocity = 1, destination = null) { 
+    function playDrum(type, time, velocity = 100, destination = null) { 
         if (midiOutMode === 'midi') return; 
 
         // =======================================================
@@ -9620,7 +9620,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         }, tailMs); 
     }
 
-    function triggerSequencerDrum(type, playTime, velocity = 1) {
+    function triggerSequencerDrum(type, playTime, velocity = 100) {
         playDrum(type, playTime, velocity);
         highlightDrumBtn(type, playTime);
 
@@ -9657,164 +9657,164 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
 
             // --- 'METRONOME' PRESETS ---
             if (metroMode === 'click') {
-                if (s % 4 === 0) triggerSequencerDrum('click', playTime, s === 0 ? 1 : 0.5);
+                if (s % 4 === 0) triggerSequencerDrum('click', playTime, s === 0 ? 100 : 50);
             }
             else if (metroMode === 'basic') {
-                if (s === 0 || s === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s % 4 === 0) triggerSequencerDrum('hihat', playTime, 0.3);
+                if (s === 0 || s === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s % 4 === 0) triggerSequencerDrum('hihat', playTime, 30);
             }
             else if (metroMode === 'rock') {
-                if (s === 0 || s === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, (s % 4 === 0) ? 0.5 : 0.2); // Accented 8th notes
-                if (s === 0 && metroStep % 64 === 0) triggerSequencerDrum('cymbal', playTime, 0.8);
+                if (s === 0 || s === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, (s % 4 === 0) ? 50 : 20); // Accented 8th notes
+                if (s === 0 && metroStep % 64 === 0) triggerSequencerDrum('cymbal', playTime, 80);
             }
             // --- GARAGE ROCK (Loose, tom-heavy, aggressive) ---
             else if (metroMode === 'garage') {
-                if (s === 0 || s === 7 || s === 10) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s === 14 || s === 15) triggerSequencerDrum('snare', playTime, 0.4); // Snare ghost rolls
-                if (s % 4 === 0) triggerSequencerDrum('ride', playTime, 0.7);
-                if (s === 6) triggerSequencerDrum('tom2', playTime, 0.6);
-                if (s === 8) triggerSequencerDrum('tom3', playTime, 0.8);
+                if (s === 0 || s === 7 || s === 10) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s === 14 || s === 15) triggerSequencerDrum('snare', playTime, 40); // Snare ghost rolls
+                if (s % 4 === 0) triggerSequencerDrum('ride', playTime, 70);
+                if (s === 6) triggerSequencerDrum('tom2', playTime, 60);
+                if (s === 8) triggerSequencerDrum('tom3', playTime, 80);
             }
             // --- METAL (Double kick, blast beats, heavy cymbals) ---
             else if (metroMode === 'metal') {
-                if (s % 2 === 0) triggerSequencerDrum('kick', playTime, 0.9); // Constant double bass
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s % 4 === 0) triggerSequencerDrum('cymbal', playTime, 0.6); // Riding the crash
-                if (s32 === 30 || s32 === 31) triggerSequencerDrum('kick', playTime, 1); // 32nd note kick gallop at the end of the bar
+                if (s % 2 === 0) triggerSequencerDrum('kick', playTime, 90); // Constant double bass
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s % 4 === 0) triggerSequencerDrum('cymbal', playTime, 60); // Riding the crash
+                if (s32 === 30 || s32 === 31) triggerSequencerDrum('kick', playTime, 100); // 32nd note kick gallop at the end of the bar
             }
             // --- PUNK (Fast, syncopated snare, driving hi-hats) ---
             else if (metroMode === 'punk') {
-                if (s === 0 || s === 6 || s === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 2 || s === 10 || s === 14) triggerSequencerDrum('snare', playTime, 1); // Anti-beat snare
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6);
-                if (s === 0 && metroStep % 32 === 0) triggerSequencerDrum('cymbal', playTime, 0.8);
+                if (s === 0 || s === 6 || s === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 2 || s === 10 || s === 14) triggerSequencerDrum('snare', playTime, 100); // Anti-beat snare
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 60);
+                if (s === 0 && metroStep % 32 === 0) triggerSequencerDrum('cymbal', playTime, 80);
             }
             else if (metroMode === 'swing') {
-                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('ride', playTime, 0.8);
-                if (s === 3 || s === 7 || s === 11 || s === 15) triggerSequencerDrum('ride', playTime, 0.5); // The "spang-a-lang"
-                if (s === 4 || s === 12) triggerSequencerDrum('hihat', playTime, 0.8); // Hi-hat on 2 and 4
-                if (s === 10) triggerSequencerDrum('snare', playTime, 0.3); // Comping snare ghost note
+                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('ride', playTime, 80);
+                if (s === 3 || s === 7 || s === 11 || s === 15) triggerSequencerDrum('ride', playTime, 50); // The "spang-a-lang"
+                if (s === 4 || s === 12) triggerSequencerDrum('hihat', playTime, 80); // Hi-hat on 2 and 4
+                if (s === 10) triggerSequencerDrum('snare', playTime, 30); // Comping snare ghost note
             }
             else if (metroMode === 'house') {
-                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('clap', playTime, 1);
-                if (s === 2 || s === 6 || s === 10 || s === 14) triggerSequencerDrum('hihat', playTime, 0.8); // Off-beat open hat
-                if (s === 15) triggerSequencerDrum('hihat', playTime, 0.3); // closed hat groove
+                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('clap', playTime, 100);
+                if (s === 2 || s === 6 || s === 10 || s === 14) triggerSequencerDrum('hihat', playTime, 80); // Off-beat open hat
+                if (s === 15) triggerSequencerDrum('hihat', playTime, 30); // closed hat groove
             }
             // --- DISCO (Four-on-the-floor with driving 16th hi-hats) ---
             else if (metroMode === 'disco') {
-                if (s % 4 === 0) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                triggerSequencerDrum('hihat', playTime, (s % 4 === 2) ? 0.9 : 0.4); // 16th hats, heavily accented on the off-beat
+                if (s % 4 === 0) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                triggerSequencerDrum('hihat', playTime, (s % 4 === 2) ? 90 : 40); // 16th hats, heavily accented on the off-beat
             }
             else if (metroMode === 'techno') {
-                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 2 || s === 6 || s === 10 || s === 14) triggerSequencerDrum('hihat', playTime, 0.8);
-                if (s === 15) triggerSequencerDrum('rimshot', playTime, 0.8);
-                if (s === 7 || s === 11) triggerSequencerDrum('tom1', playTime, 0.5); // Minimalist rolling toms
+                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 2 || s === 6 || s === 10 || s === 14) triggerSequencerDrum('hihat', playTime, 80);
+                if (s === 15) triggerSequencerDrum('rimshot', playTime, 80);
+                if (s === 7 || s === 11) triggerSequencerDrum('tom1', playTime, 50); // Minimalist rolling toms
             }
             else if (metroMode === 'breakbeat') {
-                if (s === 0 || s === 5 || s === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s === 7 || s === 14) triggerSequencerDrum('snare', playTime, 0.3); // The Amen-break ghost snares
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, (s % 4 === 0) ? 0.6 : 0.3);
+                if (s === 0 || s === 5 || s === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s === 7 || s === 14) triggerSequencerDrum('snare', playTime, 30); // The Amen-break ghost snares
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, (s % 4 === 0) ? 60 : 30);
             }
             else if (metroMode === 'dnb') {
-                if (s === 0 || s === 9) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s === 14) triggerSequencerDrum('kick', playTime, 0.7); // The classic DnB turnaround
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s === 0 || s === 9) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s === 14) triggerSequencerDrum('kick', playTime, 70); // The classic DnB turnaround
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'reggae') {
                 // One-drop groove
-                if (s === 4 || s === 12) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('rimshot', playTime, 1);
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
-                if (s === 14) triggerSequencerDrum('tom2', playTime, 0.7);
+                if (s === 4 || s === 12) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('rimshot', playTime, 100);
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
+                if (s === 14) triggerSequencerDrum('tom2', playTime, 70);
             }
             else if (metroMode === 'reggaeton') {
                 // Dembow rhythm
-                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 3 || s === 6 || s === 11 || s === 14) triggerSequencerDrum('snare', playTime, 1);
+                if (s === 0 || s === 4 || s === 8 || s === 12) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 3 || s === 6 || s === 11 || s === 14) triggerSequencerDrum('snare', playTime, 100);
             }
             else if (metroMode === 'trap') {
-                if (s === 0 || s === 8 || s === 11) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('clap', playTime, 1);
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6);
-                if (s === 14 || s === 15) triggerSequencerDrum('hihat', playTime, 0.4);
-                if (s32 === 14 || s32 === 15) triggerSequencerDrum('hihat', playTime, 0.3); // 32nd note hi-hat rolls
+                if (s === 0 || s === 8 || s === 11) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('clap', playTime, 100);
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 60);
+                if (s === 14 || s === 15) triggerSequencerDrum('hihat', playTime, 40);
+                if (s32 === 14 || s32 === 15) triggerSequencerDrum('hihat', playTime, 30); // 32nd note hi-hat rolls
             }
             // --- LO-FI (Dilla-style swing, laid back, off-grid feel) ---
             else if (metroMode === 'lofi') {
                 // Kick is intentionally slightly late/lazy on the 8
-                if (s === 0) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 9) triggerSequencerDrum('kick', playTime + 0.02, 0.8);
-                if (s === 4 || s === 12) triggerSequencerDrum('rimshot', playTime, 1);
-                triggerSequencerDrum('hihat', playTime, (s % 4 === 0) ? 0.7 : 0.3); // Unquantized 16ths feel
+                if (s === 0) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 9) triggerSequencerDrum('kick', playTime + 0.02, 80);
+                if (s === 4 || s === 12) triggerSequencerDrum('rimshot', playTime, 100);
+                triggerSequencerDrum('hihat', playTime, (s % 4 === 0) ? 70 : 30); // Unquantized 16ths feel
             }
             else if (metroMode === 'bossa') {
-                if (s === 0 || s === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 7 || s === 15) triggerSequencerDrum('kick', playTime, 0.5); // Soft turnaround kicks
-                if ([0, 3, 6, 10, 13].includes(s)) triggerSequencerDrum('rimshot', playTime, 1); // Clave
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s === 0 || s === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 7 || s === 15) triggerSequencerDrum('kick', playTime, 50); // Soft turnaround kicks
+                if ([0, 3, 6, 10, 13].includes(s)) triggerSequencerDrum('rimshot', playTime, 100); // Clave
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
             else if (metroMode === 'funk') {
-                if (s === 0 || s === 7 || s === 10) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s === 9 || s === 14) triggerSequencerDrum('snare', playTime, 0.3); // Ghost notes
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
-                if (s === 2 || s === 6) triggerSequencerDrum('cowbell', playTime, 0.6);
+                if (s === 0 || s === 7 || s === 10) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s === 9 || s === 14) triggerSequencerDrum('snare', playTime, 30); // Ghost notes
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
+                if (s === 2 || s === 6) triggerSequencerDrum('cowbell', playTime, 60);
             }
             // --- NEW: AFROBEAT (Complex polyrhythms, heavy percussion) ---
             else if (metroMode === 'afrobeat') {
-                if (s === 0 || s === 8 || s === 11) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s === 2 || s === 7 || s === 14) triggerSequencerDrum('rimshot', playTime, 0.8);
-                if (s === 6) triggerSequencerDrum('tom1', playTime, 0.7);
-                if (s === 10) triggerSequencerDrum('tom2', playTime, 0.7);
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s === 0 || s === 8 || s === 11) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s === 2 || s === 7 || s === 14) triggerSequencerDrum('rimshot', playTime, 80);
+                if (s === 6) triggerSequencerDrum('tom1', playTime, 70);
+                if (s === 10) triggerSequencerDrum('tom2', playTime, 70);
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
             else if (metroMode === 'hiphop') {
-                if (s === 0 || s === 9 || s === 11) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s === 14) triggerSequencerDrum('snare', playTime, 0.3); // Ghost note
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s === 0 || s === 9 || s === 11) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s === 14) triggerSequencerDrum('snare', playTime, 30); // Ghost note
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'rnb') {
-                if (s === 0 || s === 11) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('clap', playTime, 1);
-                if (s % 4 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s === 0 || s === 11) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('clap', playTime, 100);
+                if (s % 4 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
             else if (metroMode === 'latin') {
-                if (s === 0 || s === 6 || s === 10) triggerSequencerDrum('kick', playTime, 0.8);
-                if ([0, 3, 6, 10, 12].includes(s)) triggerSequencerDrum('cowbell', playTime, 1); // Clave
-                if (s === 4) triggerSequencerDrum('tom1', playTime, 0.7); // Conga High
-                if (s === 8) triggerSequencerDrum('tom3', playTime, 0.8); // Conga Low
-                if (s === 14) triggerSequencerDrum('tom2', playTime, 0.8); // Conga Mid
-                if (s % 4 === 0) triggerSequencerDrum('ride', playTime, 0.5);
+                if (s === 0 || s === 6 || s === 10) triggerSequencerDrum('kick', playTime, 80);
+                if ([0, 3, 6, 10, 12].includes(s)) triggerSequencerDrum('cowbell', playTime, 100); // Clave
+                if (s === 4) triggerSequencerDrum('tom1', playTime, 70); // Conga High
+                if (s === 8) triggerSequencerDrum('tom3', playTime, 80); // Conga Low
+                if (s === 14) triggerSequencerDrum('tom2', playTime, 80); // Conga Mid
+                if (s % 4 === 0) triggerSequencerDrum('ride', playTime, 50);
             }
             else if (metroMode === 'synthwave') {
-                if (s % 4 === 0) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6); // Straight 8ths
+                if (s % 4 === 0) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 4 || s === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 60); // Straight 8ths
                 // Big 80s tom fill at the end of every 2 bars
                 if (metroStep % 32 > 24) {
-                    if (s === 10) triggerSequencerDrum('tom1', playTime, 0.8);
-                    if (s === 12) triggerSequencerDrum('tom2', playTime, 0.8);
-                    if (s === 14) triggerSequencerDrum('tom3', playTime, 0.9);
+                    if (s === 10) triggerSequencerDrum('tom1', playTime, 80);
+                    if (s === 12) triggerSequencerDrum('tom2', playTime, 80);
+                    if (s === 14) triggerSequencerDrum('tom3', playTime, 90);
                 }
             }
             else if (metroMode === 'drill') {
-                if (s === 0 || s === 5 || s === 10) triggerSequencerDrum('kick', playTime, 1);
-                if (s === 6 || s === 14) triggerSequencerDrum('snare', playTime, 1); // Halftime snare placement
-                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.7); // Base 8ths
+                if (s === 0 || s === 5 || s === 10) triggerSequencerDrum('kick', playTime, 100);
+                if (s === 6 || s === 14) triggerSequencerDrum('snare', playTime, 100); // Halftime snare placement
+                if (s % 2 === 0) triggerSequencerDrum('hihat', playTime, 70); // Base 8ths
                 // Fast 32nd note hi-hat rolls (trills)
                 if (s32 === 6 || s32 === 7 || s32 === 26 || s32 === 27 || s32 === 28 || s32 === 29) {
-                    triggerSequencerDrum('hihat', playTime, 0.4);
+                    triggerSequencerDrum('hihat', playTime, 40);
                 }
             }
 
@@ -9822,92 +9822,92 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             // --- 3/4 TIME GROOVES (12 steps per bar) ---
             // ==========================================
             else if (metroMode === 'waltz') {
-                if (s12 === 0) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 4 || s12 === 8) triggerSequencerDrum('snare', playTime, 0.7); // Beats 2 and 3
-                if (s12 % 4 === 0) triggerSequencerDrum('hihat', playTime, 0.5); // Quarter notes
+                if (s12 === 0) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 4 || s12 === 8) triggerSequencerDrum('snare', playTime, 70); // Beats 2 and 3
+                if (s12 % 4 === 0) triggerSequencerDrum('hihat', playTime, 50); // Quarter notes
             }
             else if (metroMode === 'jazz34') {
-                if (s12 === 0) triggerSequencerDrum('kick', playTime, 0.6);
-                if (s12 === 0 || s12 === 4 || s12 === 8) triggerSequencerDrum('ride', playTime, 0.8);
-                if (s12 === 3 || s12 === 7 || s12 === 11) triggerSequencerDrum('ride', playTime, 0.4); // Spang-a-lang in 3
-                if (s12 === 4 || s12 === 8) triggerSequencerDrum('hihat', playTime, 0.7); // Hat pedal
+                if (s12 === 0) triggerSequencerDrum('kick', playTime, 60);
+                if (s12 === 0 || s12 === 4 || s12 === 8) triggerSequencerDrum('ride', playTime, 80);
+                if (s12 === 3 || s12 === 7 || s12 === 11) triggerSequencerDrum('ride', playTime, 40); // Spang-a-lang in 3
+                if (s12 === 4 || s12 === 8) triggerSequencerDrum('hihat', playTime, 70); // Hat pedal
             }
             else if (metroMode === 'pop34') {
-                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 4 || s12 === 8) triggerSequencerDrum('snare', playTime, 1);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 4 || s12 === 8) triggerSequencerDrum('snare', playTime, 100);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'lofi34') {
-                if (s12 === 0) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 6) triggerSequencerDrum('kick', playTime + 0.02, 0.6); // Lazy 8th
-                if (s12 === 4 || s12 === 8) triggerSequencerDrum('rimshot', playTime, 0.9);
-                if (s12 === 0 || s12 === 4 || s12 === 8) triggerSequencerDrum('hihat', playTime, 0.6);
+                if (s12 === 0) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 6) triggerSequencerDrum('kick', playTime + 0.02, 60); // Lazy 8th
+                if (s12 === 4 || s12 === 8) triggerSequencerDrum('rimshot', playTime, 90);
+                if (s12 === 0 || s12 === 4 || s12 === 8) triggerSequencerDrum('hihat', playTime, 60);
             }
             else if (metroMode === 'minuet') {
-                if (s12 === 0) triggerSequencerDrum('kick', playTime, 0.8);
-                if (s12 === 4) triggerSequencerDrum('snare', playTime, 0.6);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s12 === 0) triggerSequencerDrum('kick', playTime, 80);
+                if (s12 === 4) triggerSequencerDrum('snare', playTime, 60);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
             else if (metroMode === 'rock34') {
-                if (s12 === 0 || s12 === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 4) triggerSequencerDrum('snare', playTime, 1);
-                if (s12 % 2 === 0) triggerSequencerDrum('cymbal', playTime, 0.6);
+                if (s12 === 0 || s12 === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 4) triggerSequencerDrum('snare', playTime, 100);
+                if (s12 % 2 === 0) triggerSequencerDrum('cymbal', playTime, 60);
             }
             else if (metroMode === 'rnb34') {
-                if (s12 === 0 || s12 === 7) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s12 === 4 || s12 === 8) triggerSequencerDrum('clap', playTime, 1);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s12 === 0 || s12 === 7) triggerSequencerDrum('kick', playTime, 90);
+                if (s12 === 4 || s12 === 8) triggerSequencerDrum('clap', playTime, 100);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'folk34') {
-                if (s12 === 0) triggerSequencerDrum('kick', playTime, 0.8);
-                if (s12 === 4) triggerSequencerDrum('tom2', playTime, 0.7);
-                if (s12 === 8) triggerSequencerDrum('tom3', playTime, 0.7);
-                if (s12 % 4 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s12 === 0) triggerSequencerDrum('kick', playTime, 80);
+                if (s12 === 4) triggerSequencerDrum('tom2', playTime, 70);
+                if (s12 === 8) triggerSequencerDrum('tom3', playTime, 70);
+                if (s12 % 4 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
 
             // ==========================================
             // --- 6/8 TIME GROOVES (12 steps, Accents on 1 and 4) ---
             // ==========================================
             else if (metroMode === 'blues68') {
-                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 6) triggerSequencerDrum('snare', playTime, 1);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, (s12 === 0 || s12 === 6) ? 0.8 : 0.4);
+                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 6) triggerSequencerDrum('snare', playTime, 100);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, (s12 === 0 || s12 === 6) ? 80 : 40);
             }
             else if (metroMode === 'rock68') {
-                if (s12 === 0 || s12 === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 6) triggerSequencerDrum('snare', playTime, 1);
-                if (s12 === 0) triggerSequencerDrum('cymbal', playTime, 0.7);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s12 === 0 || s12 === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 6) triggerSequencerDrum('snare', playTime, 100);
+                if (s12 === 0) triggerSequencerDrum('cymbal', playTime, 70);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'afro68') {
-                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s12 === 0 || s12 === 3 || s12 === 6 || s12 === 9) triggerSequencerDrum('rimshot', playTime, 1); // 6/8 Clave
-                if (s12 === 4) triggerSequencerDrum('tom1', playTime, 0.8);
-                if (s12 === 10) triggerSequencerDrum('tom3', playTime, 0.8);
+                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 90);
+                if (s12 === 0 || s12 === 3 || s12 === 6 || s12 === 9) triggerSequencerDrum('rimshot', playTime, 100); // 6/8 Clave
+                if (s12 === 4) triggerSequencerDrum('tom1', playTime, 80);
+                if (s12 === 10) triggerSequencerDrum('tom3', playTime, 80);
             }
             else if (metroMode === 'rnb68') {
-                if (s12 === 0 || s12 === 3) triggerSequencerDrum('kick', playTime, 0.8);
-                if (s12 === 6) triggerSequencerDrum('snare', playTime, 1);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s12 === 0 || s12 === 3) triggerSequencerDrum('kick', playTime, 80);
+                if (s12 === 6) triggerSequencerDrum('snare', playTime, 100);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'shanty') {
-                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 6) triggerSequencerDrum('clap', playTime, 1);
+                if (s12 === 0 || s12 === 6) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 6) triggerSequencerDrum('clap', playTime, 100);
             }
             else if (metroMode === 'pop68') {
-                if (s12 === 0 || s12 === 9) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s12 === 6) triggerSequencerDrum('snare', playTime, 1);
-                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6);
+                if (s12 === 0 || s12 === 9) triggerSequencerDrum('kick', playTime, 90);
+                if (s12 === 6) triggerSequencerDrum('snare', playTime, 100);
+                if (s12 % 2 === 0) triggerSequencerDrum('hihat', playTime, 60);
             }
             else if (metroMode === 'trap68') {
-                if (s12 === 0 || s12 === 6 || s12 === 9) triggerSequencerDrum('kick', playTime, 1);
-                if (s12 === 6) triggerSequencerDrum('clap', playTime, 1);
-                triggerSequencerDrum('hihat', playTime, 0.5); // 16th notes rolling
+                if (s12 === 0 || s12 === 6 || s12 === 9) triggerSequencerDrum('kick', playTime, 100);
+                if (s12 === 6) triggerSequencerDrum('clap', playTime, 100);
+                triggerSequencerDrum('hihat', playTime, 50); // 16th notes rolling
             }
             else if (metroMode === 'lofi68') {
-                if (s12 === 0) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s12 === 6) triggerSequencerDrum('rimshot', playTime, 0.9);
-                if (s12 === 2 || s12 === 4 || s12 === 8 || s12 === 10) triggerSequencerDrum('hihat', playTime, 0.4); // Offbeats
+                if (s12 === 0) triggerSequencerDrum('kick', playTime, 90);
+                if (s12 === 6) triggerSequencerDrum('rimshot', playTime, 90);
+                if (s12 === 2 || s12 === 4 || s12 === 8 || s12 === 10) triggerSequencerDrum('hihat', playTime, 40); // Offbeats
             }
 
             // ==========================================
@@ -9915,46 +9915,46 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             // ==========================================
             else if (metroMode === 'take5') {
                 // Classic 3+2 Jazz phrasing
-                if (s20 === 0 || s20 === 12) triggerSequencerDrum('kick', playTime, 0.8); // Beat 1 and 4
-                if (s20 === 0 || s20 === 4 || s20 === 8 || s20 === 12 || s20 === 16) triggerSequencerDrum('ride', playTime, 0.8);
-                if (s20 === 3 || s20 === 7 || s20 === 11 || s20 === 15 || s20 === 19) triggerSequencerDrum('ride', playTime, 0.4);
-                if (s20 === 4 || s20 === 16) triggerSequencerDrum('hihat', playTime, 0.8); // Hat pedal
+                if (s20 === 0 || s20 === 12) triggerSequencerDrum('kick', playTime, 80); // Beat 1 and 4
+                if (s20 === 0 || s20 === 4 || s20 === 8 || s20 === 12 || s20 === 16) triggerSequencerDrum('ride', playTime, 80);
+                if (s20 === 3 || s20 === 7 || s20 === 11 || s20 === 15 || s20 === 19) triggerSequencerDrum('ride', playTime, 40);
+                if (s20 === 4 || s20 === 16) triggerSequencerDrum('hihat', playTime, 80); // Hat pedal
             }
             else if (metroMode === 'prog54') {
-                if (s20 === 0 || s20 === 6 || s20 === 12) triggerSequencerDrum('kick', playTime, 1);
-                if (s20 === 8 || s20 === 16) triggerSequencerDrum('snare', playTime, 1); // Snare on beat 3 and 5
-                if (s20 % 2 === 0) triggerSequencerDrum('cymbal', playTime, 0.5);
+                if (s20 === 0 || s20 === 6 || s20 === 12) triggerSequencerDrum('kick', playTime, 100);
+                if (s20 === 8 || s20 === 16) triggerSequencerDrum('snare', playTime, 100); // Snare on beat 3 and 5
+                if (s20 % 2 === 0) triggerSequencerDrum('cymbal', playTime, 50);
             }
             else if (metroMode === 'pop54') {
-                if (s20 === 0 || s20 === 8 || s20 === 12) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s20 === 4 || s20 === 16) triggerSequencerDrum('snare', playTime, 1);
-                if (s20 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s20 === 0 || s20 === 8 || s20 === 12) triggerSequencerDrum('kick', playTime, 90);
+                if (s20 === 4 || s20 === 16) triggerSequencerDrum('snare', playTime, 100);
+                if (s20 % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'funk54') {
-                if (s20 === 0 || s20 === 10 || s20 === 14) triggerSequencerDrum('kick', playTime, 1);
-                if (s20 === 4 || s20 === 12) triggerSequencerDrum('snare', playTime, 1);
-                if (s20 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6);
+                if (s20 === 0 || s20 === 10 || s20 === 14) triggerSequencerDrum('kick', playTime, 100);
+                if (s20 === 4 || s20 === 12) triggerSequencerDrum('snare', playTime, 100);
+                if (s20 % 2 === 0) triggerSequencerDrum('hihat', playTime, 60);
             }
             else if (metroMode === 'mission') {
                 // The classic 3+3+2+2 spy theme groove
-                if (s20 === 0 || s20 === 6 || s20 === 12 || s20 === 16) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s20 === 16) triggerSequencerDrum('snare', playTime, 1);
-                if (s20 % 4 === 0) triggerSequencerDrum('ride', playTime, 0.7);
+                if (s20 === 0 || s20 === 6 || s20 === 12 || s20 === 16) triggerSequencerDrum('kick', playTime, 90);
+                if (s20 === 16) triggerSequencerDrum('snare', playTime, 100);
+                if (s20 % 4 === 0) triggerSequencerDrum('ride', playTime, 70);
             }
             else if (metroMode === 'lofi54') {
-                if (s20 === 0 || s20 === 12) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s20 === 8 || s20 === 16) triggerSequencerDrum('rimshot', playTime, 1);
-                if (s20 % 4 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s20 === 0 || s20 === 12) triggerSequencerDrum('kick', playTime, 90);
+                if (s20 === 8 || s20 === 16) triggerSequencerDrum('rimshot', playTime, 100);
+                if (s20 % 4 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'elec54') {
-                if (s20 % 4 === 0) triggerSequencerDrum('kick', playTime, 0.9); // 4-on-the-floor in 5
-                if (s20 === 8 || s20 === 16) triggerSequencerDrum('clap', playTime, 1);
-                if (s20 % 2 === 0 && s20 % 4 !== 0) triggerSequencerDrum('hihat', playTime, 0.7); // Offbeats
+                if (s20 % 4 === 0) triggerSequencerDrum('kick', playTime, 90); // 4-on-the-floor in 5
+                if (s20 === 8 || s20 === 16) triggerSequencerDrum('clap', playTime, 100);
+                if (s20 % 2 === 0 && s20 % 4 !== 0) triggerSequencerDrum('hihat', playTime, 70); // Offbeats
             }
             else if (metroMode === 'afro54') {
-                if (s20 === 0 || s20 === 12) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s20 === 0 || s20 === 3 || s20 === 6 || s20 === 12 || s20 === 15) triggerSequencerDrum('rimshot', playTime, 1);
-                if (s20 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s20 === 0 || s20 === 12) triggerSequencerDrum('kick', playTime, 90);
+                if (s20 === 0 || s20 === 3 || s20 === 6 || s20 === 12 || s20 === 15) triggerSequencerDrum('rimshot', playTime, 100);
+                if (s20 % 2 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
 
             // ==========================================
@@ -9962,44 +9962,44 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             // ==========================================
             else if (metroMode === 'money78') {
                 // Classic 4+3 feel
-                if (s14 === 0 || s14 === 4 || s14 === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s14 === 4 || s14 === 10) triggerSequencerDrum('snare', playTime, 1);
-                if (s14 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6);
+                if (s14 === 0 || s14 === 4 || s14 === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s14 === 4 || s14 === 10) triggerSequencerDrum('snare', playTime, 100);
+                if (s14 % 2 === 0) triggerSequencerDrum('hihat', playTime, 60);
             }
             else if (metroMode === 'prog78') {
-                if (s14 === 0 || s14 === 6) triggerSequencerDrum('kick', playTime, 1);
-                if (s14 === 4 || s14 === 10) triggerSequencerDrum('snare', playTime, 1);
-                if (s14 % 2 === 0) triggerSequencerDrum('cymbal', playTime, 0.5);
+                if (s14 === 0 || s14 === 6) triggerSequencerDrum('kick', playTime, 100);
+                if (s14 === 4 || s14 === 10) triggerSequencerDrum('snare', playTime, 100);
+                if (s14 % 2 === 0) triggerSequencerDrum('cymbal', playTime, 50);
             }
             else if (metroMode === 'balkan78') {
                 // Classic 3+2+2 feel
-                if (s14 === 0 || s14 === 6 || s14 === 10) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s14 === 2 || s14 === 8 || s14 === 12) triggerSequencerDrum('tom1', playTime, 0.6);
+                if (s14 === 0 || s14 === 6 || s14 === 10) triggerSequencerDrum('kick', playTime, 90);
+                if (s14 === 2 || s14 === 8 || s14 === 12) triggerSequencerDrum('tom1', playTime, 60);
             }
             else if (metroMode === 'fusion78') {
-                if (s14 === 0 || s14 === 8) triggerSequencerDrum('kick', playTime, 1);
-                if (s14 === 4 || s14 === 10) triggerSequencerDrum('snare', playTime, 1);
-                if (s14 % 2 === 0) triggerSequencerDrum('ride', playTime, 0.7);
+                if (s14 === 0 || s14 === 8) triggerSequencerDrum('kick', playTime, 100);
+                if (s14 === 4 || s14 === 10) triggerSequencerDrum('snare', playTime, 100);
+                if (s14 % 2 === 0) triggerSequencerDrum('ride', playTime, 70);
             }
             else if (metroMode === 'funk78') {
-                if (s14 === 0 || s14 === 10 || s14 === 12) triggerSequencerDrum('kick', playTime, 1);
-                if (s14 === 4 || s14 === 8) triggerSequencerDrum('snare', playTime, 1);
-                if (s14 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.6);
+                if (s14 === 0 || s14 === 10 || s14 === 12) triggerSequencerDrum('kick', playTime, 100);
+                if (s14 === 4 || s14 === 8) triggerSequencerDrum('snare', playTime, 100);
+                if (s14 % 2 === 0) triggerSequencerDrum('hihat', playTime, 60);
             }
             else if (metroMode === 'lofi78') {
-                if (s14 === 0 || s14 === 6) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s14 === 4 || s14 === 10) triggerSequencerDrum('rimshot', playTime, 1);
-                if (s14 % 4 === 0) triggerSequencerDrum('hihat', playTime, 0.4);
+                if (s14 === 0 || s14 === 6) triggerSequencerDrum('kick', playTime, 90);
+                if (s14 === 4 || s14 === 10) triggerSequencerDrum('rimshot', playTime, 100);
+                if (s14 % 4 === 0) triggerSequencerDrum('hihat', playTime, 40);
             }
             else if (metroMode === 'elec78') {
-                if (s14 === 0 || s14 === 4 || s14 === 8 || s14 === 10) triggerSequencerDrum('kick', playTime, 0.9);
-                if (s14 === 10) triggerSequencerDrum('clap', playTime, 1);
-                if (s14 % 2 === 0) triggerSequencerDrum('hihat', playTime, 0.5);
+                if (s14 === 0 || s14 === 4 || s14 === 8 || s14 === 10) triggerSequencerDrum('kick', playTime, 90);
+                if (s14 === 10) triggerSequencerDrum('clap', playTime, 100);
+                if (s14 % 2 === 0) triggerSequencerDrum('hihat', playTime, 50);
             }
             else if (metroMode === 'jazz78') {
-                if (s14 === 0) triggerSequencerDrum('kick', playTime, 0.7);
-                if (s14 === 10) triggerSequencerDrum('snare', playTime, 0.8);
-                if (s14 === 0 || s14 === 4 || s14 === 8 || s14 === 10) triggerSequencerDrum('ride', playTime, 0.8);
+                if (s14 === 0) triggerSequencerDrum('kick', playTime, 70);
+                if (s14 === 10) triggerSequencerDrum('snare', playTime, 80);
+                if (s14 === 0 || s14 === 4 || s14 === 8 || s14 === 10) triggerSequencerDrum('ride', playTime, 80);
             }
 
             // --- EMBELLISHMENTS / PROCEDURAL FILLS (THE "DRUMMER AI") ---
@@ -10007,56 +10007,56 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
                 // 1. Dynamic Phrase Math (A standard musical phrase is 4 bars)
                 const stepsPerBar = beatsPerBar * 4;
                 const phraseLength = stepsPerBar * 4;
-                
+            
                 // Which step of the individual bar are we on? (0 to stepsPerBar - 1)
                 const barStep = metroStep % stepsPerBar; 
-                
+            
                 // Are we in the final bar of the 4-bar phrase?
                 const isBar4 = (metroStep % phraseLength) >= (phraseLength - stepsPerBar);
-                
+            
                 // Are we on the exact downbeat (the very first step) of a new 4-bar phrase?
                 const isPhraseDownbeat = (barStep === 0 && metroStep % phraseLength === 0);
 
                 // 2. GHOST NOTES (Snare buzzes & hi-hat variations)
                 // These apply globally across all time signatures on odd 16th notes
                 if (barStep % 2 !== 0 && Math.random() < (currentDrumFills * 0.35)) {
-                    triggerSequencerDrum('snare', playTime, 0.15 + (Math.random() * 0.15));
+                    triggerSequencerDrum('snare', playTime, 15 + (Math.random() * 15));
                 }
-                
+            
                 // Slightly open hat before the downbeat of the next bar
                 if (barStep === stepsPerBar - 2 && Math.random() < currentDrumFills) {
-                    triggerSequencerDrum('hihat', playTime, 0.6); 
+                    triggerSequencerDrum('hihat', playTime, 60); 
                 }
 
                 // 3. STRUCTURAL FILLS (Only happens at the end of the 4-bar phrase)
                 if (isBar4) {
                     // The "Fill Zone" is the final beat of the bar (the last 4 steps)
                     const fillZoneStart = stepsPerBar - 4;
-                    
+                
                     // Medium Fills (> 30% Intensity): 1-beat fill on the final beat
                     if (currentDrumFills >= 0.3 && barStep >= fillZoneStart) {
                         const fillStep = barStep - fillZoneStart; // Normalizes to 0, 1, 2, 3
-                        
-                        if (fillStep === 0) triggerSequencerDrum(Math.random() > 0.5 ? 'snare' : 'tom1', playTime, 0.8);
-                        if (fillStep === 1) triggerSequencerDrum('tom1', playTime, 0.7);
-                        if (fillStep === 2) triggerSequencerDrum('tom2', playTime, 0.8);
-                        if (fillStep === 3) triggerSequencerDrum('tom3', playTime, 0.9);
+                    
+                        if (fillStep === 0) triggerSequencerDrum(Math.random() > 0.5 ? 'snare' : 'tom1', playTime, 80);
+                        if (fillStep === 1) triggerSequencerDrum('tom1', playTime, 70);
+                        if (fillStep === 2) triggerSequencerDrum('tom2', playTime, 80);
+                        if (fillStep === 3) triggerSequencerDrum('tom3', playTime, 90);
                     }
 
                     // Heavy Fills (> 70% Intensity): Extends the fill to cover the final TWO beats
                     const heavyFillZoneStart = stepsPerBar - 8;
                     if (currentDrumFills >= 0.7 && barStep >= heavyFillZoneStart && barStep < fillZoneStart) {
                         const fillStep = barStep - heavyFillZoneStart; // Normalizes to 0, 1, 2, 3
-                        
-                        if (fillStep === 0 || fillStep === 2) triggerSequencerDrum('snare', playTime, 0.9);
-                        if (fillStep === 1 || fillStep === 3) triggerSequencerDrum('kick', playTime, 0.8);
+                    
+                        if (fillStep === 0 || fillStep === 2) triggerSequencerDrum('snare', playTime, 90);
+                        if (fillStep === 1 || fillStep === 3) triggerSequencerDrum('kick', playTime, 80);
                     }
                 }
 
                 // 4. CYMBAL CRASHES
                 // Hit the crash on the "1" of a new 4-bar section (only if intensity > 40%)
                 if (isPhraseDownbeat && currentDrumFills >= 0.4) {
-                    triggerSequencerDrum('cymbal', playTime, 0.5 + (currentDrumFills * 0.4));
+                    triggerSequencerDrum('cymbal', playTime, 50 + (currentDrumFills * 40));
                 }
             }
 
@@ -10065,13 +10065,13 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         }
     }
 
-    function triggerManualDrum(type, velocity = 1) {
+    function triggerManualDrum(type, velocity = 100) { // Default adjusted to 100 here as well
         initAudio();
-        
+    
         let activeDomain = studio.lastSelectedDomain;
         let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
         let destNode = activeDomain === 'looper' ? looperGainNodes[activeIdx] : linearGainNodes[activeIdx - 8];
-        
+    
         playDrum(type, audioCtx.currentTime, velocity, destNode);
 
         // --- STEP ENTRY DRUM INTERCEPT ---
@@ -10079,7 +10079,7 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             handleStepEntry(null, null, type, velocity);
             // Drums don't have a "release" state like keyboards, so we instantly auto-advance!
             advanceStepCursor(); 
-            
+        
             const b = document.querySelector(`.manual-drum-btn[data-drum="${type}"]`);
             if (b) { b.classList.add('active-btn'); setTimeout(() => b.classList.remove('active-btn'), 100); }
             return; // Skip standard live-recording logic
@@ -10098,15 +10098,15 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         if (arranger.isArmed) {
             arranger.isArmed = false; arranger.isRecording = true; arranger.isPlaying = true; arranger.startTime = audioCtx.currentTime; 
         }
-        
+    
         if (wasArmed) {
             // --- NEW: THE METRONOME PHASE SNAP ---
             metronomeBeatCount = 0;
             nextMetronomeTick = audioCtx.currentTime + (60 / currentArpBPM); 
             playClick(audioCtx.currentTime, true); // Force an instant accent click
-            
+        
             if (metronomeMode === 1) isMetronomePlaying = false; // Auto-stop Count-In
-            
+        
             updateStudioUI();
         }
 
