@@ -2510,32 +2510,6 @@
             overflow-y: auto;
         }
 
-        /* PORTRAIT: Panels dock underneath the Solid Transport */
-        @media (orientation: portrait), (max-width: 768px) {
-            #master-transport {
-                top: 0 !important;
-                width: 100vw !important;
-                border-radius: 0 !important;
-                border: none !important;
-                border-bottom: 1px solid var(--border-color) !important;
-                height: 55px !important;
-            }
-
-            body.ui-hidden #master-transport {
-                top: -60px !important;
-            }
-
-            #settings-overlay, #synth-overlay, #pads-overlay,
-            #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
-                top: 55px !important;
-                height: max-content !important; /* Yield, do not stretch */
-                border-top-left-radius: 0 !important;
-                border-top-right-radius: 0 !important;
-                border-top: none !important;
-                max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
-            }
-        }
-
         /* =========================================================
            GLOBAL AUTO-HIDE & FULL-WIDTH DOCK
            ========================================================= */
@@ -2745,15 +2719,6 @@
                 pointer-events: auto;
             }
 
-        /* If the screen isn't massive (tablets/small laptops), stretch it out nicely */
-        @media (max-width: 1200px) {
-            #macro-overlay {
-                width: calc(100vw - var(--left-panel-w, 0px));
-                justify-content: space-evenly;
-                gap: 5px;
-            }
-        }
-
         /* The Auto-Hide Animation */
         body.ui-hidden #macro-overlay.auto-hides {
             transform: translateY(100%) !important;
@@ -2863,446 +2828,304 @@
             }
 
         /* ==============================================================
-        MOBILE PORTRAIT & COMPACT SCREENS: STRICT UI OVERRIDES
-        ============================================================== */
-        @media (orientation: portrait), (max-width: 768px) {
+           20. UNIFIED RESPONSIVE ARCHITECTURE
+           (Replaces all previous mobile/portrait/landscape overrides)
+           ============================================================== */
 
-            /* --- 1. THE MACRO SHELF --- */
-            #macro-overlay {
-                min-width: 100%;
-                max-width: 100%;
-                border-radius: 0;
-                border-left: none;
-                flex-wrap: wrap; /* Wrap into a 2-row layout if 8 knobs don't fit */
-                height: auto;
-                padding: 10px 5px;
-            }
-
-            .macro-cell {
-                width: 24%; /* Forces a 4x2 grid */
-            }
-
-            /* --- 2. LEFT PANELS YIELD LOGIC --- */
-            #settings-overlay, #synth-overlay, #pads-overlay,
-            #drums-overlay, #mixer-overlay, #info-overlay {
-                max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
-            }
-
-            /* --- 3. FAB (FLOATING ACTION BUTTON) PLACEMENT --- */
-            /* Forces the FAB to the bottom right, overriding legacy top-header bugs */
-            #canvas-controls {
-                top: auto !important;
-                left: auto !important;
-                bottom: calc(var(--piano-h, 0px) + 20px) !important;
-                right: 20px !important;
-                width: auto !important;
-                flex-wrap: nowrap !important;
-                border-radius: 30px !important; /* Restore the pill shape */
-            }
-
-            #btnNavToggle {
-                font-size: 24px !important;
-            }
-
-            /* --- 4. MASTER TRANSPORT HEADER TIGHTENING --- */
-            #master-transport-header {
-                gap: 4px !important;
-                padding: 5px !important;
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-            }
-
-                #master-transport-header button {
-                    padding: 5px 8px !important;
-                    font-size: 14px !important;
-                }
-
-            #global-time-display,
-            #global-bpm-display {
-                font-size: 12px !important;
-                padding: 0 4px !important;
-                letter-spacing: -0.5px !important;
-            }
-
-            /* THE FIX: Elastic Seeker Bar */
-            #master-transport-header input[type="range"],
-            #global-timeline-seeker,
-            #master-seeker {
-                flex: 1 1 100px !important; /* Eats available space, but yields if squished past 100px */
-                min-width: 80px !important; /* Absolute minimum size before forcing a line break */
-                max-width: 100% !important;
-                width: auto !important; /* Destroys any hardcoded desktop widths */
-                margin: 2px 0 0 0 !important;
-            }
-
-            #master-transport {
-                height: auto !important; /* Allow the pill to grow taller */
-                min-height: 45px !important;
-                padding: 6px !important; /* Give it some breathing room */
-            }
-
-            /* Target the inner flex container */
-            #master-transport > div {
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                gap: 6px !important;
-            }
-
-            /* Shrink the minimum width of the seeker slider so it behaves */
-            #global-seeker {
-                min-width: 60px !important;
-                flex: 1 1 auto !important; /* Allow it to grow, but let it shrink! */
-            }
+        /* --- GLOBAL FIX: GUARANTEE D-PAD IS ALWAYS ON TOP --- */
+        #canvas-controls {
+            z-index: 99999 !important;
         }
 
         /* =========================================================
-           19. DYNAMIC PIANO-ROLL INTERFERENCE & STRETCHED D-PAD
+           A. DESKTOP ONLY (>= 1025px)
+           Strictly limits Stretched D-Pad & 1080p flattening to large screens
            ========================================================= */
+        @media (min-width: 1025px) {
 
-        #master-transport.pr-high {
-            top: 0 !important;
-            transform: none !important;
-            left: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
-            border-radius: 0 !important;
-            border: none !important;
-            border-bottom: 1px solid var(--border-color) !important;
-            box-shadow: none !important;
-            height: 45px !important;
-            z-index: 999 !important;
-        }
+            /* 1080p static flattening */
+            @media (max-height: 1080px) {
+                #master-transport {
+                    top: 0 !important;
+                    left: var(--pr-left-offset, 0px) !important;
+                    width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                    max-width: none !important;
+                    border-radius: 0 !important;
+                    border: none !important;
+                    border-bottom: 1px solid var(--border-color) !important;
+                    box-shadow: none !important;
+                    transform: none !important; /* THE FIX: Stops the -50% shift */
+                }
 
-        #canvas-controls.pr-high-stretched {
-            top: 45px !important;
-            bottom: auto !important;
-            left: 0 !important;
-            right: 0 !important;
-            transform: none !important;
-            width: 100% !important;
-            height: max-content !important; /* Forces container to expand for the 2nd row */
-            min-height: 50px !important;
-            background: var(--panel-bg) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-            z-index: 9999 !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            display: block !important;
-            overflow: visible !important;
-        }
+                #canvas-controls {
+                    top: 45px !important;
+                    bottom: auto !important;
+                    left: var(--pr-left-offset, 0px) !important;
+                    right: auto !important;
+                    width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                    background: var(--panel-bg) !important;
+                    border-bottom: 1px solid var(--border-color) !important;
+                    border-radius: 0 !important;
+                    padding: 0 !important;
+                    transform: none !important; /* THE FIX */
+                    display: block !important;
+                }
 
-            #canvas-controls.pr-high-stretched #main-nav-grid {
-                position: relative !important;
-                top: auto !important;
-                bottom: auto !important;
-                left: auto !important;
-                right: auto !important;
-                display: flex !important;
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                align-items: center !important;
-                gap: 8px !important; /* Uniform gap ensures clean wrapping */
-                width: 100% !important;
-                height: max-content !important;
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 8px !important;
-                transform: none !important;
-                overflow: visible !important;
+                #main-nav-grid {
+                    position: relative !important;
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    justify-content: center !important;
+                    width: 100% !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                    background: transparent !important;
+                    transform: none !important; /* THE FIX */
+                }
             }
 
-            #canvas-controls.pr-high-stretched #btnNavToggle {
-                display: none !important;
-            }
-
-            /* Force buttons to keep their shape when wrapping */
-            #canvas-controls.pr-high-stretched button {
-                margin: 0 !important;
-                flex: 0 0 auto !important;
-            }
-
-            /* --- LOGICAL BUTTON REORDERING --- */
-            #canvas-controls.pr-high-stretched #btnPanLeft {
-                order: 1;
-            }
-
-            #canvas-controls.pr-high-stretched #btnPanRight {
-                order: 2;
-                margin-right: 10px !important;
-            }
-
-            #canvas-controls.pr-high-stretched #btnPanUp {
-                order: 3;
-            }
-
-            #canvas-controls.pr-high-stretched #btnPanDown {
-                order: 4;
-                margin-right: 10px !important;
-            }
-
-            #canvas-controls.pr-high-stretched #btnHome {
-                order: 5;
-                margin-right: 10px !important;
-            }
-
-            #canvas-controls.pr-high-stretched #btnZoomOut {
-                order: 6;
-            }
-
-            #canvas-controls.pr-high-stretched #btnZoomIn {
-                order: 7;
-                margin-right: 10px !important;
-            }
-
-            #canvas-controls.pr-high-stretched #btnToggleSettings {
-                order: 8;
-            }
-
-            #canvas-controls.pr-high-stretched #btnToggleMixer {
-                order: 9;
-            }
-
-            #canvas-controls.pr-high-stretched #btnToggleSynth {
-                order: 10;
-            }
-
-            #canvas-controls.pr-high-stretched #btnToggleDrums {
-                order: 11;
-            }
-
-            #canvas-controls.pr-high-stretched #btnTogglePads {
-                order: 12;
-            }
-
-            #canvas-controls.pr-high-stretched #btnTogglePiano {
-                order: 13;
-            }
-
-            #canvas-controls.pr-high-stretched #btnTogglePianoRoll {
-                order: 14;
-            }
-
-            #canvas-controls.pr-high-stretched #btnToggleMacros {
-                order: 15;
-            }
-
-            #canvas-controls.pr-high-stretched #btnToggleCOF {
-                order: 16;
-                margin-right: 10px !important;
-            }
-
-            #canvas-controls.pr-high-stretched #btnInfo {
-                order: 17;
-            }
-
-            #canvas-controls.pr-high-stretched #btnQuickPanic {
-                order: 18;
-            }
-
-        /* ---------------------------------------------------------
-           APPLY IDENTICAL LOGIC TO DEFAULT MOBILE-WIDTH LAYOUT
-           --------------------------------------------------------- */
-        @media (max-width: 768px), (max-height: 1080px) and (min-width: 1025px) {
-            #master-transport {
+            /* Dynamic Piano Roll Dragging Styles */
+            #master-transport.pr-high {
                 top: 0 !important;
                 transform: none !important;
-                left: 0 !important;
-                width: 100% !important;
+                left: var(--pr-left-offset, 0px) !important;
+                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
                 max-width: none !important;
                 border-radius: 0 !important;
                 border: none !important;
                 border-bottom: 1px solid var(--border-color) !important;
                 box-shadow: none !important;
                 height: 45px !important;
-                z-index: 999 !important;
             }
 
-            #canvas-controls {
+            #canvas-controls.pr-high-stretched {
                 top: 45px !important;
                 bottom: auto !important;
-                left: 0 !important;
-                right: 0 !important;
+                left: var(--pr-left-offset, 0px) !important;
+                right: auto !important;
                 transform: none !important;
-                width: 100% !important;
+                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
                 height: max-content !important;
                 min-height: 50px !important;
                 background: var(--panel-bg) !important;
                 border-bottom: 1px solid var(--border-color) !important;
-                z-index: 9999 !important;
                 padding: 0 !important;
                 border-radius: 0 !important;
                 display: block !important;
                 overflow: visible !important;
             }
 
-            #main-nav-grid {
-                position: relative !important;
+                #canvas-controls.pr-high-stretched #main-nav-grid {
+                    position: relative !important;
+                    top: auto !important;
+                    bottom: auto !important;
+                    left: auto !important;
+                    right: auto !important;
+                    display: flex !important;
+                    flex-wrap: wrap !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    width: 100% !important;
+                    height: max-content !important;
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    padding: 8px !important;
+                    transform: none !important;
+                    overflow: visible !important;
+                }
+
+                #canvas-controls.pr-high-stretched #btnNavToggle {
+                    display: none !important;
+                }
+
+                #canvas-controls.pr-high-stretched button {
+                    margin: 0 !important;
+                    flex: 0 0 auto !important;
+                }
+
+                /* Desktop Logical Button Reordering */
+                #canvas-controls.pr-high-stretched #btnPanLeft {
+                    order: 1;
+                }
+
+                #canvas-controls.pr-high-stretched #btnPanRight {
+                    order: 2;
+                    margin-right: 10px !important;
+                }
+
+                #canvas-controls.pr-high-stretched #btnPanUp {
+                    order: 3;
+                }
+
+                #canvas-controls.pr-high-stretched #btnPanDown {
+                    order: 4;
+                    margin-right: 10px !important;
+                }
+
+                #canvas-controls.pr-high-stretched #btnHome {
+                    order: 5;
+                    margin-right: 10px !important;
+                }
+
+                #canvas-controls.pr-high-stretched #btnZoomOut {
+                    order: 6;
+                }
+
+                #canvas-controls.pr-high-stretched #btnZoomIn {
+                    order: 7;
+                    margin-right: 10px !important;
+                }
+
+                #canvas-controls.pr-high-stretched #btnToggleSettings {
+                    order: 8;
+                }
+
+                #canvas-controls.pr-high-stretched #btnToggleMixer {
+                    order: 9;
+                }
+
+                #canvas-controls.pr-high-stretched #btnToggleSynth {
+                    order: 10;
+                }
+
+                #canvas-controls.pr-high-stretched #btnToggleDrums {
+                    order: 11;
+                }
+
+                #canvas-controls.pr-high-stretched #btnTogglePads {
+                    order: 12;
+                }
+
+                #canvas-controls.pr-high-stretched #btnTogglePiano {
+                    order: 13;
+                }
+
+                #canvas-controls.pr-high-stretched #btnTogglePianoRoll {
+                    order: 14;
+                }
+
+                #canvas-controls.pr-high-stretched #btnToggleMacros {
+                    order: 15;
+                }
+
+                #canvas-controls.pr-high-stretched #btnToggleCOF {
+                    order: 16;
+                    margin-right: 10px !important;
+                }
+
+                #canvas-controls.pr-high-stretched #btnInfo {
+                    order: 17;
+                }
+
+                #canvas-controls.pr-high-stretched #btnQuickPanic {
+                    order: 18;
+                }
+        }
+
+        /* =========================================================
+           B. MOBILE & COMPACT SCREENS (<= 1024px OR Portrait)
+           ========================================================= */
+        @media (max-width: 1024px), (orientation: portrait) {
+
+            /* 1. MASTER TRANSPORT: Always Top, Full Width, Elastic Wrapping */
+            #master-transport,
+            #master-transport.pr-high {
+                top: 0 !important;
+                left: var(--pr-left-offset, 0px) !important;
+                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                max-width: none !important;
+                height: auto !important;
+                min-height: 45px !important;
+                border-radius: 0 !important;
+                border: none !important;
+                border-bottom: 1px solid var(--border-color) !important;
+                padding: 6px !important;
+                transform: none !important;
+                /* Allow the container to break into two rows */
                 display: flex !important;
                 flex-wrap: wrap !important;
                 justify-content: center !important;
                 align-items: center !important;
                 gap: 8px !important;
-                width: 100% !important;
-                height: max-content !important;
-                background: transparent !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 8px !important;
-                transform: none !important;
-                overflow: visible !important;
             }
 
-            #btnNavToggle {
-                display: none !important;
+            body.ui-hidden #master-transport {
+                top: -60px !important;
             }
 
-            #canvas-controls button {
-                margin: 0 !important;
+            /* Keep the inner button groups intact (Prevents Stop/Play from breaking apart) */
+            #master-transport .transport-group {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                gap: 6px !important;
+            }
+
+            /* Ensure uniform button sizes on mobile */
+            #master-transport .transport-btn {
                 flex: 0 0 auto !important;
+                width: 36px !important;
+                height: 36px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-size: 1rem !important;
             }
 
-            /* Mobile Ordering */
-            #btnPanLeft {
-                order: 1;
-            }
-
-            #btnPanRight {
-                order: 2;
-                margin-right: 10px !important;
-            }
-
-            #btnPanUp {
-                order: 3;
-            }
-
-            #btnPanDown {
-                order: 4;
-                margin-right: 10px !important;
-            }
-
-            #btnHome {
-                order: 5;
-                margin-right: 10px !important;
-            }
-
-            #btnZoomOut {
-                order: 6;
-            }
-
-            #btnZoomIn {
-                order: 7;
-                margin-right: 10px !important;
-            }
-
-            #btnToggleSettings {
-                order: 8;
-            }
-
-            #btnToggleMixer {
-                order: 9;
-            }
-
-            #btnToggleSynth {
-                order: 10;
-            }
-
-            #btnToggleDrums {
-                order: 11;
-            }
-
-            #btnTogglePads {
-                order: 12;
-            }
-
-            #btnTogglePiano {
-                order: 13;
-            }
-
-            #btnTogglePianoRoll {
-                order: 14;
-            }
-
-            #btnToggleMacros {
-                order: 15;
-            }
-
-            #btnToggleCOF {
-                order: 16;
-                margin-right: 10px !important;
-            }
-
-            #btnInfo {
-                order: 17;
-            }
-
-            #btnQuickPanic {
-                order: 18;
-            }
-
-            /* Push floating side-panels down so they safely clear the wrapped 2-row header */
-            .overlay.primary {
-                top: 140px !important;
-            }
-        }
-
-        /* ---------------------------------------------------------
-           LANDSCAPE OFFSET (Yielding to Left-Docked Panels)
-           --------------------------------------------------------- */
-        @media (orientation: landscape) {
-            #master-transport.pr-high,
-            #canvas-controls.pr-high-stretched {
-                left: var(--pr-left-offset, 0px) !important;
-                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
-                transform: none !important;
-            }
-
-            @media (max-width: 768px), (max-height: 1080px) and (min-width: 1025px) {
-                #master-transport,
-                #canvas-controls {
-                    left: var(--pr-left-offset, 0px) !important;
-                    width: calc(100vw - var(--pr-left-offset, 0px)) !important;
-                    transform: none !important;
+                #master-transport .transport-btn.sm {
+                    width: 28px !important;
+                    height: 28px !important;
+                    font-size: 0.8rem !important;
                 }
-            }
-        }
 
-        /* ---------------------------------------------------------
-           20. MACRO PANEL DYNAMIC STRETCHING (Eliminates "Peephole")
-           --------------------------------------------------------- */
-        /* 1. Narrow Screens */
-        @media (max-width: 1200px) {
+            /* Elastic Seeker Slider */
+            #global-timeline-seeker {
+                flex: 1 1 80px !important;
+                min-width: 80px !important;
+                max-width: 250px !important;
+                width: auto !important;
+                margin: 0 !important;
+            }
+
+            /* 2. SIDE PANELS: Dock below Master Transport */
+            #settings-overlay, #synth-overlay, #pads-overlay,
+            #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
+                top: 55px !important;
+                height: max-content !important;
+                max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
+                border-top: none !important;
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+            }
+
+            /* 3. MACRO PANEL: Stack and wrap safely */
             #macro-overlay {
                 width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                min-width: 100% !important;
+                max-width: 100% !important;
                 border-radius: 0 !important;
                 border-left: none !important;
+                flex-wrap: wrap !important;
+                height: auto !important;
+                padding: 10px 5px !important;
                 justify-content: space-evenly !important;
+            }
+
+            .macro-cell {
+                width: 24% !important;
             }
         }
 
-        /* 2. Piano Roll is dragged high (Triggered via JS) */
+        /* =========================================================
+           C. DYNAMIC MACRO PANEL STRETCHING (Desktop Edge Cases)
+           ========================================================= */
         body.pr-maximized #macro-overlay {
             width: calc(100vw - var(--pr-left-offset, 0px)) !important;
             border-radius: 0 !important;
             border-left: none !important;
             justify-content: space-evenly !important;
         }
-
-        /* ---------------------------------------------------------
-           MIXER TRACK LABEL SHORTCUTS
-           --------------------------------------------------------- */
-        .inst-label {
-            cursor: pointer !important;
-            text-decoration: underline !important;
-            text-underline-offset: 2px !important;
-            transition: color 0.2s ease !important;
-            pointer-events: auto !important;
-        }
-
-            .inst-label:hover {
-                color: #fff !important; /* Lights up when hovering! */
-            }
-
     </style>
 </head>
 <body>
