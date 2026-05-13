@@ -5,8 +5,8 @@
   <img align="right" src="src-tauri/icons/Square310x310Logo.png" alt="Tonnetz Pro Logo" width="180" height="180" style="margin-left: 20px; margin-bottom: 15px;"/>
   <h1>Tonnetz Pro</h1>
   <p><strong>A Digital Audio Workstation (DAW) and music theory tool with synthesizer and live performance environment all wrapped around Euler's "Tonnetz".</strong></p>
-  <p>The "Tonnetz" concept is much more than eye-candy: it maps harmonic relationships to physical space, allowing for the intuitive visualization and performance of complex chord structures. By translating musical intervals into a two-dimensional grid, users can explore tonal gravity, voice leading, and advanced chord extensions using visual memory rather than traditional linear keyboard mapping.</p>
-  <p>Yet still, the app is fully usable even when we completely ignore the Tonnetz chart. This chart is supposed to help with composition. It's by no means a prerequisite to understand it right away to get going with this app.</p>
+  <p>The "Tonnetz" concept is much more than eye-candy: it maps harmonic relationships to physical space, allowing for the intuitive visualization and application of complex chord structures. By translating musical intervals into a two-dimensional grid, users can explore tonal gravity, voice leading, and advanced chord extensions using visual memory rather than traditional linear keyboard mapping.</p>
+  <p>The good news for those who are still unfamiliar with the "Tonnetz" concept: the app is still fully usable as a traditional DAW. In other words: the Tonnetz chart is meant to rather be a useful tool, but by no means a prerequisite to get going with this app. Just plug in your MIDI controller or use the on-screen keyboard to start creating music immediately.</p>
   <p>Engineered as a zero-dependency vanilla JS architecture, the application operates as a fully-featured, offline-capable Digital Audio Workstation (DAW) natively in the browser, featuring full DAW interoperability and persistent local storage.</p>
 </div>
 <br clear="both"/>
@@ -35,11 +35,12 @@ Other browsers technically work and native installers are available (under "Rele
 * **Full Note Articulation:** Draw, select, move, and dynamically resize the duration of individual notes using mouse or touch gestures. Supports group Marquee selection.
 * **Cross-Track Clipboard:** Highlight note blocks and use `Ctrl+C` / `Ctrl+V` to seamlessly copy and paste across tracks. The clipboard features "domain safety" (preventing melodic synths from pasting onto drum tracks) and smartly anchors to the playhead or step cursor.
 * **Smart Playhead & Step Entry:** Mutually exclusive toolbars prevent editing conflicts. Hold `Shift + Click` to instantly teleport the playhead without dropping your current tool. Step Entry features both "Snapped" (rounds physical key-hold duration to the grid multiplier) and "Free" modes (advances by exact raw millisecond duration).
+* **AI Composition Assistant:** Select a key, scale and style and let the AI generate chord progressions or a complementary bassline or melody, which are then rendered as editable MIDI events to the piano roll.
 * **Exploded Polyphony:** Chords played live on the Tonnetz are recorded and "exploded" into individual overlapping MIDI events, allowing for precise micro-editing of individual chord tones.
 * **Right-Side Velocity Lane:** A resizable, time-synced automation lane featuring DAW-standard "lollipop" graphs. Draw sweeping curves to edit the exact impact velocities of overlapping drum hits or chord notes without visual clutter (the lane isolates and displays only the actively selected track).
 
-### Geometric Interface & Navigation
-* **Tonal Mapping (here it comes: "the TONNETZ magic" !!):**
+### "The TONNETZ magic"
+* **Tonal Mapping:**
   * Horizontal axis: every horizontal triangle edge represents a Perfect fifths
   * Diagonals: all diagonals feature a full chromatic scale, but they are layed out in a way that triangle edges on ASCENDING diagonals represent minor thirds, while triangle edges on DESCENDING diagonals represent major thirds.
   * Consequence: UPWARD triangle = MINOR third, DOWNWARD triangle = major triad.
