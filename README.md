@@ -79,10 +79,9 @@ Other browsers technically work and native installers are available (under "Rele
 
 ### Audio Engine & Sampling
 * **Dual-Oscillator Synthesizer:** Procedural subtractive audio engine featuring 33 pre-calibrated acoustic and analog presets.
-* **Chromatic Sampler Engine:** Hardware-style sampler supporting custom .wav loading. Uses Regex to automatically extract root MIDI notes from filenames (e.g., Violin_C#4.wav) and maps them chromatically across the Tonnetz. Pitch-shifting algorithms strictly respect global microtonal tunings. Custom libraries are committed to the browser's IndexedDB for permanent offline use.
+* **Chromatic Sampler Engine:** Hardware-style sampler supporting custom .wav or .flac loading. Uses Regex to automatically extract root MIDI notes from filenames (e.g., Violin_C#4.wav) and maps them chromatically across the Tonnetz. Pitch-shifting algorithms strictly respect global microtonal tunings. Custom libraries are committed to the browser's IndexedDB for permanent offline use.
 * **Master Macro Dashboard:** A floating, dynamic 8-knob interface for real-time performance tweaking. Assign any synth parameter via dropdowns. Features two-way synchronization, precise mouse-wheel scrolling, and automatically disables/grays out parameters that are acoustically inactive for `.wav` sampler presets.
 * **Master Bus & Phase Management:** Protect your speakers with a built-in Master Compressor and selectable Master Limiter (Digital Brickwall or Analog soft-saturation). A global rolling micro-staggering engine prevents constructive phase interference and volume spiking on dense orchestral hits.
-* **Persistent User Samples:** Hardware-style sampler supporting custom `.wav` loading. Uploaded files are committed to the browser's native IndexedDB, ensuring custom libraries survive page reloads and operate offline.
 * **Dynamics & Envelopes:** Visual ADSR envelope controls and a "De-Click" micro-fade engine to prevent hardware zero-crossing pops during fast arpeggios.
 * **Modulation & Effects:** Multi-LFO system, dedicated sub/noise oscillators, and a global effects chain (distortion, chorus, delay, convolver reverb).
 
