@@ -3088,15 +3088,28 @@
                 margin: 0 !important;
             }
 
-            /* 2. SIDE PANELS: Dock below Master Transport */
-            #settings-overlay, #synth-overlay, #pads-overlay,
-            #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
-                top: 55px !important;
-                height: max-content !important;
-                max-height: calc(100vh - (55px + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
-                border-top: none !important;
-                border-top-left-radius: 0 !important;
-                border-top-right-radius: 0 !important;
+            /* 2. SIDE PANELS: Dynamic Orientation Docking */
+            @media (orientation: portrait) {
+                #settings-overlay, #synth-overlay, #pads-overlay,
+                #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
+                    /* Automatically kisses the exact bottom of whatever top menus are active */
+                    top: var(--top-offset, 45px) !important;
+                    height: max-content !important;
+                    /* Dynamically calculates the remaining safe screen height */
+                    max-height: calc(100vh - (var(--top-offset, 45px) + var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px) + var(--macro-height, 0px))) !important;
+                    border-top: none !important;
+                    border-top-left-radius: 0 !important;
+                    border-top-right-radius: 0 !important;
+                }
+            }
+
+            @media (orientation: landscape) {
+                #settings-overlay, #synth-overlay, #pads-overlay,
+                #drums-overlay, #mixer-overlay, #studio-overlay, #info-overlay {
+                    top: 0 !important; /* Snaps flush to the top edge to kill the peephole! */
+                    max-height: calc(100vh - (var(--piano-h, clamp(80px, 16vh, 140px)) + var(--pr-actual-h, 0px))) !important;
+                    border-top: none !important;
+                }
             }
 
             /* 3. MACRO PANEL: Stack and wrap safely */

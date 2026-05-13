@@ -529,6 +529,25 @@
         document.documentElement.style.setProperty('--right-panel-w', `0px`);
         document.documentElement.style.setProperty('--left-panel-w', `${leftW}px`);
 
+        // =========================================================
+        // --- NEW: DYNAMIC TOP STACKING MEASUREMENT ---
+        // =========================================================
+        let totalTopOffset = 0;
+        const mt = document.getElementById('master-transport');
+        const dpad = document.getElementById('canvas-controls');
+        
+        if (mt && mt.style.display !== 'none') {
+            totalTopOffset += mt.offsetHeight;
+        }
+        
+        // Measure D-Pad ONLY if it is currently in its stretched toolbar form
+        if (dpad && dpad.classList.contains('pr-high-stretched')) {
+            totalTopOffset += (dpad.offsetHeight - 1); // -1px prevents double-thick CSS borders
+        }
+        
+        document.documentElement.style.setProperty('--top-offset', `${totalTopOffset}px`);
+        // =========================================================
+
         let newSafeOffsetX = L / 2;
         let newSafeOffsetY = (T - B) / 2;
 
