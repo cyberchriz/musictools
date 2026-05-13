@@ -2847,8 +2847,8 @@
             @media (max-height: 1080px) {
                 #master-transport {
                     top: 0 !important;
-                    left: var(--pr-left-offset, 0px) !important;
-                    width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                    left: max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px)) !important;
+                    width: calc(100vw - max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px))) !important;
                     max-width: none !important;
                     border-radius: 0 !important;
                     border: none !important;
@@ -2860,9 +2860,9 @@
                 #canvas-controls {
                     top: 45px !important;
                     bottom: auto !important;
-                    left: var(--pr-left-offset, 0px) !important;
+                    left: max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px)) !important;
+                    width: calc(100vw - max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px))) !important;
                     right: auto !important;
-                    width: calc(100vw - var(--pr-left-offset, 0px)) !important;
                     background: var(--panel-bg) !important;
                     border-bottom: 1px solid var(--border-color) !important;
                     border-radius: 0 !important;
@@ -2888,8 +2888,8 @@
             #master-transport.pr-high {
                 top: 0 !important;
                 transform: none !important;
-                left: var(--pr-left-offset, 0px) !important;
-                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                left: max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px)) !important;
+                width: calc(100vw - max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px))) !important;
                 max-width: none !important;
                 border-radius: 0 !important;
                 border: none !important;
@@ -2901,10 +2901,10 @@
             #canvas-controls.pr-high-stretched {
                 top: 45px !important;
                 bottom: auto !important;
-                left: var(--pr-left-offset, 0px) !important;
+                left: max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px)) !important;
+                width: calc(100vw - max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px))) !important;
                 right: auto !important;
                 transform: none !important;
-                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
                 height: max-content !important;
                 min-height: 50px !important;
                 background: var(--panel-bg) !important;
@@ -3033,8 +3033,8 @@
             #master-transport,
             #master-transport.pr-high {
                 top: 0 !important;
-                left: var(--pr-left-offset, 0px) !important;
-                width: calc(100vw - var(--pr-left-offset, 0px)) !important;
+                left: max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px)) !important;
+                width: calc(100vw - max(var(--left-panel-w, 0px), var(--pr-left-offset, 0px))) !important;
                 max-width: none !important;
                 height: auto !important;
                 min-height: 45px !important;
