@@ -1,12 +1,18 @@
 (() => { // scoped call (IIFE) to prevent global namespace pollution
 
     // Native Alert Catcher
-    window.onerror = function (msg, url, line) {
+    window.onerror = function(msg, url, line) {
+        const errString = msg ? msg.toString().toLowerCase() : "";
+        if (errString.includes('resizeobserver')) return true; // Ignore benign layout warnings
+
         alert("FATAL BOOT ERROR:\n" + msg + "\nLine: " + line);
     };
 
     // --- NATIVE WRAPPER CRASH CATCHER ---
     window.addEventListener('error', (e) => {
+        const errString = e.message ? e.message.toLowerCase() : "";
+        if (errString.includes('resizeobserver')) return; // Ignore benign layout warnings
+
         const errDiv = document.createElement('div');
         errDiv.style.cssText = "position:fixed; top:0; left:0; width:100vw; background:#d32f2f; color:white; z-index:9999; padding:15px; font-family:monospace; font-size:12px; box-sizing:border-box;";
         errDiv.innerHTML = `<strong>APP ERROR</strong><br>${e.message}<br>Line: ${e.lineno} <button onclick="this.parentElement.remove()" style="float:right; color:black;">Close</button>`;
