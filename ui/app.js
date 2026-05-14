@@ -6776,12 +6776,19 @@ const btnQuantize = document.getElementById('prActionQuantize');
         updateChordDisplayUI(chordNameStr, 1);
     }
 
-function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null, destination = null, noteVel = null) {
+    function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = null, destination = null, noteVel = null) {
         const midiNote = Math.round(12 * Math.log2(freq / masterTune) + 69);
 
         globalStaggerCounter = (globalStaggerCounter + 1) % 6; 
-        const stagger = isChord ? (index * 0.0015) : (globalStaggerCounter * 0.0015);
-        const safeStartTime = Math.max(startTime + stagger, audioCtx.currentTime + currentDeclick);
+    
+        // 1. RANDOMIZED STAGGERING (Breaks static phase alignment)
+        const jitter = Math.random() * 0.0015;
+        const stagger = isChord ? (index * 0.002) + jitter : (globalStaggerCounter * 0.002) + jitter;
+    
+        // 2. THREAD STALL PROTECTION (Prevents envelope snapping)
+        // Guarantee the start time is at least 15ms in the future
+        const safetyBuffer = Math.max(0.015, typeof currentDeclick !== 'undefined' ? currentDeclick : 0.015);
+        const safeStartTime = Math.max(startTime + stagger, audioCtx.currentTime + safetyBuffer);
 
         if (globalVoicePool.length >= maxVoices) {
             const oldestVoice = globalVoicePool.shift();
@@ -6790,14 +6797,21 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
             }
         }
 
+        // 3. CHORD VOLUME FIX
         let isAccent = false;
         if (!isChord) {
-            isAccent = totalNotes === 3 ? (index % 3 === 0) : (index % totalNotes === 0);
+            const safeTotal = totalNotes > 0 ? totalNotes : 4;
+            isAccent = safeTotal === 3 ? (index % 3 === 0) : (index % safeTotal === 0);
         } else {
-            isAccent = true;
+            // Only accent the root note (index 0) of a chord. 
+            // Accenting all of them causes massive 1.4x bus clipping!
+            isAccent = (index === 0);
         }
 
         const accentMult = isAccent ? 1.4 : 0.8;
+    
+        // Smoothly attenuate the higher voices in a chord to prevent summing clips
+        const chordAttenuation = isChord ? Math.max(0.5, 1.0 - (index * 0.15)) : 1.0;
 
         const s = synthState || { 
             osc1: currentOsc1, osc2: currentOsc2, detune: currentDetune, osc2Mult: currentOsc2Mult, 
@@ -7002,11 +7016,14 @@ function spawnVoice(freq, startTime, index, totalNotes, isChord, synthState = nu
         if (midiOutMode === 'midi') {
             gainNode.gain.setValueAtTime(0, safeStartTime);
         } else {
-            const polyphonyScale = Math.max(0.3, 1.0 - (globalVoicePool.length * 0.025));
-            const baseVolume = isMobileDevice ? 0.045 : 0.085;
+            // Integrate the chord attenuation into the polyphony scaler
+            const polyphonyScale = Math.max(0.3, 1.0 - (globalVoicePool.length * 0.025)) * chordAttenuation;
+            const baseVolume = typeof isMobileDevice !== 'undefined' && isMobileDevice ? 0.045 : 0.085;
             const peak = dampenHeld ? 0.015 : (baseVolume * accentMult * velMult * polyphonyScale);
             const sustainLevel = dampenHeld ? 0.005 : Math.max(0.001, peak * s.sustain);
-            const safeAttack = Math.max(currentDeclick, parseFloat(s.attack || 0));
+        
+            // Ensure the attack slope respects the thread safety buffer
+            const safeAttack = Math.max(safetyBuffer, parseFloat(s.attack || 0)); 
 
             gainNode.gain.linearRampToValueAtTime(peak, safeStartTime + safeAttack);
             gainNode.gain.exponentialRampToValueAtTime(sustainLevel, safeStartTime + safeAttack + s.decay);
