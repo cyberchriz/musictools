@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
     <script>
+        // 1. Standard Error Handler
         window.onerror = function(msg, url, line) {
-            if (typeof msg === 'string' && (
-                msg.includes('ResizeObserver loop limit exceeded') ||
-                msg.includes('ResizeObserver loop completed with undelivered notifications')
-            )) {
-                return true; // Tell the browser we safely handled it
+            // Safely convert whatever the browser passed (string, object, event) into lowercase text
+            const errString = msg ? msg.toString().toLowerCase() : "";
+
+            // If it has anything to do with ResizeObserver, swallow it silently
+            if (errString.includes('resizeobserver')) {
+                return true;
             }
 
             const boot = document.getElementById('boot-status');
@@ -18,6 +20,17 @@
             }
         };
 
+        // 2. Modern Event Listener (Catches errors that bypass window.onerror in some mobile browsers)
+        window.addEventListener('error', function(e) {
+            const errString = e.message ? e.message.toLowerCase() : "";
+            if (errString.includes('resizeobserver')) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // 3. Promise Rejection Handler
         window.addEventListener('unhandledrejection', function (e) {
             const boot = document.getElementById('boot-status');
             if (boot) {
