@@ -30,7 +30,7 @@
     // GLOBAL AUDIO WAKE TRAP (Defeats Browser Background Throttling)
     // =====================================================================
     const forceAudioWake = () => {
-        if (typeof audioCtx !== 'undefined' && audioCtx.state === 'suspended') {
+        if (typeof audioCtx !== 'undefined' && audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
             audioCtx.resume().then(() => {
                 console.log("AudioContext forcefully awakened by user gesture.");
                 // Resync sequencer clocks so arps don't trigger all at once
@@ -39,6 +39,36 @@
             }).catch(e => console.warn(e));
         }
     };
+
+    // =====================================================================
+    // WAKE UP SCREEN, AUDIO ENGINE & RESYNC CLOCKS AFTER THROTTLING
+    // =====================================================================
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+            
+            // 1. Restore the Screen Wake Lock (Keeps the mobile screen on)
+            if (typeof wakeLock !== 'undefined' && wakeLock !== null && typeof requestWakeLock === 'function') {
+                requestWakeLock(); 
+            }
+
+            // 2. Resync the Audio Engine and Clocks
+            if (typeof audioCtx !== 'undefined') {
+                nextMetroTime = audioCtx.currentTime + 0.1;
+                if (typeof nextMidiPulseTime !== 'undefined') nextMidiPulseTime = audioCtx.currentTime + 0.1;
+
+                // Catch 'interrupted' or 'suspended' hardware states
+                if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
+                    try {
+                        // Because this function is async, we can await the hardware wake!
+                        await audioCtx.resume();
+                        console.log("Audio Engine and Sequencer Clocks re-awakened!");
+                    } catch (err) {
+                        console.warn("Could not wake Audio Engine:", err);
+                    }
+                }
+            }
+        }
+    });
 
     // Capture every possible interaction at the highest level
     window.addEventListener('mousedown', forceAudioWake, { capture: true });
@@ -115,10 +145,6 @@
             catch (err) { console.error('WakeLock Error:', err); }
         }
     }
-
-    document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock();
-    });
 
     function triggerHaptic() {
         // 10ms is a crisp, premium "click" feel (only fires on supported mobile devices)
@@ -1375,6 +1401,16 @@
                     if (headerText) headerText.textContent = `ARRANGER TRACKS (A1-A8)`;
                 }
 
+                // --- Reset the pointer if it was on a destroyed track! ---
+                if (studio.activeArrangerTrack >= 16) {
+                    studio.activeArrangerTrack = 8; // Reset back to A1
+                    
+                    // Visually highlight the A1 button again
+                    document.querySelectorAll('.track-btn').forEach(b => b.classList.remove('active'));
+                    const a1Btn = document.querySelector('.track-btn[data-track="8"]');
+                    if (a1Btn) a1Btn.classList.add('active');
+                }
+
                 // 3. Reset Global Arranger Clocks
                 arranger.duration = 0;
                 arranger.pauseTime = 0;
@@ -1560,10 +1596,13 @@
         // =======================================================
         if (audioCtx) {
             // 1. Tell the hardware to close, but DO NOT await the promise!
-            // If the background thread is dead, this promise will hang forever.
             try {
                 if (audioCtx.state !== 'closed') {
-                    audioCtx.close().catch(e => console.warn("AudioCtx close error:", e));
+                    const oldCtx = audioCtx;
+                    // THE FIX: Fire both asynchronously. Suspend aggressively releases 
+                    // the hardware lock instantly, allowing the new context to boot safely!
+                    oldCtx.suspend().catch(() => { });
+                    oldCtx.close().catch(e => console.warn("AudioCtx close error:", e));
                 }
             } catch (e) { 
                 console.warn("Panic: AudioContext already closing.", e); 
@@ -1594,7 +1633,7 @@
             initAudio();
 
             // THE FIX: Explicitly wake the newly spawned engine while still inside the user's click event!
-            if (audioCtx && audioCtx.state === 'suspended') {
+            if (audioCtx && audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
                 try {
                     await audioCtx.resume();
                     console.log("Panic: Audio Engine forcefully awakened after reboot.");
@@ -2805,7 +2844,7 @@
 
         // Explicitly wake up the audio context to prevent browser hang bugs
         if (typeof initAudio === 'function') initAudio();
-        if (audioCtx && audioCtx.state === 'suspended') {
+        if (audioCtx && audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
             await audioCtx.resume();
         }
 
@@ -4789,7 +4828,7 @@ document.getElementById('echo')?.addEventListener('input', e => {
             // ONLY draw the active track to prevent visual clutter
             let activeDomain = typeof studio !== 'undefined' ? studio.lastSelectedDomain : 'arranger';
             let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
-            let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+            let activeTrack = (activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8]) || [];
             let activeColor = trackColors[activeIdx];
 
             activeTrack.forEach(evt => {
@@ -6056,7 +6095,7 @@ const btnQuantize = document.getElementById('prActionQuantize');
     function initAudio() {
         // --- FORCE WAKE IN CASE OF AUDIO THROTTLING ---
         if (audioCtx) {
-            if (audioCtx.state === 'suspended') {
+            if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
                 audioCtx.resume().then(() => {
                     console.log("Audio Engine force-awakened by physical user gesture!");
                 }).catch(err => console.warn(err));
@@ -6068,10 +6107,8 @@ const btnQuantize = document.getElementById('prActionQuantize');
         audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 
         // --- NATIVE AUDIO STATE CHANGE LISTENER ---
-        // Updates the UI immediately if the browser forces the audio engine to sleep,
-        // bypassing the need for the sequencer worker to detect it!
         audioCtx.onstatechange = () => {
-            if (audioCtx.state === 'suspended') {
+            if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
                 if (typeof globalTimeDisplay !== 'undefined' && globalTimeDisplay) {
                     globalTimeDisplay.textContent = "Zzz...";
                 }
@@ -6288,7 +6325,9 @@ const btnQuantize = document.getElementById('prActionQuantize');
             if (linearReverbSends[i]) linearReverbSends[i].connect(convolver);
         }
 
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
+            audioCtx.resume().catch(e => console.warn(e));
+        }
 
         // Bake the acoustic wave (overtones emulation)
         updateAcousticWave();
@@ -6797,14 +6836,19 @@ const btnQuantize = document.getElementById('prActionQuantize');
             }
         }
 
-        // 3. CHORD VOLUME FIX
+        // 3. CHORD & GLISSANDO VOLUME FIX
         let isAccent = false;
         if (!isChord) {
-            const safeTotal = totalNotes > 0 ? totalNotes : 4;
-            isAccent = safeTotal === 3 ? (index % 3 === 0) : (index % safeTotal === 0);
+            // Prevent massive transient clipping during fast piano slides (glissandos).
+            if (totalNotes === 1) {
+                // Only 1 out of every 6 rapid piano notes gets the 1.4x burst
+                isAccent = (globalStaggerCounter === 0); 
+            } else {
+                const safeTotal = totalNotes > 0 ? totalNotes : 4;
+                isAccent = safeTotal === 3 ? (index % 3 === 0) : (index % safeTotal === 0);
+            }
         } else {
             // Only accent the root note (index 0) of a chord. 
-            // Accenting all of them causes massive 1.4x bus clipping!
             isAccent = (index === 0);
         }
 
@@ -7195,24 +7239,20 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
 
-        voices.forEach(({ osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, midiNote, isChord, releaseTime }) => {
+        voices.forEach(({ osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, midiNote, isChord, releaseTime, startTime }) => {
             try {
-                // --- THE MID-RAMP POP FIX ---
-                // Stop current envelopes exactly where they are without resetting them to zero!
-                if (typeof gainNode.gain.cancelAndHoldAtTime === 'function') {
-                    gainNode.gain.cancelAndHoldAtTime(now);
-                    filter.frequency.cancelAndHoldAtTime(now);
-                } else {
-                    gainNode.gain.cancelScheduledValues(now);
-                    filter.frequency.cancelScheduledValues(now);
-                }
+                // --- THE MID-RAMP POP FIX (Foolproof JS Anchor) ---
+                // Bypasses Firefox/Safari bugs by manually reading and anchoring the JS float values!
+                const currentVol = gainNode.gain.value;
+                const currentFreq = filter.frequency.value;
 
-                const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
-                let relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
-                
-                // --- DE-CLICK INJECTION (Standard Release) ---
-                relTime = Math.max(currentDeclick, relTime);
+                gainNode.gain.cancelScheduledValues(now);
+                filter.frequency.cancelScheduledValues(now);
 
+                gainNode.gain.setValueAtTime(currentVol, now);
+                filter.frequency.setValueAtTime(currentFreq, now);
+
+                // --- THE GARBAGE COLLECTOR ---
                 const cleanup = () => {
                     const safeStop = (n) => { try { if (n) n.stop(); } catch (e) { } };
                     const safeDisc = (n) => { try { if (n) n.disconnect(); } catch (e) { } };
@@ -7230,26 +7270,40 @@ const btnQuantize = document.getElementById('prActionQuantize');
                     safeDisc(filter); safeDisc(gainNode); safeDisc(ampLfoGain);
                 };
 
-                if (skipFade || isFastSwipe) {
-                    // --- DE-CLICK INJECTION (Voice Stealing / Panic) ---
-                    // Respect the user's declick setting even during a forced shutdown!
-                    const fastTC = Math.max(currentDeclick, 0.015); 
-                    gainNode.gain.setTargetAtTime(0, now, fastTC);
-                    
-                    // Exponential decay requires ~5 time constants to reach silence
-                    setTimeout(cleanup, fastTC * 5000); 
-                } else {
-                    // STANDARD ADSR RELEASE
-                    // setTargetAtTime naturally ramps from the *currently computed* audio-rate volume.
-                    const releaseTC = relTime / 4;
-                    gainNode.gain.setTargetAtTime(0, now, releaseTC);
-                    
-                    setTimeout(cleanup, (relTime * 1000) + 100);
+                // =========================================================
+                // THE PHANTOM NOTE FIX
+                // =========================================================
+                if (startTime && now <= startTime) {
+                    gainNode.gain.setTargetAtTime(0, now, 0.005); // 5ms micro-fade to absolute zero
+                    setTimeout(cleanup, 50);
+                } 
+                else {
+                    // STANDARD DAW RELEASE LOGIC
+                    const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
+                    let relTime = dampenHeld ? Math.min(0.15, targetRelease) : targetRelease;
+                    relTime = Math.max(currentDeclick, relTime);
+
+                    if (skipFade || isFastSwipe) {
+                        const fastTC = Math.max(currentDeclick, 0.015); 
+                        gainNode.gain.setTargetAtTime(0, now, fastTC);
+                        setTimeout(cleanup, fastTC * 5000); 
+                    } else {
+                        const releaseTC = relTime / 4;
+                        gainNode.gain.setTargetAtTime(0, now, releaseTC);
+                        setTimeout(cleanup, (relTime * 1000) + 100);
+                    }
                 }
                 
+                // --- EXTERNAL MIDI OFF ---
                 if (midiOut && isChord) midiOut.send([0x80, midiNote, 0]);
+
             } catch (e) { }
         });
+
+        // Remove the released voices from the active pool so they aren't double-released
+        if (typeof globalVoicePool !== 'undefined') {
+            globalVoicePool = globalVoicePool.filter(activeVoice => !voices.includes(activeVoice));
+        }
     }
 
     function stopFrequencies(element, forceInstant = false) {
@@ -12366,7 +12420,7 @@ function assignMacroParam(knobIndex, targetId) {
 
             let activeDomain = typeof studio !== 'undefined' ? studio.lastSelectedDomain : 'arranger';
             let activeIdx = activeDomain === 'looper' ? studio.activeLooperTrack : studio.activeArrangerTrack;
-            let activeTrack = activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8];
+            let activeTrack = (activeDomain === 'looper' ? looper.tracks[activeIdx] : arranger.tracks[activeIdx - 8]) || [];
 
             if (typeof prSelectedNotes !== 'undefined' && prSelectedNotes.size > 0) {
                 prSelectedNotes.forEach(evt => evt.velocity = newVel);
