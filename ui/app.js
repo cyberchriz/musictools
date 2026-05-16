@@ -237,7 +237,7 @@
 
     let prClipboard = []; // Global Midi Clipboard
 
-    const CHORD_BUFFER_MAX = 5; // Max notes in the rolling queue for chord/harmony analysis (best root and lowest note always get prioritized for preservation within the bucket!)
+    const CHORD_BUFFER_MAX = 4; // Max notes in the rolling queue for chord/harmony analysis (best root and lowest note always get prioritized for preservation within the bucket!)
 
     const MAX_BPM_STRETCH_RATIO = 0.15; // 15% threshold for time-stretching
     let audioClips = []; // Stores objects: { id, trackId, buffer, startBeat, durationBeats, sourceNode }
@@ -251,6 +251,10 @@
     let isExporting = false; // Engine State
     let exportAbortController = null;
     let exportTimeoutId = null;
+
+    let currentOsc2Pitch = 0;
+    let currentSampleStart = 0;
+    let currentModWheel = 0; // Float 0.0 to 1.0
 
     // =====================================================================
     // GENERAL MIDI (GM) DRUM MAP & ALIAS ROUTING
@@ -344,6 +348,52 @@
         
         // Clamp to valid MIDI range
         return Math.max(0, Math.min(127, midiNote));
+    }
+
+    // --- UNIFIED MOD WHEEL CONTROLLER ---
+    function setModWheel(val0to1) {
+        // 1. Anchor the state (clamp between 0.0 and 1.0)
+        currentModWheel = Math.max(0, Math.min(1.0, val0to1));
+
+        // 2. Update the new Synth Overlay Slider (0 to 1 scale)
+        const synthModSlider = document.getElementById('modWheel');
+        if (synthModSlider && synthModSlider.value != currentModWheel) {
+            synthModSlider.value = currentModWheel;
+        }
+
+        // 3. Update the legacy MIDI UI Slider (0 to 127 scale)
+        const midiVal127 = Math.round(currentModWheel * 127);
+        const midiModSlider = document.getElementById('midiModWheel');
+        if (midiModSlider && midiModSlider.value != midiVal127) {
+            midiModSlider.value = midiVal127;
+            if (typeof updateLabel === 'function') updateLabel('midiModWheel', midiVal127, 'Mod Wheel');
+        }
+
+        // 4. Send MIDI CC1 Out to connected external hardware
+        if (typeof midiOut !== 'undefined' && midiOut) {
+            for (let c = 0; c < 16; c++) midiOut.send([0xB0 + c, 1, midiVal127]);
+        }
+
+        // 5. Apply the live audio modulation to internal Web Audio engine
+        applyModWheelToActiveVoices(currentModWheel);
+    }
+
+    // --- THE LIVE AUDIO MODULATOR ---
+    function applyModWheelToActiveVoices(val) {
+        if (typeof globalVoicePool === 'undefined' || !audioCtx) return;
+        const now = audioCtx.currentTime;
+    
+        globalVoicePool.forEach(v => {
+            // Mod Wheel pushes the filter cutoff higher AND increases vibrato depth simultaneously
+            if (v.filter && v.baseCutoff) {
+                const macroCutoff = Math.min(20000, v.baseCutoff * (1 + (val * 3))); // Up to 3x brighter
+                v.filter.frequency.setTargetAtTime(macroCutoff, now, 0.05);
+            }
+            if (v.vPitchGain) {
+                // Adds up to 50 cents of extra vibrato depth
+                v.vPitchGain.gain.setTargetAtTime((typeof currentVibrato !== 'undefined' ? currentVibrato : 0) + (val * 50), now, 0.05);
+            }
+        });
     }
 
     function isSustainOn() { return sustainLocked || sustainHeld; }
@@ -2109,6 +2159,13 @@
 
     if (tonnetzWrapper) {
         tonnetzWrapper.addEventListener('wheel', (e) => {
+            
+            // --- Yield the mouse wheel to the Mod Wheel if notes are playing! ---
+            if ((typeof activeUserNotes !== 'undefined' && activeUserNotes > 0) || 
+                (typeof sustainedVoices !== 'undefined' && sustainedVoices.size > 0)) {
+                return; // Abort Tonnetz zoom. Let the event bubble up to the global Mod Wheel listener!
+            }
+            
             e.preventDefault();
             wakeNav();
 
@@ -2503,62 +2560,62 @@
 
     const presets = {
         // --- KEYS & ORGANS ---
-        piano: { attack: 0.01, decay: 0.5, sustain: 0.15, release: 0.4, distortion: 0, brightness: 2.2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.05, noise: 0.01, overtones: 0.1, oscMix: 0.85, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        epiano: { attack: 0.01, decay: 0.3, sustain: 0.5, release: 0.5, distortion: 1, brightness: 3.0, resonance: 2.0, chorus: 15, echo: 0.1, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.1, noise: 0, overtones: 0.4, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        lofi_keys: { attack: 0.02, decay: 0.4, sustain: 0.6, release: 0.6, distortion: 1, brightness: 0.5, resonance: 1.0, chorus: 10, echo: 0.15, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.4, vibrato: 10, sweep: 0, tremolo: 0.05, detune: 12, subOsc: 0.2, noise: 0.15, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' }, // Warm tape flutter & hiss
-        organ: { attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.1, distortion: 4, brightness: 6, resonance: 1.2, chorus: 20, echo: 0, reverbMix: 0.3, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.8, vibrato: 8, sweep: 0, tremolo: 0.4, detune: 14, subOsc: 0.8, noise: 0.02, overtones: 0.2, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0.2, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        church_organ: { attack: 0.05, decay: 0.2, sustain: 0.9, release: 0.8, distortion: 0, brightness: 8, resonance: 1, chorus: 10, echo: 0.1, reverbMix: 0.8, osc1: 'sawtooth', osc2: 'square', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0.05, overtones: 0.8, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        reed_organ: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 2, brightness: 3, resonance: 5, chorus: 5, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 5, subOsc: 0.2, noise: 0.1, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        accordion: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.2, distortion: 2, brightness: 2.5, resonance: 1.2, chorus: 15, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 10, subOsc: 0, noise: 0.02, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        harpsichord: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.1, distortion: 0, brightness: 5.0, resonance: 1.5, chorus: 0, echo: 0, reverbMix: 0.15, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
+        piano: { attack: 0.01, decay: 0.5, sustain: 0.15, release: 0.4, distortion: 0, brightness: 2.2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.05, noise: 0.01, overtones: 0.1, oscMix: 0.85, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        epiano: { attack: 0.01, decay: 0.3, sustain: 0.5, release: 0.5, distortion: 1, brightness: 3.0, resonance: 2.0, chorus: 15, echo: 0.1, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.1, noise: 0, overtones: 0.4, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        lofi_keys: { attack: 0.02, decay: 0.4, sustain: 0.6, release: 0.6, distortion: 1, brightness: 0.5, resonance: 1.0, chorus: 10, echo: 0.15, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.4, vibrato: 10, sweep: 0, tremolo: 0.05, detune: 12, subOsc: 0.2, noise: 0.15, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Warm tape flutter & hiss
+        organ: { attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.1, distortion: 4, brightness: 6, resonance: 1.2, chorus: 20, echo: 0, reverbMix: 0.3, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.8, vibrato: 8, sweep: 0, tremolo: 0.25, detune: 14, subOsc: 0.8, noise: 0.02, overtones: 0.2, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0.2, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        church_organ: { attack: 0.05, decay: 0.2, sustain: 0.9, release: 0.8, distortion: 0, brightness: 8, resonance: 1, chorus: 10, echo: 0.1, reverbMix: 0.8, osc1: 'sawtooth', osc2: 'square', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0.05, overtones: 0.8, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        reed_organ: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 2, brightness: 3, resonance: 5, chorus: 5, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 5, subOsc: 0.2, noise: 0.1, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        accordion: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.2, distortion: 2, brightness: 2.5, resonance: 1.2, chorus: 15, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 10, subOsc: 0, noise: 0.02, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        harpsichord: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.1, distortion: 0, brightness: 5.0, resonance: 1.5, chorus: 0, echo: 0, reverbMix: 0.15, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
 
         // --- STRINGS & PLUCKS ---
-        nylon_guitar: { attack: 0.01, decay: 0.5, sustain: 0.05, release: 0.6, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 5, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.1, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0.4, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar' }, // Warm & mellow
-        western_guitar: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 0.8, distortion: 0, brightness: 2.0, resonance: 2.0, chorus: 4, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 6, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.1, noise: 0.08, overtones: 0.1, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0.5, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar' }, // Balanced acoustic
-        steel_guitar: { attack: 0.01, decay: 0.8, sustain: 0.1, release: 1.0, distortion: 1, brightness: 3.5, resonance: 3.0, chorus: 8, echo: 0.15, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 8, sweep: 0, tremolo: 0, detune: 6, subOsc: 0, noise: 0.1, overtones: 0.2, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0.6, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar' }, // Bright & twangy
-        bass: { attack: 0.01, decay: 0.3, sustain: 0.4, release: 0.2, distortion: 6, brightness: 1.5, resonance: 4, chorus: 2, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 3, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.02, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        slapbass: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2, distortion: 8, brightness: 4.5, resonance: 6.0, chorus: 4, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 6.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.8, noise: 0.15, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        fretless: { attack: 0.05, decay: 0.4, sustain: 0.5, release: 0.4, distortion: 2, brightness: 1.8, resonance: 3.5, chorus: 15, echo: 0, reverbMix: 0.15, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 2.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 12, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.8, noise: 0.02, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.15, lfoDelay: 0.4, lfoFade: 0.6, lfoKeytrack: 15, lfoPolarity: 'bipolar' },
-        harp: { attack: 0.02, decay: 0.5, sustain: 0.1, release: 1.8, distortion: 0, brightness: 2.0, resonance: 1.5, chorus: 5, echo: 0.15, reverbMix: 0.45, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.02, overtones: 0.15, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        shamisen: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.3, distortion: 4, brightness: 3.5, resonance: 4, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 5.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 8, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.02, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        banjo: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.2, distortion: 2, brightness: 4.0, resonance: 2.0, chorus: 0, echo: 0.05, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.6, filterType: 'highpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        sitar: { attack: 0.02, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 4, brightness: 4.5, resonance: 6.0, chorus: 12, echo: 0.2, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 2.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 12, subOsc: 0.1, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.8, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        violin: { attack: 0.25, decay: 0.4, sustain: 0.9, release: 0.6, distortion: 1, brightness: 2.5, resonance: 2.0, chorus: 12, echo: 0.2, reverbMix: 0.5, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.2, vibrato: 28, sweep: 0, tremolo: 0, detune: 12, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.4, lfoFade: 0.5, lfoKeytrack: 15, lfoPolarity: 'bipolar' },
-        cello: { attack: 0.2, decay: 0.3, sustain: 0.8, release: 0.6, distortion: 2, brightness: 1.6, resonance: 2.5, chorus: 8, echo: 0.15, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 0.5, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 20, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.4, noise: 0.1, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.6, lfoFade: 0.6, lfoKeytrack: 10, lfoPolarity: 'bipolar' },
-        pizzicato: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1, distortion: 0, brightness: 2.5, resonance: 1.5, chorus: 4, echo: 0.05, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
+        nylon_guitar: { attack: 0.01, decay: 0.5, sustain: 0.05, release: 0.6, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 5, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.1, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0.4, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Warm & mellow
+        western_guitar: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 0.8, distortion: 0, brightness: 2.0, resonance: 2.0, chorus: 4, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 6, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.1, noise: 0.08, overtones: 0.1, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0.5, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Balanced acoustic
+        steel_guitar: { attack: 0.01, decay: 0.8, sustain: 0.1, release: 1.0, distortion: 1, brightness: 3.5, resonance: 3.0, chorus: 8, echo: 0.15, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 8, sweep: 0, tremolo: 0, detune: 6, subOsc: 0, noise: 0.1, overtones: 0.2, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0.6, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Bright & twangy
+        bass: { attack: 0.01, decay: 0.3, sustain: 0.4, release: 0.2, distortion: 6, brightness: 1.5, resonance: 4, chorus: 2, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 3, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.02, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        slapbass: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2, distortion: 8, brightness: 4.5, resonance: 6.0, chorus: 4, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 6.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.8, noise: 0.15, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        fretless: { attack: 0.05, decay: 0.4, sustain: 0.5, release: 0.4, distortion: 2, brightness: 1.8, resonance: 3.5, chorus: 15, echo: 0, reverbMix: 0.15, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 2.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 12, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.8, noise: 0.02, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.15, lfoDelay: 0.4, lfoFade: 0.6, lfoKeytrack: 15, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        harp: { attack: 0.02, decay: 0.5, sustain: 0.1, release: 1.8, distortion: 0, brightness: 2.0, resonance: 1.5, chorus: 5, echo: 0.15, reverbMix: 0.45, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.02, overtones: 0.15, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        shamisen: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.3, distortion: 4, brightness: 3.5, resonance: 4, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 5.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 8, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.02, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        banjo: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.2, distortion: 2, brightness: 4.0, resonance: 2.0, chorus: 0, echo: 0.05, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.6, filterType: 'highpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        sitar: { attack: 0.02, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 4, brightness: 4.5, resonance: 6.0, chorus: 12, echo: 0.2, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 2.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 12, subOsc: 0.1, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.8, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        violin: { attack: 0.25, decay: 0.4, sustain: 0.9, release: 0.6, distortion: 1, brightness: 2.5, resonance: 2.0, chorus: 12, echo: 0.2, reverbMix: 0.5, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.2, vibrato: 28, sweep: 0, tremolo: 0, detune: 12, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.4, lfoFade: 0.5, lfoKeytrack: 15, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        cello: { attack: 0.2, decay: 0.3, sustain: 0.8, release: 0.6, distortion: 2, brightness: 1.6, resonance: 2.5, chorus: 8, echo: 0.15, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 0.5, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 20, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.4, noise: 0.1, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.6, lfoFade: 0.6, lfoKeytrack: 10, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        pizzicato: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1, distortion: 0, brightness: 2.5, resonance: 1.5, chorus: 4, echo: 0.05, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
 
         // --- BRASS & WINDS ---
-        sax: { attack: 0.08, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 6, brightness: 2.8, resonance: 3.5, chorus: 6, echo: 0.15, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.15, noise: 0.06, overtones: 0, oscMix: 0.65, filterType: 'lowpass', glide: 0.06, lfoDelay: 0.35, lfoFade: 0.4, lfoKeytrack: 12, lfoPolarity: 'bipolar' },
-        trumpet: { attack: 0.05, decay: 0.15, sustain: 0.8, release: 0.2, distortion: 4, brightness: 4.0, resonance: 4.0, chorus: 4, echo: 0.1, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.8, vibrato: 15, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.08, overtones: 0, oscMix: 0.55, filterType: 'lowpass', glide: 0.04, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 5, lfoPolarity: 'bipolar' },
-        frenchhorn: { attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 1, brightness: 1.4, resonance: 2.0, chorus: 10, echo: 0.1, reverbMix: 0.45, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 10, sweep: 0, tremolo: 0, detune: 8, subOsc: 0.2, noise: 0.02, overtones: 0, oscMix: 0.4, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.5, lfoFade: 0.6, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        tuba: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 3, brightness: 1.1, resonance: 1.5, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.0, vibrato: 6, sweep: 0, tremolo: 0, detune: 3, subOsc: 1.0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0.05, lfoDelay: 0.6, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        flute: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.35, distortion: 0, brightness: 1.5, resonance: 1.5, chorus: 5, echo: 0.2, reverbMix: 0.4, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 20, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.15, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.06, lfoDelay: 0.25, lfoFade: 0.4, lfoKeytrack: 20, lfoPolarity: 'bipolar' },
-        pan_flute: { attack: 0.1, decay: 0.3, sustain: 0.7, release: 0.4, distortion: 0, brightness: 1.2, resonance: 2.0, chorus: 8, echo: 0.25, reverbMix: 0.5, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.0, vibrato: 25, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.25, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.3, lfoFade: 0.5, lfoKeytrack: 15, lfoPolarity: 'bipolar' },
-        ocarina: { attack: 0.08, decay: 0.1, sustain: 0.9, release: 0.2, distortion: 0, brightness: 1.0, resonance: 1.0, chorus: 2, echo: 0.15, reverbMix: 0.35, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.5, vibrato: 28, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0.12, lfoDelay: 0.1, lfoFade: 0.3, lfoKeytrack: 25, lfoPolarity: 'bipolar' },
-        clarinet: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2, distortion: 0, brightness: 1.5, resonance: 1.5, chorus: 4, echo: 0.1, reverbMix: 0.25, osc1: 'square', osc2: 'triangle', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 12, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.04, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 5, lfoPolarity: 'bipolar' },
-        oboe: { attack: 0.04, decay: 0.1, sustain: 0.8, release: 0.2, distortion: 1, brightness: 3.5, resonance: 2.0, chorus: 5, echo: 0.15, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.8, vibrato: 18, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.03, overtones: 0, oscMix: 0.6, filterType: 'bandpass', glide: 0.04, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 8, lfoPolarity: 'bipolar' },
+        sax: { attack: 0.08, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 6, brightness: 2.8, resonance: 3.5, chorus: 6, echo: 0.15, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.15, noise: 0.06, overtones: 0, oscMix: 0.65, filterType: 'lowpass', glide: 0.06, lfoDelay: 0.35, lfoFade: 0.4, lfoKeytrack: 12, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        trumpet: { attack: 0.05, decay: 0.15, sustain: 0.8, release: 0.2, distortion: 4, brightness: 4.0, resonance: 4.0, chorus: 4, echo: 0.1, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.8, vibrato: 15, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.08, overtones: 0, oscMix: 0.55, filterType: 'lowpass', glide: 0.04, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 5, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        frenchhorn: { attack: 0.15, decay: 0.2, sustain: 0.8, release: 0.4, distortion: 1, brightness: 1.4, resonance: 2.0, chorus: 10, echo: 0.1, reverbMix: 0.45, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 10, sweep: 0, tremolo: 0, detune: 8, subOsc: 0.2, noise: 0.02, overtones: 0, oscMix: 0.4, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.5, lfoFade: 0.6, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        tuba: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 3, brightness: 1.1, resonance: 1.5, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.0, vibrato: 6, sweep: 0, tremolo: 0, detune: 3, subOsc: 1.0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0.05, lfoDelay: 0.6, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        flute: { attack: 0.12, decay: 0.2, sustain: 0.8, release: 0.35, distortion: 0, brightness: 1.5, resonance: 1.5, chorus: 5, echo: 0.2, reverbMix: 0.4, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 20, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.15, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.06, lfoDelay: 0.25, lfoFade: 0.4, lfoKeytrack: 20, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        pan_flute: { attack: 0.1, decay: 0.3, sustain: 0.7, release: 0.4, distortion: 0, brightness: 1.2, resonance: 2.0, chorus: 8, echo: 0.25, reverbMix: 0.5, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.0, vibrato: 25, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.25, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.3, lfoFade: 0.5, lfoKeytrack: 15, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        ocarina: { attack: 0.08, decay: 0.1, sustain: 0.9, release: 0.2, distortion: 0, brightness: 1.0, resonance: 1.0, chorus: 2, echo: 0.15, reverbMix: 0.35, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.5, vibrato: 28, sweep: 0, tremolo: 0, detune: 2, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0.12, lfoDelay: 0.1, lfoFade: 0.3, lfoKeytrack: 25, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        clarinet: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.2, distortion: 0, brightness: 1.5, resonance: 1.5, chorus: 4, echo: 0.1, reverbMix: 0.25, osc1: 'square', osc2: 'triangle', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 12, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.04, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 5, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        oboe: { attack: 0.04, decay: 0.1, sustain: 0.8, release: 0.2, distortion: 1, brightness: 3.5, resonance: 2.0, chorus: 5, echo: 0.15, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.8, vibrato: 18, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.03, overtones: 0, oscMix: 0.6, filterType: 'bandpass', glide: 0.04, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 8, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
 
         // --- SYNTHS & PADS ---
-        pad: { attack: 0.6, decay: 1.0, sustain: 0.8, release: 1.8, distortion: 0, brightness: 2.0, resonance: 3, chorus: 30, echo: 0.3, reverbMix: 0.65, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.4, vibrato: 6, sweep: 1200, tremolo: 0, detune: 24, subOsc: 0.5, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.05, lfoDelay: 0, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        glasspad: { attack: 0.8, decay: 0.5, sustain: 0.8, release: 2.0, distortion: 0, brightness: 4.5, resonance: 4.0, chorus: 25, echo: 0.4, reverbMix: 0.8, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 0.5, lfoShape: 'sah', lfoSync: 'free', lfoSpeed: 1.2, vibrato: 8, sweep: 800, tremolo: 0.2, detune: 15, subOsc: 0.2, noise: 0.02, overtones: 0.2, oscMix: 0.6, filterType: 'bandpass', glide: 0.1, lfoDelay: 0.5, lfoFade: 2.0, lfoKeytrack: 0, lfoPolarity: 'unipolar' },
-        mellotron: { attack: 0.2, decay: 0.4, sustain: 0.8, release: 0.6, distortion: 6, brightness: 1.5, resonance: 2.0, chorus: 20, echo: 0.2, reverbMix: 0.5, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.0, vibrato: 25, sweep: 0, tremolo: 0.1, detune: 18, subOsc: 0, noise: 0.3, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.05, lfoDelay: 0, lfoFade: 0.8, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        synth_strings: { attack: 0.4, decay: 0.5, sustain: 0.9, release: 1.2, distortion: 2, brightness: 3.5, resonance: 2.0, chorus: 30, echo: 0.2, reverbMix: 0.6, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.5, vibrato: 10, sweep: 400, tremolo: 0, detune: 22, subOsc: 0.2, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.05, lfoDelay: 0, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        acid303: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 0.1, distortion: 25, brightness: 1.0, resonance: 18.0, chorus: 0, echo: 0.15, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 8.5, lfoShape: 'sawtooth', lfoSync: 'sync', lfoSpeed: 2, vibrato: 0, sweep: 1800, tremolo: 0, detune: 2, subOsc: 0.2, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.12, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'unipolar' },
-        synthlead: { attack: 0.05, decay: 0.3, sustain: 0.8, release: 0.5, distortion: 8, brightness: 4.5, resonance: 8, chorus: 15, echo: 0.3, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 16, sweep: 1500, tremolo: 0, detune: 14, subOsc: 0.5, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.4, lfoFade: 0.2, lfoKeytrack: 5, lfoPolarity: 'unipolar' },
-        chiptune: { attack: 0.01, decay: 0.1, sustain: 1.0, release: 0.05, distortion: 0, brightness: 8.0, resonance: 0, chorus: 0, echo: 0, reverbMix: 0, osc1: 'square', osc2: 'square', osc2Mult: 0.5, filterEnv: 0, lfoShape: 'square', lfoSync: 'sync', lfoSpeed: 8, vibrato: 100, sweep: 0, tremolo: 0, detune: 0, subOsc: 0, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        synthbrass: { attack: 0.18, decay: 0.4, sustain: 0.7, release: 0.5, distortion: 0, brightness: 3.5, resonance: 2.5, chorus: 18, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 6, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 8, sweep: 0, tremolo: 0, detune: 15, subOsc: 0.3, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.04, lfoDelay: 0.4, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        synth_flute: { attack: 0.05, decay: 0.2, sustain: 0.9, release: 0.3, distortion: 0, brightness: 1.5, resonance: 2.0, chorus: 10, echo: 0.3, reverbMix: 0.4, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.05, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 10, lfoPolarity: 'bipolar' },
-        choir: { attack: 0.6, decay: 0.5, sustain: 0.8, release: 1.2, distortion: 0, brightness: 1.8, resonance: 1.5, chorus: 22, echo: 0.2, reverbMix: 0.7, osc1: 'sine', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.2, vibrato: 12, sweep: 0, tremolo: 0, detune: 18, subOsc: 0.4, noise: 0.25, overtones: 0.1, oscMix: 0.4, filterType: 'lowpass', glide: 0.1, lfoDelay: 0.6, lfoFade: 0.8, lfoKeytrack: 5, lfoPolarity: 'bipolar' },
-        theremin: { attack: 0.25, decay: 0.1, sustain: 1.0, release: 0.5, distortion: 0, brightness: 1.2, resonance: 1, chorus: 5, echo: 0.25, reverbMix: 0.6, osc1: 'sine', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.5, vibrato: 45, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.1, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.25, lfoDelay: 0.1, lfoFade: 0.4, lfoKeytrack: 25, lfoPolarity: 'bipolar' },
+        pad: { attack: 0.6, decay: 1.0, sustain: 0.8, release: 1.8, distortion: 0, brightness: 2.0, resonance: 3, chorus: 30, echo: 0.3, reverbMix: 0.65, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.4, vibrato: 6, sweep: 1200, tremolo: 0, detune: 24, subOsc: 0.5, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.05, lfoDelay: 0, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: -12, sampleStart: 0, modWheel: 0 },
+        glasspad: { attack: 0.8, decay: 0.5, sustain: 0.8, release: 2.0, distortion: 0, brightness: 4.5, resonance: 4.0, chorus: 25, echo: 0.4, reverbMix: 0.8, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 0.5, lfoShape: 'sah', lfoSync: 'free', lfoSpeed: 1.2, vibrato: 8, sweep: 800, tremolo: 0.2, detune: 15, subOsc: 0.2, noise: 0.02, overtones: 0.2, oscMix: 0.6, filterType: 'bandpass', glide: 0.1, lfoDelay: 0.5, lfoFade: 2.0, lfoKeytrack: 0, lfoPolarity: 'unipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        mellotron: { attack: 0.2, decay: 0.4, sustain: 0.8, release: 0.6, distortion: 6, brightness: 1.5, resonance: 2.0, chorus: 20, echo: 0.2, reverbMix: 0.5, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.0, vibrato: 25, sweep: 0, tremolo: 0.1, detune: 18, subOsc: 0, noise: 0.3, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.05, lfoDelay: 0, lfoFade: 0.8, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        synth_strings: { attack: 0.4, decay: 0.5, sustain: 0.9, release: 1.2, distortion: 2, brightness: 3.5, resonance: 2.0, chorus: 30, echo: 0.2, reverbMix: 0.6, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.5, vibrato: 10, sweep: 400, tremolo: 0, detune: 22, subOsc: 0.2, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.05, lfoDelay: 0, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        acid303: { attack: 0.01, decay: 0.25, sustain: 0.05, release: 0.1, distortion: 25, brightness: 1.0, resonance: 18.0, chorus: 0, echo: 0.15, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 8.5, lfoShape: 'sawtooth', lfoSync: 'sync', lfoSpeed: 2, vibrato: 0, sweep: 1800, tremolo: 0, detune: 2, subOsc: 0.2, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.12, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'unipolar', osc2Pitch: -12, sampleStart: 0, modWheel: 0 },
+        synthlead: { attack: 0.05, decay: 0.3, sustain: 0.8, release: 0.5, distortion: 8, brightness: 4.5, resonance: 8, chorus: 15, echo: 0.3, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 16, sweep: 1500, tremolo: 0, detune: 14, subOsc: 0.5, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.4, lfoFade: 0.2, lfoKeytrack: 5, lfoPolarity: 'unipolar', osc2Pitch: 7, sampleStart: 0, modWheel: 0 },
+        chiptune: { attack: 0.01, decay: 0.1, sustain: 1.0, release: 0.05, distortion: 0, brightness: 8.0, resonance: 0, chorus: 0, echo: 0, reverbMix: 0, osc1: 'square', osc2: 'square', osc2Mult: 0.5, filterEnv: 0, lfoShape: 'square', lfoSync: 'sync', lfoSpeed: 8, vibrato: 100, sweep: 0, tremolo: 0, detune: 0, subOsc: 0, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        synthbrass: { attack: 0.18, decay: 0.4, sustain: 0.7, release: 0.5, distortion: 0, brightness: 3.5, resonance: 2.5, chorus: 18, echo: 0.1, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 6, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 8, sweep: 0, tremolo: 0, detune: 15, subOsc: 0.3, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.04, lfoDelay: 0.4, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: -12, sampleStart: 0, modWheel: 0 },
+        synth_flute: { attack: 0.05, decay: 0.2, sustain: 0.9, release: 0.3, distortion: 0, brightness: 1.5, resonance: 2.0, chorus: 10, echo: 0.3, reverbMix: 0.4, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.05, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 10, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        choir: { attack: 0.6, decay: 0.5, sustain: 0.8, release: 1.2, distortion: 0, brightness: 1.8, resonance: 1.5, chorus: 22, echo: 0.2, reverbMix: 0.7, osc1: 'sine', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.2, vibrato: 12, sweep: 0, tremolo: 0, detune: 18, subOsc: 0.4, noise: 0.25, overtones: 0.1, oscMix: 0.4, filterType: 'lowpass', glide: 0.1, lfoDelay: 0.6, lfoFade: 0.8, lfoKeytrack: 5, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        theremin: { attack: 0.25, decay: 0.1, sustain: 1.0, release: 0.5, distortion: 0, brightness: 1.2, resonance: 1, chorus: 5, echo: 0.25, reverbMix: 0.6, osc1: 'sine', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.5, vibrato: 45, sweep: 0, tremolo: 0, detune: 2, subOsc: 0.1, noise: 0, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.25, lfoDelay: 0.1, lfoFade: 0.4, lfoKeytrack: 25, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
 
         // --- PERCUSSION & MALLETS ---
-        musicbox: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.8, distortion: 0, brightness: 6.0, resonance: 2.0, chorus: 5, echo: 0.25, reverbMix: 0.45, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0, overtones: 0.5, oscMix: 0.5, filterType: 'bandpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        glockenspiel: { attack: 0.01, decay: 0.8, sustain: 0, release: 1.2, distortion: 0, brightness: 8.0, resonance: 2.0, chorus: 5, echo: 0.15, reverbMix: 0.4, osc1: 'sine', osc2: 'sine', osc2Mult: 3, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0, overtones: 0.8, oscMix: 0.5, filterType: 'highpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        kalimba: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.4, distortion: 1, brightness: 2.5, resonance: 4.0, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 4.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.2, noise: 0.05, overtones: 0.2, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        marimba: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.25, distortion: 0, brightness: 2.5, resonance: 4, chorus: 0, echo: 0.15, reverbMix: 0.15, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 2.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0.2, noise: 0.12, overtones: 0.6, oscMix: 0.3, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        vibraphone: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 0, brightness: 2.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.8, vibrato: 0, sweep: 0, tremolo: 0.5, detune: 1, subOsc: 0, noise: 0, overtones: 0.3, oscMix: 0.4, filterType: 'lowpass', glide: 0, lfoDelay: 0.4, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'unipolar' },
-        steelpan: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.5, distortion: 2, brightness: 4.5, resonance: 5.0, chorus: 8, echo: 0.15, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1.5, filterEnv: 3.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 10, subOsc: 0.1, noise: 0.05, overtones: 0.5, oscMix: 0.5, filterType: 'bandpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' },
-        gamelan: { attack: 0.01, decay: 0.8, sustain: 0.2, release: 1.5, distortion: 1, brightness: 5.0, resonance: 3.0, chorus: 15, echo: 0.2, reverbMix: 0.4, osc1: 'square', osc2: 'sine', osc2Mult: 2.5, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 25, subOsc: 0.1, noise: 0.02, overtones: 0.6, oscMix: 0.4, filterType: 'bandpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar' }
+        musicbox: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.8, distortion: 0, brightness: 6.0, resonance: 2.0, chorus: 5, echo: 0.25, reverbMix: 0.45, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0, overtones: 0.5, oscMix: 0.5, filterType: 'bandpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        glockenspiel: { attack: 0.01, decay: 0.8, sustain: 0, release: 1.2, distortion: 0, brightness: 8.0, resonance: 2.0, chorus: 5, echo: 0.15, reverbMix: 0.4, osc1: 'sine', osc2: 'sine', osc2Mult: 3, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0, overtones: 0.8, oscMix: 0.5, filterType: 'highpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        kalimba: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.4, distortion: 1, brightness: 2.5, resonance: 4.0, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 4.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.2, noise: 0.05, overtones: 0.2, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        marimba: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.25, distortion: 0, brightness: 2.5, resonance: 4, chorus: 0, echo: 0.15, reverbMix: 0.15, osc1: 'sine', osc2: 'triangle', osc2Mult: 2, filterEnv: 2.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 0, subOsc: 0.2, noise: 0.12, overtones: 0.6, oscMix: 0.3, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        vibraphone: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 0, brightness: 2.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.4, osc1: 'sine', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.8, vibrato: 0, sweep: 0, tremolo: 0.5, detune: 1, subOsc: 0, noise: 0, overtones: 0.3, oscMix: 0.4, filterType: 'lowpass', glide: 0, lfoDelay: 0.4, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'unipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        steelpan: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.5, distortion: 2, brightness: 4.5, resonance: 5.0, chorus: 8, echo: 0.15, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1.5, filterEnv: 3.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 10, subOsc: 0.1, noise: 0.05, overtones: 0.5, oscMix: 0.5, filterType: 'bandpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        gamelan: { attack: 0.01, decay: 0.8, sustain: 0.2, release: 1.5, distortion: 1, brightness: 5.0, resonance: 3.0, chorus: 15, echo: 0.2, reverbMix: 0.4, osc1: 'square', osc2: 'sine', osc2Mult: 2.5, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 25, subOsc: 0.1, noise: 0.02, overtones: 0.6, oscMix: 0.4, filterType: 'bandpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }
     };
 
     // --- DISSONANCE CALCULATOR FOR HARMONY HEATMAP ---
@@ -2865,7 +2922,19 @@
             }
 
             if (presetEl && lastFileName) {
-                presetEl.value = `sample_db:${lastFileName}`;
+                const targetValue = `sample_db:${lastFileName}`;
+                
+                // Guarantee the option exists in the HTML before trying to select it!
+                const optionExists = Array.from(presetEl.options).some(opt => opt.value === targetValue);
+                if (!optionExists) {
+                    const newOpt = document.createElement('option');
+                    newOpt.value = targetValue;
+                    newOpt.textContent = cleanLabelName(lastFileName); 
+                    presetEl.appendChild(newOpt);
+                }
+
+                // Now the browser will successfully accept the assignment and trigger the synth engine
+                presetEl.value = targetValue;
                 presetEl.dispatchEvent(new Event('change'));
             }
             showToast(`Successfully loaded ${files.length} sample(s)!`);
@@ -2887,13 +2956,17 @@
 
         // Toggle UI Elements safely
         const grpOscMix = document.getElementById('grpOscMix');
+        // Handle both the old ID and the new grouped ID from the recent HTML update
+        const grpSamplerControls = document.getElementById('grpSamplerControls'); 
         const grpSampleRoot = document.getElementById('grpSampleRoot');
 
         if (grpOscMix) grpOscMix.style.display = isSamplerMode ? 'none' : 'flex';
+        if (grpSamplerControls) grpSamplerControls.style.display = isSamplerMode ? 'flex' : 'none';
         if (grpSampleRoot) grpSampleRoot.style.display = isSamplerMode ? 'flex' : 'none';
 
         // --- Gray out controls that do not apply to audio samples ---
-        const disabledInSampler = ['vibrato', 'detune', 'subOsc', 'noise', 'overtones'];
+        // THE FIX: 'vibrato' removed so it stays active! 'osc2Pitch' added.
+        const disabledInSampler = ['detune', 'osc2Pitch', 'subOsc', 'noise', 'overtones'];
         disabledInSampler.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -2903,10 +2976,19 @@
             }
         });
 
+        // Ensure Vibrato is explicitly restored if switching back from a disabled state
+        const vibEl = document.getElementById('vibrato');
+        if (vibEl) {
+            vibEl.disabled = false;
+            const vibGroup = vibEl.closest('.control-group');
+            if (vibGroup) vibGroup.style.opacity = '1';
+        }
+
         if (isSamplerMode) {
             syncADSR('attack', 0.01); syncADSR('decay', 1.0); syncADSR('sustain', 0.8); syncADSR('release', 0.4);
 
-            ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato', 'distortion'].forEach(id => {
+            // Added modWheel and sampleStart to the zero-out list for a clean sample load
+            ['subOsc', 'noise', 'filterEnv', 'tremolo', 'sweep', 'vibrato', 'distortion', 'modWheel', 'sampleStart'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { el.value = 0; el.dispatchEvent(new Event('input')); }
             });
@@ -2957,7 +3039,8 @@
             const p = presets[val]; if (!p) return;
             currentOsc1 = p.osc1; currentOsc2 = p.osc2; currentOsc2Mult = p.osc2Mult;
 
-            ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'subOsc', 'noise', 'filterEnv', 'overtones', 'autoPan', 'lfoDelay', 'lfoFade', 'lfoKeytrack'].forEach(id => {
+            // Added osc2Pitch, and replaced autoPan with modWheel
+            ['attack', 'decay', 'sustain', 'release', 'distortion', 'brightness', 'chorus', 'echo', 'resonance', 'reverbMix', 'lfoSpeed', 'vibrato', 'sweep', 'tremolo', 'detune', 'osc2Pitch', 'subOsc', 'noise', 'filterEnv', 'overtones', 'modWheel', 'lfoDelay', 'lfoFade', 'lfoKeytrack'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && p[id] !== undefined) { el.value = p[id]; el.dispatchEvent(new Event('input')); }
             });
@@ -3296,10 +3379,30 @@ document.getElementById('echo')?.addEventListener('input', e => {
     });
     document.getElementById('midiVelocity')?.addEventListener('input', e => { currentVelocity = parseInt(e.target.value); updateLabel('midiVelocity', currentVelocity, 'Velocity'); });
 
+    // Link the Legacy MIDI Tab Slider (0-127)
     document.getElementById('midiModWheel')?.addEventListener('input', e => {
-        const val = parseInt(e.target.value); updateLabel('midiModWheel', val, 'Mod Wheel');
-        if (midiOut) { for (let c = 0; c < 16; c++) midiOut.send([0xB0 + c, 1, val]); }
+        const val127 = parseInt(e.target.value);
+        setModWheel(val127 / 127.0); // Convert to 0.0-1.0 and pipe it to the brain
     });
+
+    // Link the new Synth Overlay Slider (0.0-1.0)
+    document.getElementById('modWheel')?.addEventListener('input', e => {
+        setModWheel(parseFloat(e.target.value)); 
+    });
+
+    // --- LIVE PLAY EXPRESSION: Mouse Wheel Hijack ---
+    window.addEventListener('wheel', (e) => {
+        // Only hijack the wheel if notes are actively being held down
+        if ((typeof activeUserNotes !== 'undefined' && activeUserNotes > 0) || 
+            (typeof sustainedVoices !== 'undefined' && sustainedVoices.size > 0)) {
+            
+            e.preventDefault(); // Stop the Tonnetz from zooming
+            
+            // Scroll up = increase, Scroll down = decrease
+            const newVal = currentModWheel - (e.deltaY * 0.002);
+            setModWheel(newVal);
+        }
+    }, { passive: false }); // passive: false is required so e.preventDefault() works!
 
     const pbSlider = document.getElementById('midiPitchBend');
     const sendPitchBend = (val) => {
@@ -6862,8 +6965,11 @@ const btnQuantize = document.getElementById('prActionQuantize');
             subOsc: currentSubOsc, noise: currentNoise, resonance: currentResonance, brightness: currentBrightness, 
             filterEnv: currentFilterEnv, attack: currentAttack, decay: currentDecay, sustain: currentSustain, 
             release: currentRelease, oscMix: currentOscMix, glide: currentGlide, filterType: currentFilterType, 
-            sampleRootKey: currentSampleRootKey,
-            instrumentPreset: document.getElementById('instrumentPreset')?.value || 'piano' 
+            sampleRootKey: typeof currentSampleRootKey !== 'undefined' ? currentSampleRootKey : 60,
+            instrumentPreset: document.getElementById('instrumentPreset')?.value || 'piano',
+            osc2Pitch: typeof currentOsc2Pitch !== 'undefined' ? currentOsc2Pitch : 0,
+            sampleStart: typeof currentSampleStart !== 'undefined' ? currentSampleStart : 0,
+            modWheel: typeof currentModWheel !== 'undefined' ? currentModWheel : 0
         };
 
         const osc1Gain = audioCtx.createGain();
@@ -6952,7 +7058,15 @@ const btnQuantize = document.getElementById('prActionQuantize');
             if (customWave) { osc1.setPeriodicWave(customWave); osc2.setPeriodicWave(customWave); }
             else { osc1.type = s.osc1; osc2.type = s.osc2; }
 
-            const targetFreq2 = freq * Math.pow(2, s.detune / 1200) * s.osc2Mult;
+            // 1. Grab the preset's core harmonic multiplier (e.g., 2.0 for an octave)
+            const baseOsc2Mult = s.osc2Mult !== undefined ? s.osc2Mult : (typeof currentOsc2Mult !== 'undefined' ? currentOsc2Mult : 1);
+        
+            // 2. Grab the user's manual slider pitch shift (e.g., 7 semitones)
+            const o2p = s.osc2Pitch !== undefined ? s.osc2Pitch : (typeof currentOsc2Pitch !== 'undefined' ? currentOsc2Pitch : 0);
+            const pitchOsc2Mult = Math.pow(2, o2p / 12.0); 
+        
+            // 3. Combine them all: (Base Freq) * (Detune Drift) * (Preset Harmony) * (User Shift)
+            const targetFreq2 = freq * Math.pow(2, s.detune / 1200) * baseOsc2Mult * pitchOsc2Mult;
 
             if (shouldGlide) {
                 osc1.frequency.setValueAtTime(lastPlayedFreq, safeStartTime);
@@ -6987,16 +7101,21 @@ const btnQuantize = document.getElementById('prActionQuantize');
         
         const targetBaseCutoff = Math.min(freq * s.brightness, 12000);
         const baseCutoff = dampenHeld ? 600 : targetBaseCutoff;
-        
-        filter.frequency.value = baseCutoff; 
-        filter.frequency.setValueAtTime(baseCutoff, audioCtx.currentTime);
-        filter.frequency.setValueAtTime(baseCutoff, safeStartTime);
+    
+        // --- MOD WHEEL SEQUENCER FIX (Filter) ---
+        const modVal = s.modWheel !== undefined ? s.modWheel : (typeof currentModWheel !== 'undefined' ? currentModWheel : 0);
+        const macroCutoff = Math.min(20000, baseCutoff * (1 + (modVal * 3)));
+    
+        filter.frequency.value = macroCutoff; 
+        filter.frequency.setValueAtTime(macroCutoff, audioCtx.currentTime);
+        filter.frequency.setValueAtTime(macroCutoff, safeStartTime);
 
         if (s.filterEnv !== 0 && !dampenHeld) {
-            const peakCutoff = s.filterEnv > 0 ? Math.min(baseCutoff * (1 + s.filterEnv), 20000) : Math.max(baseCutoff * (1 + s.filterEnv), 50);
+            // The envelope now scales dynamically on top of the mod wheel's pushed cutoff!
+            const peakCutoff = s.filterEnv > 0 ? Math.min(macroCutoff * (1 + s.filterEnv), 20000) : Math.max(macroCutoff * (1 + s.filterEnv), 50);
             const safeFilterAttack = Math.max(0.025, Math.max(currentDeclick, s.attack * 0.5));
             filter.frequency.exponentialRampToValueAtTime(peakCutoff, safeStartTime + safeFilterAttack);
-            filter.frequency.exponentialRampToValueAtTime(Math.max(0.001, baseCutoff), safeStartTime + safeFilterAttack + s.decay);
+            filter.frequency.exponentialRampToValueAtTime(Math.max(0.001, macroCutoff), safeStartTime + safeFilterAttack + s.decay);
         }
 
         const gainNode = audioCtx.createGain();
@@ -7019,13 +7138,17 @@ const btnQuantize = document.getElementById('prActionQuantize');
 
         if (globalLfoOutput) globalLfoOutput.connect(voiceLfoEnv);
 
-        const vPitchGain = audioCtx.createGain(); vPitchGain.gain.value = s.vibrato !== undefined ? s.vibrato : currentVibrato;
+        const baseVibrato = s.vibrato !== undefined ? s.vibrato : (typeof currentVibrato !== 'undefined' ? currentVibrato : 0);
+        const vPitchGain = audioCtx.createGain(); 
+        vPitchGain.gain.value = baseVibrato + (modVal * 50); // Add up to 50 cents based on Mod Wheel
+
         const vFilterGain = audioCtx.createGain(); vFilterGain.gain.value = s.sweep !== undefined ? s.sweep : currentSweep;
         const vAmpGain = audioCtx.createGain(); vAmpGain.gain.value = s.tremolo !== undefined ? s.tremolo : currentTremolo;
 
         voiceLfoEnv.connect(vPitchGain);
         if (osc1) vPitchGain.connect(osc1.detune);
         if (osc2) vPitchGain.connect(osc2.detune);
+        if (sampleSource) vPitchGain.connect(sampleSource.detune);
 
         voiceLfoEnv.connect(vFilterGain); vFilterGain.connect(filter.detune);
         voiceLfoEnv.connect(vAmpGain); vAmpGain.connect(ampLfoGain.gain);
@@ -7075,7 +7198,8 @@ const btnQuantize = document.getElementById('prActionQuantize');
 
         if (osc1) osc1.start(safeStartTime);
         if (osc2) osc2.start(safeStartTime);
-        if (sampleSource) sampleSource.start(safeStartTime); 
+        const sStart = s.sampleStart !== undefined ? s.sampleStart : currentSampleStart;
+        if (sampleSource) sampleSource.start(safeStartTime, sStart);
         if (subOsc) subOsc.start(safeStartTime);
         if (noiseSrc) noiseSrc.start(safeStartTime);
 
@@ -7087,7 +7211,12 @@ const btnQuantize = document.getElementById('prActionQuantize');
             }, timeToStart * 1000);
         }
 
-        const voiceObj = { osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, freq, midiNote, isChord, startTime: safeStartTime, accentMult, releaseTime: s.release };
+        const voiceObj = { 
+            osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, 
+            baseCutoff,
+            ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, 
+            freq, midiNote, isChord, startTime: safeStartTime, releaseTime: s.release 
+        };
         globalVoicePool.push(voiceObj); 
         return voiceObj;
     }
@@ -7426,7 +7555,10 @@ const btnQuantize = document.getElementById('prActionQuantize');
             glideMode: typeof currentGlideMode !== 'undefined' ? currentGlideMode : 'always',
             vibrato: typeof currentVibrato !== 'undefined' ? currentVibrato : 0,
             sweep: typeof currentSweep !== 'undefined' ? currentSweep : 0,
-            tremolo: typeof currentTremolo !== 'undefined' ? currentTremolo : 0
+            tremolo: typeof currentTremolo !== 'undefined' ? currentTremolo : 0,
+            osc2Pitch: parseInt(document.getElementById('osc2Pitch')?.value || 0),
+            sampleStart: parseFloat(document.getElementById('sampleStart')?.value || 0),
+            modWheel: typeof currentModWheel !== 'undefined' ? currentModWheel : 0
         };
     }
 
@@ -7482,6 +7614,10 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (filterEl) { filterEl.value = s.filterType; currentFilterType = s.filterType; }
 
         currentOsc1 = s.osc1; currentOsc2 = s.osc2; currentOsc2Mult = s.osc2Mult;
+        
+        // Ensure the global tracking variables update even if the UI fails
+        if (s.osc2Pitch !== undefined) currentOsc2Pitch = s.osc2Pitch;
+        if (s.sampleStart !== undefined) currentSampleStart = s.sampleStart;
 
         // THE FIX: Add the new parameters to the UI sync map
         const map = {
@@ -7490,8 +7626,14 @@ const btnQuantize = document.getElementById('prActionQuantize');
             sustain: s.sustain, release: s.release, oscMix: s.oscMix, glide: s.glide,
             lfoDelay: s.lfoDelay, lfoFade: s.lfoFade, lfoKeytrack: s.lfoKeytrack,
             overtones: s.overtones, vibrato: s.vibrato, sweep: s.sweep, tremolo: s.tremolo,
-            sampleRootKey: s.sampleRootKey
+            sampleRootKey: s.sampleRootKey,
+            
+            // --- NEW VARIABLES ADDED HERE ---
+            osc2Pitch: s.osc2Pitch,
+            sampleStart: s.sampleStart,
+            modWheel: s.modWheel
         };
+        
         for (const [id, val] of Object.entries(map)) {
             const el = document.getElementById(id);
             if (el && val !== undefined) { el.value = val; el.dispatchEvent(new Event('input')); }
@@ -10357,11 +10499,34 @@ engineClockWorker.onmessage = function () {
 
         // --- STANDARD MIDI NOTES ---
         const command = status >> 4; const note = data1; const velocity = data2;
-        if (command === 9 && velocity > 0) { midiActiveNotes.set(note, velocity); playMidiNote(note); }
-        else if (command === 8 || (command === 9 && velocity === 0)) { midiActiveNotes.delete(note); stopMidiNote(note); }
+        
+        if (command === 9 && velocity > 0) { 
+            midiActiveNotes.set(note, velocity); 
+            playMidiNote(note); 
+        }
+        else if (command === 8 || (command === 9 && velocity === 0)) { 
+            midiActiveNotes.delete(note); 
+            stopMidiNote(note); 
+        }
+        // --- MOD WHEEL INTERCEPT ---
+        else if (command === 11 && note === 1) {
+            setModWheel(velocity / 127.0); // Map 0-127 MIDI value to 0.0-1.0 float
+        }
+        // --- SUSTAIN PEDAL ---
         else if (command === 11 && note === 64) {
-            if (velocity > 63 && !sustainLocked) { sustainLocked = true; const lS = document.getElementById('lockSustain'); if (lS) lS.classList.add('active-btn'); updatePadVisuals(); }
-            else if (velocity <= 63 && sustainLocked) { sustainLocked = false; const lS = document.getElementById('lockSustain'); if (lS) lS.classList.remove('active-btn'); checkSustainRelease(); updatePadVisuals(); }
+            if (velocity > 63 && !sustainLocked) { 
+                sustainLocked = true; 
+                const lS = document.getElementById('lockSustain'); 
+                if (lS) lS.classList.add('active-btn'); 
+                updatePadVisuals(); 
+            }
+            else if (velocity <= 63 && sustainLocked) { 
+                sustainLocked = false; 
+                const lS = document.getElementById('lockSustain'); 
+                if (lS) lS.classList.remove('active-btn'); 
+                checkSustainRelease(); 
+                updatePadVisuals(); 
+            }
         }
     }
 
