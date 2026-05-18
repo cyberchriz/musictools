@@ -10568,7 +10568,22 @@ const btnQuantize = document.getElementById('prActionQuantize');
                     .then(onMIDISuccess)
                     .catch(err => {
                         console.warn("MIDI Promise Rejected:", err);
-                        if (btn) { btn.textContent = "MIDI: Access Denied"; btn.classList.remove('active-btn'); }
+                        if (btn) {
+                            // Dynamically read the DOMException name
+                            let errorReason = "Access Denied";
+                            if (err.name === 'SecurityError' || err.name === 'NotAllowedError') {
+                                errorReason = "Permission Blocked";
+                            } else if (err.name === 'AbortError') {
+                                errorReason = "Prompt Dismissed";
+                            } else if (err.name === 'NotFoundError') {
+                                errorReason = "OS Backend Failed";
+                            } else {
+                                errorReason = err.name || "Unknown Error";
+                            }
+
+                            btn.textContent = `MIDI: ${errorReason}`;
+                            btn.classList.remove('active-btn');
+                        }
                     });
             } catch (err) {
                 console.error("MIDI Sync Crash Blocked:", err);
