@@ -1650,6 +1650,8 @@
             });
         }
 
+        if (typeof midiDummyElements !== 'undefined') midiDummyElements.clear();
+
         // =======================================================
         // 5. NUCLEAR AUDIO REBOOT (Fixes Background Throttling)
         // =======================================================
@@ -7532,9 +7534,15 @@ const btnQuantize = document.getElementById('prActionQuantize');
                 
                 // --- EXTERNAL MIDI OFF ---
                 if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
-                    midiOuts.forEach(out => {
-                        try { out.send([0x80, midiNote, 0]); } catch (e) { }
-                    });
+                    // Calculate if the Note On is still waiting in the thread buffer
+                    const timeToStop = Math.max(0, startTime - now);
+
+                    // Add a tiny 5ms chronological pad so OFF always safely fires AFTER the ON
+                    setTimeout(() => {
+                        midiOuts.forEach(out => {
+                            try { out.send([0x80, midiNote, 0]); } catch (e) { }
+                        });
+                    }, (timeToStop * 1000) + 5);
                 }
 
             } catch (e) { }
