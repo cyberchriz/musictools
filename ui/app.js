@@ -369,9 +369,13 @@
             if (typeof updateLabel === 'function') updateLabel('midiModWheel', midiVal127, 'Mod Wheel');
         }
 
-        // 4. Send MIDI CC1 Out to connected external hardware
-        if (typeof midiOut !== 'undefined' && midiOut) {
-            for (let c = 0; c < 16; c++) midiOut.send([0xB0 + c, 1, midiVal127]);
+        // 4. Send MIDI CC1 Out to all connected external hardware
+        if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+            midiOuts.forEach(out => {
+                for (let c = 0; c < 16; c++) {
+                    try { out.send([0xB0 + c, 1, midiVal127]); } catch (e) { }
+                }
+            });
         }
 
         // 5. Apply the live audio modulation to internal Web Audio engine
@@ -1637,11 +1641,13 @@
             } catch (e) { }
         }
 
-        // 4. Send MIDI 'All Notes Off' (CC 123) to all 16 channels
-        if (midiOut) {
-            for (let c = 0; c < 16; c++) {
-                midiOut.send([0xB0 + c, 123, 0]);
-            }
+        // 4. Send MIDI 'All Notes Off' (CC 123) to all 16 channels on all devices
+        if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+            midiOuts.forEach(out => {
+                for (let c = 0; c < 16; c++) {
+                    try { out.send([0xB0 + c, 123, 0]); } catch (e) { }
+                }
+            });
         }
 
         // =======================================================
@@ -2301,7 +2307,15 @@
         el._stopAction = () => { onRelease(); updatePadVisuals(); retriggerHeldNodes(); };
     }
 
-    const sendMidiCC = (cc, val) => { if (midiOut) { for (let c = 0; c < 16; c++) midiOut.send([0xB0 + c, cc, val]); } };
+    const sendMidiCC = (cc, val) => {
+        if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+            midiOuts.forEach(out => {
+                for (let c = 0; c < 16; c++) {
+                    try { out.send([0xB0 + c, cc, val]); } catch (e) { }
+                }
+            });
+        }
+    };
 
     setupTapPad('tapSustain', () => { sustainHeld = true; sendMidiCC(64, 127); }, () => { sustainHeld = false; sendMidiCC(64, 0); checkSustainRelease(); });
     setupTapPad('tapDampen', () => { dampenHeld = true; applyDampening(true); }, () => { dampenHeld = false; applyDampening(false); });
@@ -3410,18 +3424,27 @@ document.getElementById('echo')?.addEventListener('input', e => {
     }, { passive: false }); // passive: false is required so e.preventDefault() works!
 
     const pbSlider = document.getElementById('midiPitchBend');
+
     const sendPitchBend = (val) => {
-        if (!midiOut) return;
+        if (typeof midiOuts === 'undefined' || midiOuts.length === 0) return;
         const pbVal = val + 8192; // MIDI pitch bend is 0 to 16383, center is 8192
         const lsb = pbVal & 0x7F; const msb = (pbVal >> 7) & 0x7F;
-        for (let c = 0; c < 16; c++) midiOut.send([0xE0 + c, lsb, msb]);
+
+        midiOuts.forEach(out => {
+            for (let c = 0; c < 16; c++) {
+                try { out.send([0xE0 + c, lsb, msb]); } catch (e) { }
+            }
+        });
     };
+
     pbSlider?.addEventListener('input', e => {
         const val = parseInt(e.target.value);
         updateLabel('midiPitchBend', val === 0 ? 'Center' : val, 'Pitch Bend'); sendPitchBend(val);
     });
+
     // Snap Pitch Bend back to center on release!
     const snapPitchBend = () => { if (pbSlider) { pbSlider.value = 0; updateLabel('midiPitchBend', 'Center', 'Pitch Bend'); sendPitchBend(0); } };
+
     pbSlider?.addEventListener('mouseup', snapPitchBend); pbSlider?.addEventListener('touchend', snapPitchBend);
 
     // --- SAMPLER ENGINE UI & DECODING ---
@@ -3800,26 +3823,47 @@ document.getElementById('echo')?.addEventListener('input', e => {
             let dir = Math.random() > 0.5 ? 1 : -1;
             let accumulatedTicks = 0;
             let i = 0;
-            
-            // Loop the rhythm cell until we have enough notes to fill an entire measure
+
             while (accumulatedTicks < totalBarTicks) {
                 let noteLen = cell[i % cell.length];
-                
-                // Truncate the final note if it spills over the bar line
+
+                // --- UPGRADE: INTERNAL SYNCOPATION (TIES) ---
+                // Give the AI a 15% chance to tie two rhythmic cells together. 
+                // This breaks the robotic loop and creates natural, human-like syncopation!
+                if (Math.random() < 0.15 && accumulatedTicks + noteLen < totalBarTicks) {
+                    let nextLen = cell[(i + 1) % cell.length];
+                    if (accumulatedTicks + noteLen + nextLen <= totalBarTicks) {
+                        noteLen += nextLen;
+                        i++; // Skip the next index since we absorbed it
+                    }
+                }
+
                 if (accumulatedTicks + noteLen > totalBarTicks) {
                     noteLen = totalBarTicks - accumulatedTicks;
                 }
-                
+
                 theme.push({ length: noteLen, step: step, isRest: false });
                 accumulatedTicks += noteLen;
 
-                if (Math.random() > contourProb) dir *= -1; 
-                let jump = (Math.random() < (leaps / 100)) ? 2 : 1;
+                if (Math.random() > contourProb) dir *= -1;
+
+                // --- UPGRADE: REAL MELODIC INTERVALS ---
+                let jump = 1; // Default to scale step
+                const leapRoll = Math.random() * 100;
+
+                if (leapRoll < leaps) {
+                    // If 'Leaps' is high, unlock dramatic 4ths, 5ths, and 6ths
+                    jump = Math.random() > 0.7 ? 4 : (Math.random() > 0.4 ? 3 : 2);
+                } else if (leapRoll > 100 - (100 - leaps) / 2) {
+                    // If 'Leaps' is low, heavily favor REPEATED NOTES (0) like modern pop singers!
+                    jump = 0;
+                }
+
                 step += (dir * jump);
-                
-                if (step > 4) dir = -1;
-                if (step < -4) dir = 1;
-                
+
+                if (step > 6) dir = -1;
+                if (step < -6) dir = 1;
+
                 i++;
             }
             return theme;
@@ -4312,15 +4356,29 @@ document.getElementById('echo')?.addEventListener('input', e => {
 
                         lastPlayedMelodyMidi = nextMidi; 
 
-                        // --- SYNCOPATED ANTICIPATION (THE "PUSH") ---
+                        // --- UPGRADE 3: SYNCOPATED ANTICIPATION (THE "PUSH") ---
                         let swingDelay = isOffbeat ? (base16th * valSwing * 0.6) : 0;
                         let finalNoteDur = noteDur * 0.96;
 
-                        // If it's a strong downbeat, and 'Swing' is high, occasionally push the note a 16th early!
-                        // This creates professional, forward-leaning momentum.
                         if (!isOffbeat && beatPos % 4 === 0 && valSwing > 0.4 && Math.random() < (valSwing / 2)) {
-                            swingDelay = -base16th; // Push ahead of the beat
-                            finalNoteDur += base16th; // Sustain it over the bar line so it connects
+                            swingDelay = -base16th;
+                            finalNoteDur += base16th;
+                        }
+
+                        // --- NEW UPGRADE: CADENTIAL RESOLUTION (CALL AND RESPONSE) ---
+                        const isLastNoteOfPhrase = (remainingTicks - ticksToPlay <= 0);
+                        const isResolutionBar = (b === lengthBars - 1) || currentThemeMarker.includes('res') || currentThemeMarker === 'C';
+
+                        if (isLastNoteOfPhrase && isResolutionBar) {
+                            // The phrase is ending! Force the final melody note to mathematically snap 
+                            // to the Root or the 3rd of the current chord to create a satisfying resolution.
+                            let resolutionTarget = chordMidis[Math.random() > 0.5 ? 0 : 1];
+
+                            // Move the target to the correct octave so it doesn't jump wildly
+                            while (resolutionTarget < nextMidi - 6) resolutionTarget += 12;
+                            while (resolutionTarget > nextMidi + 6) resolutionTarget -= 12;
+
+                            nextMidi = resolutionTarget;
                         }
 
                         const freq = masterTune * Math.pow(2, (nextMidi - 69) / 12);
@@ -7260,11 +7318,13 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (subOsc) subOsc.start(safeStartTime);
         if (noiseSrc) noiseSrc.start(safeStartTime);
 
-        if (midiOut) {
+        // --- EXTERNAL MIDI ON ---
+        if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
             const timeToStart = Math.max(0, safeStartTime - audioCtx.currentTime);
             setTimeout(() => {
-                if (midiOut) midiOut.send([0x90, midiNote, activeVelocity]);
-                if (!isChord) setTimeout(() => { if (midiOut) midiOut.send([0x80, midiNote, 0]); }, 250);
+                midiOuts.forEach(out => {
+                    try { out.send([0x90, midiNote, activeVelocity]); } catch (e) { }
+                });
             }, timeToStart * 1000);
         }
 
@@ -7471,7 +7531,11 @@ const btnQuantize = document.getElementById('prActionQuantize');
                 }
                 
                 // --- EXTERNAL MIDI OFF ---
-                if (midiOut && isChord) midiOut.send([0x80, midiNote, 0]);
+                if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+                    midiOuts.forEach(out => {
+                        try { out.send([0x80, midiNote, 0]); } catch (e) { }
+                    });
+                }
 
             } catch (e) { }
         });
@@ -8079,23 +8143,23 @@ const btnQuantize = document.getElementById('prActionQuantize');
             // Save the pause state correctly based on which engine was driving
             if (arranger.isPlaying) arranger.pauseTime = audioCtx.currentTime - arranger.startTime;
             else if (looper.isPlaying) arranger.pauseTime = audioCtx.currentTime - looper.startTime;
-            
+
             looper.isPlaying = false;
             arranger.isPlaying = false;
 
         } else {
             // Play (Syncs both engines using the global pre-roll constant!)
-            const now = audioCtx.currentTime + AUDIO_PREROLL; 
+            const now = audioCtx.currentTime + AUDIO_PREROLL;
             arranger.isPlaying = true;
             arranger.startTime = now - arranger.pauseTime;
             lastArrangerPhase = arranger.pauseTime - 0.01;
-            
-            looper.isPlaying = true;
-            looper.startTime = arranger.startTime; 
-            looper.lastPhases.fill(-0.01); 
 
-            if (midiSyncMode === 'master' && midiOut) {
-                midiOut.send([250]);
+            looper.isPlaying = true;
+            looper.startTime = arranger.startTime;
+            looper.lastPhases.fill(-0.01);
+
+            if (midiSyncMode === 'master' && typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+                midiOuts.forEach(out => { try { out.send([250]); } catch (e) { } });
                 nextMidiPulseTime = now;
             }
 
@@ -8216,7 +8280,9 @@ const btnQuantize = document.getElementById('prActionQuantize');
             }
         }
 
-        if (midiSyncMode === 'master' && midiOut) midiOut.send([252]);
+        if (midiSyncMode === 'master' && typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+            midiOuts.forEach(out => { try { out.send([252]); } catch (e) { } });
+        }
 
         // Reset UI Seekers
         const seeker = document.getElementById('arranger-seeker');
@@ -8259,17 +8325,19 @@ const btnQuantize = document.getElementById('prActionQuantize');
     document.getElementById('btnLooperPlay')?.addEventListener('click', () => {
         if (looper.isPlaying) {
             looper.isPlaying = false; looper.isRecording = false; looper.isArmed = false;
-            looper.lastPhases.fill(0); 
+            looper.lastPhases.fill(0);
             const pFill = document.getElementById('looper-progress-fill'); if (pFill) pFill.style.width = '0%';
-            if (midiSyncMode === 'master' && midiOut) midiOut.send([252]);
+            if (midiSyncMode === 'master' && typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+                midiOuts.forEach(out => { try { out.send([252]); } catch (e) { } });
+            }
         } else {
             looper.isPlaying = true;
             // Use global pre-roll constant
             const now = audioCtx ? audioCtx.currentTime + AUDIO_PREROLL : 0;
             looper.startTime = now;
             looper.lastPhases.fill(-0.01);
-            if (midiSyncMode === 'master' && midiOut) {
-                midiOut.send([250]);
+            if (midiSyncMode === 'master' && typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+                midiOuts.forEach(out => { try { out.send([250]); } catch (e) { } });
                 nextMidiPulseTime = now;
             }
         }
@@ -10434,14 +10502,14 @@ const btnQuantize = document.getElementById('prActionQuantize');
     const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
     const engineClockWorker = new Worker(URL.createObjectURL(workerBlob));
 
-engineClockWorker.onmessage = function () {
+    engineClockWorker.onmessage = function () {
         if (typeof scheduleArps === 'function') scheduleArps();
         if (typeof scheduleMetronome === 'function') scheduleMetronome(); // Keeps the drum AI ticking
         if (typeof scheduleClickTrack === 'function') scheduleClickTrack(); // Keeps the metronome click track ticking!
         if (typeof processStudioPlayback === 'function') processStudioPlayback();
 
         // --- MIDI MASTER CLOCK SENDER ---
-        if (midiSyncMode === 'master' && midiOut && audioCtx) {
+        if (midiSyncMode === 'master' && midiOuts.length > 0 && audioCtx) {
             const now = audioCtx.currentTime;
             if (now > 0) {
                 const pulseInterval = (60 / currentArpBPM) / 24; // 24 pulses per quarter note
@@ -10450,7 +10518,10 @@ engineClockWorker.onmessage = function () {
                 // Lookahead schedule for MIDI clock (prevents javascript timer jitter)
                 while (nextMidiPulseTime < now + 0.1) {
                     const timeToStart = Math.max(0, nextMidiPulseTime - now);
-                    setTimeout(() => { if (midiOut) midiOut.send([248]); }, timeToStart * 1000);
+                    setTimeout(() => {
+                        // THE FIX: Broadcast the clock tick to ALL connected MIDI outputs
+                        midiOuts.forEach(out => out.send([248]));
+                    }, timeToStart * 1000);
                     nextMidiPulseTime += pulseInterval;
                 }
             }
@@ -10469,7 +10540,8 @@ engineClockWorker.onmessage = function () {
     // ==========================================
     // 3. MIDI INTEGRATION
     // ==========================================
-    let midiAccess = null; let midiOut = null; const midiActiveNotes = new Map();
+    // THE FIX: Changed midiOut to an array to hold all hardware outputs!
+    let midiAccess = null; let midiOuts = []; const midiActiveNotes = new Map();
     let midiSyncMode = 'off'; // 'off', 'master', or 'slave'
     let clockPulses = []; // Tracks incoming slave pulses
     let nextMidiPulseTime = 0; // Tracks outgoing master pulses
@@ -10482,7 +10554,7 @@ engineClockWorker.onmessage = function () {
         if (midiAccess) {
             const inputs = midiAccess.inputs.values();
             for (let input = inputs.next(); input && !input.done; input = inputs.next()) input.value.onmidimessage = null;
-            midiAccess = null; midiOut = null; midiActiveNotes.clear();
+            midiAccess = null; midiOuts = []; midiActiveNotes.clear();
 
             if (btn) { btn.textContent = "Connect MIDI"; btn.classList.remove('active-btn'); }
             // Lock the UI back down on disconnect
@@ -10511,14 +10583,19 @@ engineClockWorker.onmessage = function () {
         midiAccess = midi;
         const inputs = midiAccess.inputs.values(); let connectedInputs = 0;
         for (let input = inputs.next(); input && !input.done; input = inputs.next()) { input.value.onmidimessage = onMIDIMessage; connectedInputs++; }
+
+        // THE FIX: Grab every available output and store it, instead of breaking after the first one!
+        midiOuts = [];
         const outputs = midiAccess.outputs.values();
-        for (let output = outputs.next(); output && !output.done; output = outputs.next()) { midiOut = output.value; break; }
+        for (let output = outputs.next(); output && !output.done; output = outputs.next()) {
+            midiOuts.push(output.value);
+        }
 
         const btn = document.getElementById('btnMidi');
         const btnOut = document.getElementById('btnMidiOutput');
         const syncMode = document.getElementById('midiSyncMode');
 
-        if (connectedInputs > 0 || midiOut) {
+        if (connectedInputs > 0 || midiOuts.length > 0) {
             if (btn) { btn.textContent = "Disconnect MIDI"; btn.classList.add('active-btn'); }
             // Wake the UI up!
             if (btnOut) { btnOut.disabled = false; btnOut.style.opacity = '1'; btnOut.textContent = midiOutMode === 'both' ? 'MIDI OUT: MIDI + BROWSER' : 'MIDI OUT: MIDI ONLY'; }
@@ -10537,12 +10614,14 @@ engineClockWorker.onmessage = function () {
             if (status === 248) { // 0xF8 Timing Clock (24 times per beat)
                 const now = performance.now();
                 clockPulses.push(now);
-                if (clockPulses.length > 24) clockPulses.shift();
 
-                if (clockPulses.length === 24) {
-                    // Calculate exact BPM based on the time it took to receive 24 pulses
+                // THE FIX: Expanded buffer to 96 pulses (4 beats) to completely erase browser timer jitter
+                if (clockPulses.length > 96) clockPulses.shift();
+
+                if (clockPulses.length === 96) {
+                    // Calculate exact BPM based on the time it took to receive 4 full beats
                     const elapsed = now - clockPulses[0];
-                    const bpm = Math.round(60000 / elapsed);
+                    const bpm = Math.round((60000 / elapsed) * 4);
                     if (bpm !== currentArpBPM && bpm >= 40 && bpm <= 240) {
                         currentArpBPM = bpm;
                         const bpmSlider = document.getElementById('arpBpm');
@@ -10568,14 +10647,14 @@ engineClockWorker.onmessage = function () {
 
         // --- STANDARD MIDI NOTES ---
         const command = status >> 4; const note = data1; const velocity = data2;
-        
-        if (command === 9 && velocity > 0) { 
-            midiActiveNotes.set(note, velocity); 
-            playMidiNote(note); 
+
+        if (command === 9 && velocity > 0) {
+            midiActiveNotes.set(note, velocity);
+            playMidiNote(note);
         }
-        else if (command === 8 || (command === 9 && velocity === 0)) { 
-            midiActiveNotes.delete(note); 
-            stopMidiNote(note); 
+        else if (command === 8 || (command === 9 && velocity === 0)) {
+            midiActiveNotes.delete(note);
+            stopMidiNote(note);
         }
         // --- MOD WHEEL INTERCEPT ---
         else if (command === 11 && note === 1) {
@@ -10583,18 +10662,18 @@ engineClockWorker.onmessage = function () {
         }
         // --- SUSTAIN PEDAL ---
         else if (command === 11 && note === 64) {
-            if (velocity > 63 && !sustainLocked) { 
-                sustainLocked = true; 
-                const lS = document.getElementById('lockSustain'); 
-                if (lS) lS.classList.add('active-btn'); 
-                updatePadVisuals(); 
+            if (velocity > 63 && !sustainLocked) {
+                sustainLocked = true;
+                const lS = document.getElementById('lockSustain');
+                if (lS) lS.classList.add('active-btn');
+                updatePadVisuals();
             }
-            else if (velocity <= 63 && sustainLocked) { 
-                sustainLocked = false; 
-                const lS = document.getElementById('lockSustain'); 
-                if (lS) lS.classList.remove('active-btn'); 
-                checkSustainRelease(); 
-                updatePadVisuals(); 
+            else if (velocity <= 63 && sustainLocked) {
+                sustainLocked = false;
+                const lS = document.getElementById('lockSustain');
+                if (lS) lS.classList.remove('active-btn');
+                checkSustainRelease();
+                updatePadVisuals();
             }
         }
     }
@@ -10608,6 +10687,7 @@ engineClockWorker.onmessage = function () {
             playFrequencies(dummy, [freq], [midiNote]);
         }
     }
+
     function stopMidiNote(midiNote, forceInstant = false) {
         if (midiDummyElements.has(midiNote)) {
             stopFrequencies(midiDummyElements.get(midiNote), forceInstant);
@@ -10688,7 +10768,7 @@ engineClockWorker.onmessage = function () {
     document.getElementById('scaleOverlay')?.addEventListener('change', e => { currentScale = e.target.value; updateScaleOverlay(); });
     document.getElementById('labelType')?.addEventListener('change', e => { currentLabelType = e.target.value; updateLabels(); });
 
-function updateScaleOverlay() {
+    function updateScaleOverlay() {
         const mask = scaleMasks[currentScale];
         const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
 
