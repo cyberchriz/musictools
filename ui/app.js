@@ -237,7 +237,7 @@
 
     let prClipboard = []; // Global Midi Clipboard
 
-    const CHORD_BUFFER_MAX = 4; // Max notes in the rolling queue for chord/harmony analysis (best root and lowest note always get prioritized for preservation within the bucket!)
+    const CHORD_BUFFER_MAX = 5; // Max notes in the rolling queue for chord/harmony analysis (best root and lowest note always get prioritized for preservation within the bucket!)
 
     const MAX_BPM_STRETCH_RATIO = 0.15; // 15% threshold for time-stretching
     let audioClips = []; // Stores objects: { id, trackId, buffer, startBeat, durationBeats, sourceNode }
@@ -1468,6 +1468,9 @@
                 const masterSeeker = document.getElementById('global-timeline-seeker');
                 if (masterSeeker) masterSeeker.value = 0;
                 
+                // rewire audio cabling
+                if (typeof syncAllTrackRouting === 'function') syncAllTrackRouting();
+
                 // Force UI update
                 if (typeof drawPianoRoll === 'function') drawPianoRoll();
                 if (typeof updateStudioUI === 'function') updateStudioUI();
@@ -2498,7 +2501,10 @@
     let currentSubOsc = 0.05, currentNoise = 0.03, currentOscMix = 0.5, currentGlide = 0, currentFilterType = 'lowpass';
     let currentSampleRootKey = 60;
     let currentOvertones = 0;
-    let acousticWaveCache = null;
+    const acousticWaveCache = new Map();
+    const numHarmonics = 8;
+    const overtoneReal = new Float32Array(numHarmonics);
+    const overtoneImag = new Float32Array(numHarmonics);
     let currentAttack = 0.01, currentDecay = 0.4, currentSustain = 0.2, currentRelease = 0.3;
     let currentDistortion = 0, currentBrightness = 2.2, currentResonance = 1, currentFilterEnv = 3;
     let currentLfoSpeed = 5.5, currentVibrato = 0, currentSweep = 0, currentTremolo = 0;
@@ -2546,11 +2552,6 @@
         sampleGainCompensation.set(instName, compensationMultiplier);
         sampleBank.set(instName, audioBuffer);
     }
-    
-    // Pre-allocate memory for Fourier Transform arrays to prevent Garbage Collection stutters!
-    const numHarmonics = 8;
-    const overtoneReal = new Float32Array(numHarmonics);
-    const overtoneImag = new Float32Array(numHarmonics);
 
     document.getElementById('btnMidiOutput')?.addEventListener('click', e => {
         midiOutMode = midiOutMode === 'both' ? 'midi' : 'both';
@@ -2560,29 +2561,29 @@
 
     const presets = {
         // --- KEYS & ORGANS ---
-        piano: { attack: 0.01, decay: 0.5, sustain: 0.15, release: 0.4, distortion: 0, brightness: 2.2, resonance: 1, chorus: 2, echo: 0.05, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.05, noise: 0.01, overtones: 0.1, oscMix: 0.85, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
-        epiano: { attack: 0.01, decay: 0.3, sustain: 0.5, release: 0.5, distortion: 1, brightness: 3.0, resonance: 2.0, chorus: 15, echo: 0.1, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.1, noise: 0, overtones: 0.4, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        piano: { attack: 0.01, decay: 0.6, sustain: 0.15, release: 0.8, distortion: 0, brightness: 1.2, resonance: 1.0, chorus: 1, echo: 0.02, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 2.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.05, noise: 0.06, overtones: 0.15, oscMix: 0.85, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        epiano: { attack: 0.01, decay: 0.4, sustain: 0.4, release: 0.5, distortion: 1, brightness: 1.0, resonance: 2.0, chorus: 15, echo: 0.1, reverbMix: 0.2, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 4.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 0, sweep: 0, tremolo: 0.3, detune: 8, subOsc: 0.1, noise: 0, overtones: 0.4, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 12, sampleStart: 0, modWheel: 0 },
         lofi_keys: { attack: 0.02, decay: 0.4, sustain: 0.6, release: 0.6, distortion: 1, brightness: 0.5, resonance: 1.0, chorus: 10, echo: 0.15, reverbMix: 0.3, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0.4, vibrato: 10, sweep: 0, tremolo: 0.05, detune: 12, subOsc: 0.2, noise: 0.15, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Warm tape flutter & hiss
         organ: { attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.1, distortion: 4, brightness: 6, resonance: 1.2, chorus: 20, echo: 0, reverbMix: 0.3, osc1: 'sine', osc2: 'triangle', osc2Mult: 3, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.8, vibrato: 8, sweep: 0, tremolo: 0.25, detune: 14, subOsc: 0.8, noise: 0.02, overtones: 0.2, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0.2, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         church_organ: { attack: 0.05, decay: 0.2, sustain: 0.9, release: 0.8, distortion: 0, brightness: 8, resonance: 1, chorus: 10, echo: 0.1, reverbMix: 0.8, osc1: 'sawtooth', osc2: 'square', osc2Mult: 2, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0.05, overtones: 0.8, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         reed_organ: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 2, brightness: 3, resonance: 5, chorus: 5, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'triangle', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 5, subOsc: 0.2, noise: 0.1, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0.3, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         accordion: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.2, distortion: 2, brightness: 2.5, resonance: 1.2, chorus: 15, echo: 0, reverbMix: 0.2, osc1: 'square', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4, vibrato: 5, sweep: 0, tremolo: 0.1, detune: 10, subOsc: 0, noise: 0.02, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0, lfoDelay: 0.2, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
-        harpsichord: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.1, distortion: 0, brightness: 5.0, resonance: 1.5, chorus: 0, echo: 0, reverbMix: 0.15, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        harpsichord: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.15, distortion: 0, brightness: 1.5, resonance: 1.5, chorus: 0, echo: 0, reverbMix: 0.15, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 5.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 3, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 12, sampleStart: 0, modWheel: 0 },
 
         // --- STRINGS & PLUCKS ---
-        nylon_guitar: { attack: 0.01, decay: 0.5, sustain: 0.05, release: 0.6, distortion: 0, brightness: 1.2, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.25, osc1: 'triangle', osc2: 'sine', osc2Mult: 2, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 5, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.1, noise: 0.05, overtones: 0, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0.4, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Warm & mellow
-        western_guitar: { attack: 0.01, decay: 0.6, sustain: 0.1, release: 0.8, distortion: 0, brightness: 2.0, resonance: 2.0, chorus: 4, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 6, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.1, noise: 0.08, overtones: 0.1, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0.5, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Balanced acoustic
+        nylon_guitar: { attack: 0.01, decay: 0.3, sustain: 0.05, release: 0.7, distortion: 0, brightness: 0.5, resonance: 1.5, chorus: 2, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 3.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.0, vibrato: 5, sweep: 0, tremolo: 0, detune: 3, subOsc: 0.1, noise: 0.02, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0.4, lfoFade: 0.3, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        western_guitar: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.9, distortion: 0, brightness: 1.2, resonance: 3.5, chorus: 8, echo: 0.1, reverbMix: 0.25, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 4.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 6, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0.2, oscMix: 0.8, filterType: 'lowpass', glide: 0, lfoDelay: 0.5, lfoFade: 0.4, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 12, sampleStart: 0, modWheel: 0 },
         steel_guitar: { attack: 0.01, decay: 0.8, sustain: 0.1, release: 1.0, distortion: 1, brightness: 3.5, resonance: 3.0, chorus: 8, echo: 0.15, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 8, sweep: 0, tremolo: 0, detune: 6, subOsc: 0, noise: 0.1, overtones: 0.2, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0.6, lfoFade: 0.5, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 }, // Bright & twangy
         bass: { attack: 0.01, decay: 0.3, sustain: 0.4, release: 0.2, distortion: 6, brightness: 1.5, resonance: 4, chorus: 2, echo: 0.0, reverbMix: 0.05, osc1: 'sawtooth', osc2: 'square', osc2Mult: 0.5, filterEnv: 3, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 0, sweep: 0, tremolo: 0, detune: 6, subOsc: 1.0, noise: 0, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.02, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         slapbass: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2, distortion: 8, brightness: 4.5, resonance: 6.0, chorus: 4, echo: 0, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 6.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0.8, noise: 0.15, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         fretless: { attack: 0.05, decay: 0.4, sustain: 0.5, release: 0.4, distortion: 2, brightness: 1.8, resonance: 3.5, chorus: 15, echo: 0, reverbMix: 0.15, osc1: 'triangle', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 2.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 4.5, vibrato: 12, sweep: 0, tremolo: 0, detune: 5, subOsc: 0.8, noise: 0.02, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.15, lfoDelay: 0.4, lfoFade: 0.6, lfoKeytrack: 15, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
-        harp: { attack: 0.02, decay: 0.5, sustain: 0.1, release: 1.8, distortion: 0, brightness: 2.0, resonance: 1.5, chorus: 5, echo: 0.15, reverbMix: 0.45, osc1: 'triangle', osc2: 'sine', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.02, overtones: 0.15, oscMix: 0.7, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        harp: { attack: 0.01, decay: 0.4, sustain: 0.05, release: 2.2, distortion: 0, brightness: 0.8, resonance: 1.5, chorus: 5, echo: 0.15, reverbMix: 0.45, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 4.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.02, overtones: 0.15, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         shamisen: { attack: 0.01, decay: 0.2, sustain: 0.05, release: 0.3, distortion: 4, brightness: 3.5, resonance: 4, chorus: 2, echo: 0.1, reverbMix: 0.2, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 5.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 8, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0.02, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         banjo: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.2, distortion: 2, brightness: 4.0, resonance: 2.0, chorus: 0, echo: 0.05, reverbMix: 0.1, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 3.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 4, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.6, filterType: 'highpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         sitar: { attack: 0.02, decay: 0.6, sustain: 0.1, release: 1.2, distortion: 4, brightness: 4.5, resonance: 6.0, chorus: 12, echo: 0.2, reverbMix: 0.35, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 2.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 15, sweep: 0, tremolo: 0, detune: 12, subOsc: 0.1, noise: 0.05, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.8, lfoFade: 1.0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         violin: { attack: 0.25, decay: 0.4, sustain: 0.9, release: 0.6, distortion: 1, brightness: 2.5, resonance: 2.0, chorus: 12, echo: 0.2, reverbMix: 0.5, osc1: 'sawtooth', osc2: 'sawtooth', osc2Mult: 1, filterEnv: 0.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 6.2, vibrato: 28, sweep: 0, tremolo: 0, detune: 12, subOsc: 0, noise: 0.1, overtones: 0, oscMix: 0.5, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.4, lfoFade: 0.5, lfoKeytrack: 15, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
         cello: { attack: 0.2, decay: 0.3, sustain: 0.8, release: 0.6, distortion: 2, brightness: 1.6, resonance: 2.5, chorus: 8, echo: 0.15, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 0.5, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.5, vibrato: 20, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.4, noise: 0.1, overtones: 0, oscMix: 0.7, filterType: 'lowpass', glide: 0.08, lfoDelay: 0.6, lfoFade: 0.6, lfoKeytrack: 10, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
-        pizzicato: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1, distortion: 0, brightness: 2.5, resonance: 1.5, chorus: 4, echo: 0.05, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 1.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
+        pizzicato: { attack: 0.01, decay: 0.15, sustain: 0.0, release: 0.15, distortion: 0, brightness: 1.0, resonance: 2.0, chorus: 4, echo: 0.05, reverbMix: 0.3, osc1: 'sawtooth', osc2: 'triangle', osc2Mult: 1, filterEnv: 6.0, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 0, vibrato: 0, sweep: 0, tremolo: 0, detune: 5, subOsc: 0, noise: 0.05, overtones: 0, oscMix: 0.6, filterType: 'lowpass', glide: 0, lfoDelay: 0, lfoFade: 0, lfoKeytrack: 0, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
 
         // --- BRASS & WINDS ---
         sax: { attack: 0.08, decay: 0.2, sustain: 0.8, release: 0.3, distortion: 6, brightness: 2.8, resonance: 3.5, chorus: 6, echo: 0.15, reverbMix: 0.4, osc1: 'sawtooth', osc2: 'square', osc2Mult: 1, filterEnv: 1.5, lfoShape: 'sine', lfoSync: 'free', lfoSpeed: 5.2, vibrato: 18, sweep: 0, tremolo: 0, detune: 6, subOsc: 0.15, noise: 0.06, overtones: 0, oscMix: 0.65, filterType: 'lowpass', glide: 0.06, lfoDelay: 0.35, lfoFade: 0.4, lfoKeytrack: 12, lfoPolarity: 'bipolar', osc2Pitch: 0, sampleStart: 0, modWheel: 0 },
@@ -2745,22 +2746,27 @@
         }
     }
 
-    // Uses Fourier Transforms to permanently bake overtones into a single waveform (Zero CPU cost at runtime!)
-    function updateAcousticWave() {
-        if (!audioCtx || currentOvertones === 0) {
-            acousticWaveCache = null;
-            return;
+    function getOrCreateAcousticWave(overtoneValue) {
+        if (!audioCtx || overtoneValue === 0) return null;
+
+        // Use a fixed precision key (e.g., 2 decimals) to prevent floating-point cache misses
+        const cacheKey = overtoneValue.toFixed(2);
+
+        if (acousticWaveCache.has(cacheKey)) {
+            return acousticWaveCache.get(cacheKey);
         }
 
         overtoneReal.fill(0);
         overtoneImag.fill(0);
+        overtoneImag[1] = 1; // Fundamental
 
-        overtoneImag[1] = 1; // Fundamental frequency
         for (let i = 2; i < numHarmonics; i++) {
-            overtoneImag[i] = currentOvertones * (1 / i);
+            overtoneImag[i] = overtoneValue * (1 / i);
         }
 
-        acousticWaveCache = audioCtx.createPeriodicWave(overtoneReal, overtoneImag);
+        const wave = audioCtx.createPeriodicWave(overtoneReal, overtoneImag, { disableNormalization: false });
+        acousticWaveCache.set(cacheKey, wave);
+        return wave;
     }
 
     function createSahCurve() {
@@ -3300,8 +3306,7 @@ document.getElementById('echo')?.addEventListener('input', e => {
 
     document.getElementById('overtones')?.addEventListener('input', e => {
         currentOvertones = parseFloat(e.target.value);
-        updateLabel('overtones', Math.round(currentOvertones * 100), 'Overtones', '%');
-        updateAcousticWave();
+        if (typeof updateLabel === 'function') updateLabel('overtones', currentOvertones, 'Overtones', '%', true);
     });
 
     document.getElementById('filterEnv')?.addEventListener('input', e => {
@@ -6431,9 +6436,6 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
             audioCtx.resume().catch(e => console.warn(e));
         }
-
-        // Bake the acoustic wave (overtones emulation)
-        updateAcousticWave();
     }
 
     const playingMidiNotes = new Set();
@@ -6977,6 +6979,8 @@ const btnQuantize = document.getElementById('prActionQuantize');
         let osc1 = null;
         let osc2 = null;
         let sampleSource = null;
+        let overtoneOsc = null;
+        let overtoneGain = null;
 
         const effectiveGlideTime = isGlidePadOn() ? Math.max(0.15, s.glide) : s.glide;
         const isLegato = activeUserNotes > 1 || sustainedVoices.size > 0;
@@ -7046,17 +7050,26 @@ const btnQuantize = document.getElementById('prActionQuantize');
             osc1 = audioCtx.createOscillator();
             osc2 = audioCtx.createOscillator();
             
-            let customWave = null;
-            if (s.overtones > 0) {
-                const real = new Float32Array(8);
-                const imag = new Float32Array(8);
-                imag[1] = 1; 
-                for (let i = 2; i < 8; i++) imag[i] = s.overtones * (1 / i); 
-                customWave = audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
-            }
+            osc1.type = s.osc1;
+            osc2.type = s.osc2;
 
-            if (customWave) { osc1.setPeriodicWave(customWave); osc2.setPeriodicWave(customWave); }
-            else { osc1.type = s.osc1; osc2.type = s.osc2; }
+            if (s.overtones > 0) {
+                const customWave = getOrCreateAcousticWave(s.overtones);
+                if (customWave) {
+                    overtoneOsc = audioCtx.createOscillator();
+                    overtoneOsc.setPeriodicWave(customWave);
+                    overtoneOsc.frequency.value = freq;
+
+                    overtoneGain = audioCtx.createGain();
+                    // Scale the volume so it acts as a subtle resonance layer
+                    overtoneGain.gain.value = s.overtones * 0.3;
+
+                    overtoneOsc.connect(overtoneGain);
+                    overtoneGain.connect(filter);
+
+                    overtoneOsc.start(safeStartTime);
+                }
+            }
 
             // 1. Grab the preset's core harmonic multiplier (e.g., 2.0 for an octave)
             const baseOsc2Mult = s.osc2Mult !== undefined ? s.osc2Mult : (typeof currentOsc2Mult !== 'undefined' ? currentOsc2Mult : 1);
@@ -7122,6 +7135,8 @@ const btnQuantize = document.getElementById('prActionQuantize');
         gainNode.gain.value = 0; 
         gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(0, safeStartTime);
+        const releaseGain = audioCtx.createGain();
+        releaseGain.gain.value = 1.0;
 
         let ampLfoGain = audioCtx.createGain(); ampLfoGain.gain.value = 1.0;
 
@@ -7158,7 +7173,8 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (noiseSrc) { noiseSrc.connect(noiseGain); noiseGain.connect(filter); }
 
         filter.connect(gainNode); 
-        gainNode.connect(ampLfoGain);
+        gainNode.connect(releaseGain);
+        releaseGain.connect(ampLfoGain);
 
         let finalVoiceOutput = ampLfoGain;
 
@@ -7211,13 +7227,13 @@ const btnQuantize = document.getElementById('prActionQuantize');
             }, timeToStart * 1000);
         }
 
-        const voiceObj = { 
-            osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, 
-            baseCutoff,
-            ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, 
-            freq, midiNote, isChord, startTime: safeStartTime, releaseTime: s.release 
+        const voiceObj = {
+            osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, releaseGain,
+            filter, baseCutoff, ampLfoGain, vPitchGain, vFilterGain, vAmpGain,
+            voiceLfoEnv, freq, midiNote, isChord, startTime: safeStartTime, releaseTime: s.release,
+            overtoneOsc, overtoneGain
         };
-        globalVoicePool.push(voiceObj); 
+        globalVoicePool.push(voiceObj);
         return voiceObj;
     }
 
@@ -7368,44 +7384,33 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (!audioCtx) return;
         const now = audioCtx.currentTime;
 
-        voices.forEach(({ osc1, osc2, sampleSource, subOsc, noiseSrc, gainNode, filter, ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, midiNote, isChord, releaseTime, startTime }) => {
+        // THE FIX: Added overtoneOsc and overtoneGain to the destructured list
+        voices.forEach(({ osc1, osc2, overtoneOsc, overtoneGain, sampleSource, subOsc, noiseSrc, gainNode, releaseGain, filter, ampLfoGain, vPitchGain, vFilterGain, vAmpGain, voiceLfoEnv, midiNote, isChord, releaseTime, startTime }) => {
             try {
-                // --- THE MID-RAMP POP FIX (Foolproof JS Anchor) ---
-                // Bypasses Firefox/Safari bugs by manually reading and anchoring the JS float values!
-                const currentVol = gainNode.gain.value;
-                const currentFreq = filter.frequency.value;
+                const activeRelNode = releaseGain || gainNode;
 
-                gainNode.gain.cancelScheduledValues(now);
-                filter.frequency.cancelScheduledValues(now);
-
-                gainNode.gain.setValueAtTime(currentVol, now);
-                filter.frequency.setValueAtTime(currentFreq, now);
-
-                // --- THE GARBAGE COLLECTOR ---
                 const cleanup = () => {
                     const safeStop = (n) => { try { if (n) n.stop(); } catch (e) { } };
                     const safeDisc = (n) => { try { if (n) n.disconnect(); } catch (e) { } };
 
-                    safeStop(osc1); safeStop(osc2); safeStop(sampleSource); safeStop(subOsc); safeStop(noiseSrc);
+                    safeStop(osc1); safeStop(osc2); safeStop(overtoneOsc); safeStop(sampleSource); safeStop(subOsc); safeStop(noiseSrc);
 
                     if (globalLfoOutput && voiceLfoEnv) {
                         try { globalLfoOutput.disconnect(voiceLfoEnv); } catch (e) { }
                     }
 
-                    safeDisc(osc1); safeDisc(osc2); safeDisc(sampleSource); 
-                    safeDisc(subOsc); safeDisc(noiseSrc);
+                    safeDisc(osc1); safeDisc(osc2); safeDisc(overtoneOsc); safeDisc(overtoneGain);
+                    safeDisc(sampleSource); safeDisc(subOsc); safeDisc(noiseSrc);
                     safeDisc(vPitchGain); safeDisc(vFilterGain); safeDisc(vAmpGain); safeDisc(voiceLfoEnv);
-                    
-                    safeDisc(filter); safeDisc(gainNode); safeDisc(ampLfoGain);
+
+                    safeDisc(filter); safeDisc(gainNode); safeDisc(releaseGain); safeDisc(ampLfoGain);
                 };
 
-                // =========================================================
-                // THE PHANTOM NOTE FIX
-                // =========================================================
                 if (startTime && now <= startTime) {
-                    gainNode.gain.setTargetAtTime(0, now, 0.005); // 5ms micro-fade to absolute zero
+                    activeRelNode.gain.setTargetAtTime(0, now, 0.005); 
                     setTimeout(cleanup, 50);
                 } 
+
                 else {
                     // STANDARD DAW RELEASE LOGIC
                     const targetRelease = releaseTime !== undefined ? releaseTime : currentRelease;
@@ -7414,11 +7419,12 @@ const btnQuantize = document.getElementById('prActionQuantize');
 
                     if (skipFade || isFastSwipe) {
                         const fastTC = Math.max(currentDeclick, 0.015); 
-                        gainNode.gain.setTargetAtTime(0, now, fastTC);
+                        activeRelNode.gain.setTargetAtTime(0, now, fastTC);
                         setTimeout(cleanup, fastTC * 5000); 
                     } else {
-                        const releaseTC = relTime / 4;
-                        gainNode.gain.setTargetAtTime(0, now, releaseTC);
+                        // Math.exp(-5) reaches 0.6% volume, preventing micro-clicks when osc.stop() hard-kills the hardware
+                        const releaseTC = relTime / 5; 
+                        activeRelNode.gain.setTargetAtTime(0, now, releaseTC);
                         setTimeout(cleanup, (relTime * 1000) + 100);
                     }
                 }
@@ -7758,6 +7764,8 @@ const btnQuantize = document.getElementById('prActionQuantize');
                 studio.trackTypes[track] = null;
                 const el = document.getElementById(`inst-label-${track}`);
                 if (el) el.textContent = 'EMPTY';
+
+                if (typeof syncAllTrackRouting === 'function') syncAllTrackRouting();
 
                 // 3. Recalculate Arranger Duration
                 if (domain === 'arranger') {
@@ -8366,20 +8374,35 @@ const btnQuantize = document.getElementById('prActionQuantize');
                 }
             }
 
-            if (studio.trackTypes[targetTrack] === null) {
-                studio.trackTypes[targetTrack] = type;
-                const btn = document.querySelector(`.track-btn[data-track="${targetTrack}"]`);
-                if (btn) btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
+            // ========================================================
+            // THE NEW DYNAMIC ROUTING FIX (NO MORE SYNTH BUS BLEED)
+            // ========================================================
+            const previousType = studio.trackTypes[targetTrack];
+            studio.trackTypes[targetTrack] = type;
+            
+            const btn = document.querySelector(`.track-btn[data-track="${targetTrack}"]`);
+            if (btn) {
+                btn.classList.remove('type-drum', 'type-voice');
+                btn.classList.add(type === 'drum' ? 'type-drum' : 'type-voice');
+            }
 
-                const pNodes = isLooperDomain ? looperPanners : linearPanners;
+            const pNodes = isLooperDomain ? looperPanners : linearPanners;
 
-                // --- DYNAMIC ROUTING FIX ---
-                // Ensure the track's audio cable is instantly plugged into the correct Submix Bus
-                if (typeof audioCtx !== 'undefined' && pNodes[localIdx]) {
-                    pNodes[localIdx].disconnect();
-                    pNodes[localIdx].connect(type === 'drum' ? drumGain : synthGain);
+            // If the track type changed (or was just initialized), unplug the 
+            // panner from whatever bus it was attached to, and plug it into the correct one!
+            if (previousType !== type && typeof audioCtx !== 'undefined' && pNodes[localIdx]) {
+                try {
+                    // Hard-disconnect the panner from all master buses to kill the Synth bleed
+                    pNodes[localIdx].disconnect(); 
+                    
+                    // Reconnect to the proper bus
+                    const targetBus = type === 'drum' ? drumGain : synthGain;
+                    if (targetBus) pNodes[localIdx].connect(targetBus);
+                } catch (err) {
+                    console.warn("Routing disconnect bypassed:", err);
                 }
             }
+            // ========================================================
 
             if (type === 'drum') {
                 const isDup = domainObj.tracks[localIdx].some(e => e.drumType === drumType && Math.abs(e.timeOffset - offsetTime) < 0.05);
@@ -9721,9 +9744,14 @@ const btnQuantize = document.getElementById('prActionQuantize');
             } 
         } 
 
-        // Fallback: If no drum track is selected, route to the global Drum Bus 
-        const targetDest = activeDest || (typeof drumGain !== 'undefined' ? drumGain : compressor); 
-        mainGain.connect(targetDest); 
+        // THE FIX: Bulletproof the fallback so it never bypasses the drum VCA
+        let fallbackDest = null;
+        if (typeof drumGain !== 'undefined' && drumGain) fallbackDest = drumGain;
+        else if (typeof window.drumGain !== 'undefined' && window.drumGain) fallbackDest = window.drumGain;
+        else if (typeof compressor !== 'undefined' && compressor) fallbackDest = compressor;
+        
+        const targetDest = activeDest || fallbackDest; 
+        if (targetDest) mainGain.connect(targetDest); 
 
         // --- SYNTHESIS BLOCK (Now uses activeType instead of type) ---
         if (activeType === 'click' || activeType === 'snare') { 
@@ -10931,6 +10959,34 @@ function updateScaleOverlay() {
         }
     }
 
+    window.syncAllTrackRouting = function() {
+        if (typeof audioCtx === 'undefined' || !audioCtx || typeof synthGain === 'undefined' || typeof drumGain === 'undefined') return;
+
+        // 1. Re-patch Looper Tracks (0-7)
+        if (typeof looperPanners !== 'undefined') {
+            for (let i = 0; i < looperPanners.length; i++) {
+                if (looperPanners[i] && typeof studio !== 'undefined' && studio.trackTypes[i] !== null) {
+                    try {
+                        looperPanners[i].disconnect();
+                        looperPanners[i].connect(studio.trackTypes[i] === 'drum' ? drumGain : synthGain);
+                    } catch (e) { console.warn("Failed to route Looper track", i); }
+                }
+            }
+        }
+
+        // 2. Re-patch Arranger Tracks (8-15+)
+        if (typeof linearPanners !== 'undefined') {
+            for (let i = 0; i < linearPanners.length; i++) {
+                if (linearPanners[i] && typeof studio !== 'undefined' && studio.trackTypes[i + 8] !== null) {
+                    try {
+                        linearPanners[i].disconnect();
+                        linearPanners[i].connect(studio.trackTypes[i + 8] === 'drum' ? drumGain : synthGain);
+                    } catch (e) { console.warn("Failed to route Arranger track", i + 8); }
+                }
+            }
+        }
+    };
+
     // =========================================================================
     // MULTI-FORMAT STEM, MIDI & DAWPROJECT IMPORTER (The Ultimate Version)
     // =========================================================================
@@ -11530,6 +11586,8 @@ function updateScaleOverlay() {
                 }
             }
         }
+
+        if (typeof syncAllTrackRouting === 'function') syncAllTrackRouting();
 
         updateStudioUI();
         if (typeof drawPianoRoll === 'function') drawPianoRoll();
@@ -12514,13 +12572,22 @@ function assignMacroParam(knobIndex, targetId) {
         refreshSavedSamplesUI();
         updateLabels();
         updateScaleOverlay();
+
+        // --- MASTER STARTUP UI INITIALIZATION ---
+        // Force the synth engine to load the physics for the default instrument (Piano)
+        const presetEl = document.getElementById('instrumentPreset');
+        if (presetEl) {
+            presetEl.value = 'piano';
+            presetEl.dispatchEvent(new Event('change'));
+        }
+
         initPianoRoll();
         initMacros();
-        
+
         // Visually highlight the Piano/Synth button on the D-Pad by default
         const defaultNavBtn = document.getElementById('btnTogglePiano');
-        if (defaultNavBtn) defaultNavBtn.classList.add('active-btn'); 
-        
+        if (defaultNavBtn) defaultNavBtn.classList.add('active-btn');
+
         const wrapper = document.getElementById('tonnetz-wrapper');
         if (wrapper) tonnetzObserver.observe(wrapper);
         resizeTonnetzSvg();
