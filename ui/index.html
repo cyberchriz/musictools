@@ -2901,8 +2901,37 @@
                     box-shadow: none !important;
                     border: none !important;
                     background: transparent !important;
-                    transform: none !important; /* THE FIX */
+                    transform: none !important;
                 }
+
+                /* --- 1080p Logical Button Reordering --- */
+                #main-nav-grid button { margin: 0 !important; flex: 0 0 auto !important; }
+                
+                /* 1. Zoom Controls */
+                #main-nav-grid #btnZoomIn { order: 1; }
+                #main-nav-grid #btnZoomOut { order: 2; margin-right: 15px !important; }
+                
+                /* 2. Directional Arrows & Center */
+                #main-nav-grid #btnPanUp { order: 3; }
+                #main-nav-grid #btnPanDown { order: 4; }
+                #main-nav-grid #btnPanLeft { order: 5; }
+                #main-nav-grid #btnPanRight { order: 6; }
+                #main-nav-grid #btnHome { order: 7; margin-right: 15px !important; }
+                
+                /* 3. Panel Selectors */
+                #main-nav-grid #btnTogglePiano { order: 8; }
+                #main-nav-grid #btnToggleSynth { order: 9; }
+                #main-nav-grid #btnToggleDrums { order: 10; }
+                #main-nav-grid #btnTogglePads { order: 11; }
+                #main-nav-grid #btnToggleMixer { order: 12; }
+                #main-nav-grid #btnTogglePianoRoll { order: 13; }
+                #main-nav-grid #btnToggleMacros { order: 14; }
+                #main-nav-grid #btnToggleSettings { order: 15; }
+                #main-nav-grid #btnToggleCOF { order: 16; }
+                #main-nav-grid #btnInfo { order: 17; margin-right: 15px !important; }
+                
+                /* 4. Panic Button */
+                #main-nav-grid #btnQuickPanic { order: 18; }
             }
 
             /* Dynamic Piano Roll Dragging Styles */
@@ -2967,82 +2996,33 @@
                 }
 
                 /* Desktop Logical Button Reordering */
-                #canvas-controls.pr-high-stretched #btnPanLeft {
-                    order: 1;
-                }
-
-                #canvas-controls.pr-high-stretched #btnPanRight {
-                    order: 2;
-                    margin-right: 10px !important;
-                }
-
-                #canvas-controls.pr-high-stretched #btnPanUp {
-                    order: 3;
-                }
-
-                #canvas-controls.pr-high-stretched #btnPanDown {
-                    order: 4;
-                    margin-right: 10px !important;
-                }
-
-                #canvas-controls.pr-high-stretched #btnHome {
-                    order: 5;
-                    margin-right: 10px !important;
-                }
-
-                #canvas-controls.pr-high-stretched #btnZoomOut {
-                    order: 6;
-                }
-
-                #canvas-controls.pr-high-stretched #btnZoomIn {
-                    order: 7;
-                    margin-right: 10px !important;
-                }
-
-                #canvas-controls.pr-high-stretched #btnToggleSettings {
-                    order: 8;
-                }
-
-                #canvas-controls.pr-high-stretched #btnToggleMixer {
-                    order: 9;
-                }
-
-                #canvas-controls.pr-high-stretched #btnToggleSynth {
-                    order: 10;
-                }
-
-                #canvas-controls.pr-high-stretched #btnToggleDrums {
-                    order: 11;
-                }
-
-                #canvas-controls.pr-high-stretched #btnTogglePads {
-                    order: 12;
-                }
-
-                #canvas-controls.pr-high-stretched #btnTogglePiano {
-                    order: 13;
-                }
-
-                #canvas-controls.pr-high-stretched #btnTogglePianoRoll {
-                    order: 14;
-                }
-
-                #canvas-controls.pr-high-stretched #btnToggleMacros {
-                    order: 15;
-                }
-
-                #canvas-controls.pr-high-stretched #btnToggleCOF {
-                    order: 16;
-                    margin-right: 10px !important;
-                }
-
-                #canvas-controls.pr-high-stretched #btnInfo {
-                    order: 17;
-                }
-
-                #canvas-controls.pr-high-stretched #btnQuickPanic {
-                    order: 18;
-                }
+                #canvas-controls.pr-high-stretched button { margin: 0 !important; flex: 0 0 auto !important; }
+                
+                /* 1. Zoom Controls */
+                #canvas-controls.pr-high-stretched #btnZoomIn { order: 1; }
+                #canvas-controls.pr-high-stretched #btnZoomOut { order: 2; margin-right: 15px !important; }
+                
+                /* 2. Directional Arrows & Center */
+                #canvas-controls.pr-high-stretched #btnPanUp { order: 3; }
+                #canvas-controls.pr-high-stretched #btnPanDown { order: 4; }
+                #canvas-controls.pr-high-stretched #btnPanLeft { order: 5; }
+                #canvas-controls.pr-high-stretched #btnPanRight { order: 6; }
+                #canvas-controls.pr-high-stretched #btnHome { order: 7; margin-right: 15px !important; }
+                
+                /* 3. Panel Selectors */
+                #canvas-controls.pr-high-stretched #btnTogglePiano { order: 8; }
+                #canvas-controls.pr-high-stretched #btnToggleSynth { order: 9; }
+                #canvas-controls.pr-high-stretched #btnToggleDrums { order: 10; }
+                #canvas-controls.pr-high-stretched #btnTogglePads { order: 11; }
+                #canvas-controls.pr-high-stretched #btnToggleMixer { order: 12; }
+                #canvas-controls.pr-high-stretched #btnTogglePianoRoll { order: 13; }
+                #canvas-controls.pr-high-stretched #btnToggleMacros { order: 14; }
+                #canvas-controls.pr-high-stretched #btnToggleSettings { order: 15; }
+                #canvas-controls.pr-high-stretched #btnToggleCOF { order: 16; }
+                #canvas-controls.pr-high-stretched #btnInfo { order: 17; margin-right: 15px !important; }
+                
+                /* 4. Panic Button */
+                #canvas-controls.pr-high-stretched #btnQuickPanic { order: 18; }
         }
 
         /* =========================================================
