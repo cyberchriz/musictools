@@ -7321,7 +7321,7 @@ const btnQuantize = document.getElementById('prActionQuantize');
         if (noiseSrc) noiseSrc.start(safeStartTime);
 
         // --- EXTERNAL MIDI ON ---
-        if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
+        if (typeof midiOuts !== 'undefined' && midiOuts.length > 0 && !window.preventMidiEcho) {
             const timeToStart = Math.max(0, safeStartTime - audioCtx.currentTime);
             setTimeout(() => {
                 midiOuts.forEach(out => {
@@ -7533,11 +7533,11 @@ const btnQuantize = document.getElementById('prActionQuantize');
                 }
                 
                 // --- EXTERNAL MIDI OFF ---
-                if (typeof midiOuts !== 'undefined' && midiOuts.length > 0) {
-                    // Calculate if the Note On is still waiting in the thread buffer
-                    const timeToStop = Math.max(0, startTime - now);
+                if (typeof midiOuts !== 'undefined' && midiOuts.length > 0 && !window.preventMidiEcho) {
+                    // Safe fallback if startTime is undefined
+                    const safeStart = startTime || now;
+                    const timeToStop = Math.max(0, safeStart - now);
 
-                    // Add a tiny 5ms chronological pad so OFF always safely fires AFTER the ON
                     setTimeout(() => {
                         midiOuts.forEach(out => {
                             try { out.send([0x80, midiNote, 0]); } catch (e) { }
@@ -7616,8 +7616,14 @@ const btnQuantize = document.getElementById('prActionQuantize');
         const timeHeld = audioCtx ? (audioCtx.currentTime - nodeData.startTime) : 0;
         const isFastSwipe = timeHeld < 0.08;
 
-        if (isSustainOn() && !forceInstant) sustainedVoices.add(nodeData);
-        else beginRelease(nodeData.voices, forceInstant, isFastSwipe);
+        // --- THE FIX: MIDI ECHO PROTECTION ---
+        if (element.isMidi) window.preventMidiEcho = true;
+        try {
+            if (isSustainOn() && !forceInstant) sustainedVoices.add(nodeData);
+            else beginRelease(nodeData.voices, forceInstant, isFastSwipe);
+        } finally {
+            if (element.isMidi) window.preventMidiEcho = false;
+        }
 
         updateHighlights();
     }
@@ -10702,12 +10708,20 @@ const btnQuantize = document.getElementById('prActionQuantize');
     }
 
     const midiDummyElements = new Map();
+
     function playMidiNote(midiNote) {
         if (!midiDummyElements.has(midiNote)) {
             const dummy = { _st: [midiNote], isMidi: true };
             midiDummyElements.set(midiNote, dummy);
             const freq = masterTune * Math.pow(2, (midiNote - 69) / 12);
-            playFrequencies(dummy, [freq], [midiNote]);
+
+            // --- THE FIX: MIDI ECHO PROTECTION ---
+            window.preventMidiEcho = true;
+            try {
+                playFrequencies(dummy, [freq], [midiNote]);
+            } finally {
+                window.preventMidiEcho = false;
+            }
         }
     }
 
