@@ -3781,7 +3781,7 @@ document.getElementById('echo')?.addEventListener('input', e => {
 
         const lib = progressionLibrary[mood];
         const romanBase = lib[Math.floor(Math.random() * lib.length)];
-        let previousCenter = null; 
+        let previousChordMidis = null;
         
         let lastPlayedMelodyMidi = null;
 
@@ -3887,15 +3887,15 @@ document.getElementById('echo')?.addEventListener('input', e => {
             const activeDomain = typeof studio !== 'undefined' ? studio.lastSelectedDomain : 'arranger';
             const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : (studio.activeArrangerTrack - 8);
             const isContextAware = document.getElementById('genContextAware')?.checked;
-            
+
             let existingChord = null;
             if (isContextAware) existingChord = getAggregatedChordForWindow(barStartTime, barSecs, activeDomain, targetTrackIdx);
 
             if (existingChord && existingChord.length > 0) {
                 midiArray = existingChord;
-                previousCenter = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
+                previousChordMidis = [...midiArray];
             } else {
-                // --- THE DIATONIC HARMONY FIX (True Modal Stacking) ---
+            // --- THE DIATONIC HARMONY FIX (True Modal Stacking) ---
                 const stepIndex = b % romanBase.length;
                 let degree = romanBase[stepIndex];
                 
@@ -3930,28 +3930,46 @@ document.getElementById('echo')?.addEventListener('input', e => {
                     midiArray.push(fullScaleMidi[rootIdx + (addNinth ? 8 : 6)]); 
                 }
 
-                // Block Chord Voice Leading
-                if (previousCenter !== null) {
-                    let currentAvg = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
-                    let bestDiff = Math.abs(currentAvg - previousCenter);
-                    let bestShift = 0;
-                    for (let oct = -2; oct <= 2; oct++) {
-                        let testAvg = currentAvg + (oct * 12);
-                        if (Math.abs(testAvg - previousCenter) < bestDiff) {
-                            bestDiff = Math.abs(testAvg - previousCenter);
-                            bestShift = oct * 12;
+                // --- TRUE SMOOTH VOICE LEADING & DROP VOICINGS ---
+                if (previousChordMidis !== null && midiArray.length > 0) {
+                    let bestInversion = midiArray;
+                    let lowestCost = Infinity;
+
+                    // 1. Calculate all possible inversions of the new chord within a 2-octave range
+                    for (let oct = -1; oct <= 1; oct++) {
+                        for (let inv = 0; inv < midiArray.length; inv++) {
+
+                            let testChord = midiArray.map((m, idx) => {
+                                let shifted = m + (oct * 12);
+                                if (idx < inv) shifted += 12; // Invert lower notes up an octave
+                                return shifted;
+                            }).sort((a, b) => a - b);
+
+                            // 2. Calculate Voice Leading Cost (Total distance traveled from previous chord)
+                            let cost = 0;
+                            for (let i = 0; i < Math.max(testChord.length, previousChordMidis.length); i++) {
+                                let targetMidi = testChord[i % testChord.length];
+                                let prevMidi = previousChordMidis[i % previousChordMidis.length];
+                                cost += Math.abs(targetMidi - prevMidi);
+                            }
+
+                            if (cost < lowestCost) {
+                                lowestCost = cost;
+                                bestInversion = testChord;
+                            }
                         }
                     }
-                    midiArray = midiArray.map(m => m + bestShift);
-                    const currentCenter = previousCenter; 
-                    midiArray = midiArray.map(m => {
-                        if (m - currentCenter > 8) return m - 12; 
-                        if (currentCenter - m > 8) return m + 12; 
-                        return m;
-                    });
+                    midiArray = [...bestInversion];
+
+                    // 3. Drop-2 Voicings (The Jazz/Neo-Soul Secret)
+                    // If it's a 7th/9th chord and the Extensions slider is high, drop the 2nd highest note an octave
+                    if (midiArray.length >= 4 && valExtensions > 0.5 && Math.random() < valExtensions) {
+                        let dropIdx = midiArray.length - 2;
+                        midiArray[dropIdx] -= 12;
+                        midiArray.sort((a, b) => a - b);
+                    }
                 }
-                previousCenter = midiArray.reduce((a, b) => a + b, 0) / midiArray.length;
-                midiArray.sort((a, b) => a - b);
+                previousChordMidis = [...midiArray];
             }
 
             let targetFreqs = midiArray.map(midi => masterTune * Math.pow(2, (midi - 69) / 12));
@@ -3967,10 +3985,26 @@ document.getElementById('echo')?.addEventListener('input', e => {
             let barNotes = []; 
 
             const bufferNote = (freqs, tOffset, dur, isMelody = false) => {
-                const maxTimeShift = (base16th / 4) * valTimingHum; 
+                const maxTimeShift = (base16th / 4) * valTimingHum;
                 const humanTime = Math.max(currentTime, tOffset + ((Math.random() - 0.5) * 2 * maxTimeShift));
-                const humanVel = Math.floor(100 - (Math.random() * valVelHum * 40));
-                barNotes.push({ timeOffset: humanTime, duration: dur, freqs: freqs, velocity: humanVel, isMelody: isMelody });
+
+                // --- UPGRADE 1: METRICAL DYNAMICS ---
+                // Calculate exact grid position (0 to 15 for 16th notes in a 4/4 bar)
+                const gridPos = Math.round((tOffset - currentTime) / base16th);
+                let baseVel = 80;
+
+                if (gridPos === 0) baseVel = 110;               // Beat 1 (The Downbeat: Heaviest)
+                else if (gridPos === 8) baseVel = 100;          // Beat 3 (Secondary Strong Beat)
+                else if (gridPos % 4 === 0) baseVel = 90;       // Beats 2 & 4 (The Backbeats)
+                else if (gridPos % 2 === 0) baseVel = 75;       // 8th note offbeats (Standard syncopation)
+                else baseVel = 60;                              // 16th note subdivisions (Ghost notes)
+
+                // Apply the UI Velocity Humanizer as a percentage-based wobble on top of the groove
+                const wobbleAmt = baseVel * (valVelHum * 0.4);
+                const humanVel = Math.floor(baseVel - (Math.random() * wobbleAmt));
+                const clampedVel = Math.max(10, Math.min(127, humanVel)); // Safety clamp
+
+                barNotes.push({ timeOffset: humanTime, duration: dur, freqs: freqs, velocity: clampedVel, isMelody: isMelody });
             };
 
             // ========================================================
@@ -4008,23 +4042,46 @@ document.getElementById('echo')?.addEventListener('input', e => {
             // BASS LINES
             // ========================================================
             else if (style.startsWith('bass_')) {
-                // Drop the sorted root by exactly one octave to put it deep in the bass register
                 let bassRootFreq = targetFreqs[0] / 2;
                 let bassOctFreq = targetFreqs[0];
                 let bassFifthFreq = (targetFreqs[2] || (targetFreqs[0] * 1.5)) / 2;
-                
+
+                // --- LOOK-AHEAD TARGETING ---
+                // Figure out what the root note of the *next* bar is going to be
+                let nextDegree = romanBase[(b + 1) % romanBase.length];
+                let nextRootIdx = (nextDegree - 1) % mask.length;
+                let nextRootMidi = fullScaleMidi[nextRootIdx];
+                while (nextRootMidi < 48) nextRootMidi += mask.length;
+                let nextBassRootMidi = nextRootMidi - 12; // Drop to bass octave
+
                 if (style === 'bass_pedal_4' || style === 'bass_pedal_8') {
                     for (let i = 0; i < steps; i++) {
                         const isOffbeatStep = i % 2 !== 0;
                         const swingDelay = isOffbeatStep ? (stepDur * valSwing * 0.6) : 0;
-                        bufferNote([bassRootFreq], currentTime + (i * stepDur) + swingDelay, stepDur * 0.85);
+
+                        let finalFreq = bassRootFreq;
+                        let isLastNote = (i === steps - 1);
+                        if (isLastNote && Math.random() < (valPassing / 100)) {
+                            let approachMidi = nextBassRootMidi + (Math.random() > 0.5 ? 1 : -1);
+                            finalFreq = masterTune * Math.pow(2, (approachMidi - 69) / 12);
+                        }
+
+                        bufferNote([finalFreq], currentTime + (i * stepDur) + swingDelay, stepDur * 0.85);
                     }
                 } else if (style.startsWith('bass_octaves_')) {
                     for (let i = 0; i < steps; i++) {
                         const isOffbeatStep = i % 2 !== 0;
                         const swingDelay = isOffbeatStep ? (stepDur * valSwing * 0.6) : 0;
+
                         // Alternate between the deep root and the octave up
-                        bufferNote([i % 2 === 0 ? bassRootFreq : bassOctFreq], currentTime + (i * stepDur) + swingDelay, stepDur * 0.8);
+                        let finalFreq = (i % 2 === 0) ? bassRootFreq : bassOctFreq;
+                        let isLastNote = (i === steps - 1);
+                        if (isLastNote && Math.random() < (valPassing / 100)) {
+                            let approachMidi = nextBassRootMidi + (Math.random() > 0.5 ? 1 : -1);
+                            finalFreq = masterTune * Math.pow(2, (approachMidi - 69) / 12);
+                        }
+
+                        bufferNote([finalFreq], currentTime + (i * stepDur) + swingDelay, stepDur * 0.8);
                     }
                 } else if (style === 'bass_bossa_8') {
                     let bossaPat = [1, 0, 0, 1, 1, 0, 0, 1]; // Classic Latin dotted-quarter feel
@@ -4032,22 +4089,36 @@ document.getElementById('echo')?.addEventListener('input', e => {
                         if (bossaPat[i % 8]) {
                             const isOffbeatStep = i % 2 !== 0;
                             const swingDelay = isOffbeatStep ? (stepDur * valSwing * 0.6) : 0;
+
                             // Play Root on beat 1, Fifth on beat 3
-                            let f = (i % 8 < 4) ? bassRootFreq : bassFifthFreq;
-                            bufferNote([f], currentTime + (i * stepDur) + swingDelay, stepDur * 1.2);
+                            let finalFreq = (i % 8 < 4) ? bassRootFreq : bassFifthFreq;
+                            let isLastNote = (i === steps - 1);
+                            if (isLastNote && Math.random() < (valPassing / 100)) {
+                                let approachMidi = nextBassRootMidi + (Math.random() > 0.5 ? 1 : -1);
+                                finalFreq = masterTune * Math.pow(2, (approachMidi - 69) / 12);
+                            }
+
+                            bufferNote([finalFreq], currentTime + (i * stepDur) + swingDelay, stepDur * 1.2);
                         }
                     }
                 } else if (style === 'bass_walking_4') {
                     // For walking bass, we perfectly outline the chord tones we generated
                     for (let i = 0; i < steps; i++) {
-                        let f = bassRootFreq;
-                        if (i % 4 === 1 && targetFreqs[1]) f = targetFreqs[1] / 2; // 3rd
-                        else if (i % 4 === 2 && targetFreqs[2]) f = targetFreqs[2] / 2; // 5th
-                        else if (i % 4 === 3) f = (targetFreqs[2] || targetFreqs[0] * 1.5) / 2 * 1.05946; // Half-step passing tone
-                        
+                        let finalFreq = bassRootFreq;
+                        if (i % 4 === 1 && targetFreqs[1]) finalFreq = targetFreqs[1] / 2; // 3rd
+                        else if (i % 4 === 2 && targetFreqs[2]) finalFreq = targetFreqs[2] / 2; // 5th
+                        else if (i % 4 === 3) finalFreq = (targetFreqs[2] || targetFreqs[0] * 1.5) / 2 * 1.05946; // Half-step passing tone
+
                         const isOffbeatStep = i % 2 !== 0;
                         const swingDelay = isOffbeatStep ? (stepDur * valSwing * 0.6) : 0;
-                        bufferNote([f], currentTime + (i * stepDur) + swingDelay, stepDur * 0.95);
+
+                        let isLastNote = (i === steps - 1);
+                        if (isLastNote && Math.random() < (valPassing / 100)) {
+                            let approachMidi = nextBassRootMidi + (Math.random() > 0.5 ? 1 : -1);
+                            finalFreq = masterTune * Math.pow(2, (approachMidi - 69) / 12);
+                        }
+
+                        bufferNote([finalFreq], currentTime + (i * stepDur) + swingDelay, stepDur * 0.95);
                     }
                 }
             }
