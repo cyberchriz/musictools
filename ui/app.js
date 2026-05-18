@@ -4208,16 +4208,27 @@ document.getElementById('echo')?.addEventListener('input', e => {
                     while (anchorMidi < baselineTarget - 6) anchorMidi += 12;
                     while (anchorMidi > baselineTarget + 6) anchorMidi -= 12;
                 } else {
-                    // Consecutive Bars: Anchor to the chord tone NEAREST to the last note played!
+                    // --- GUIDE TONE TARGETING ---
                     let nearest = chordMidis[0] + 12;
                     let minDiff = 999;
-                    chordMidis.forEach(cm => {
+
+                    chordMidis.forEach((cm, chordIdx) => {
                         let pc = cm % 12;
                         let target1 = pc + Math.floor(lastPlayedMelodyMidi / 12) * 12;
+
+                        // If 'Extensions' slider is high, penalize the boring Root/5th 
+                        // and heavily magnetize the melody toward the colorful 3rd and 7th!
+                        let colorBonus = 0;
+                        if (chordIdx === 1) colorBonus = 3 * valExtensions; // The 3rd
+                        if (chordIdx >= 3) colorBonus = 5 * valExtensions;  // The 7th, 9th, etc.
+                        if (chordIdx === 0) colorBonus = -2 * valExtensions; // The Root
+
                         [target1, target1 + 12, target1 - 12].forEach(targetMidi => {
-                            if (Math.abs(targetMidi - lastPlayedMelodyMidi) < minDiff) { 
-                                minDiff = Math.abs(targetMidi - lastPlayedMelodyMidi); 
-                                nearest = targetMidi; 
+                            // Subtract the color bonus from the perceived distance
+                            let perceivedDistance = Math.abs(targetMidi - lastPlayedMelodyMidi) - colorBonus;
+                            if (perceivedDistance < minDiff) {
+                                minDiff = perceivedDistance;
+                                nearest = targetMidi;
                             }
                         });
                     });
@@ -4254,8 +4265,12 @@ document.getElementById('echo')?.addEventListener('input', e => {
                         noteIdx = Math.max(0, Math.min(scaleArray.length - 1, noteIdx));
                         let nextMidi = scaleArray[noteIdx];
 
-                        // Dissonance Check
+                        // --- THE DIATONIC DISSONANCE & PASSING TONE FIX ---
                         let isChordTone = chordMidis.some(cm => (cm % 12) === (nextMidi % 12));
+
+                        // 1. Long Note Dissonance Correction
+                        // If a note is held for a long time (a quarter note or more) and isn't a chord tone, 
+                        // it will clash. We snap it to the nearest true chord tone.
                         if (!isChordTone && ticksToPlay >= 4) {
                             let nearest = nextMidi;
                             let minDiff = 999;
@@ -4263,27 +4278,53 @@ document.getElementById('echo')?.addEventListener('input', e => {
                                 let pc = cm % 12;
                                 let target1 = pc + Math.floor(nextMidi / 12) * 12;
                                 [target1, target1 + 12, target1 - 12].forEach(targetMidi => {
-                                    if (Math.abs(targetMidi - nextMidi) < minDiff) { 
-                                        minDiff = Math.abs(targetMidi - nextMidi); 
-                                        nearest = targetMidi; 
+                                    if (Math.abs(targetMidi - nextMidi) < minDiff) {
+                                        minDiff = Math.abs(targetMidi - nextMidi);
+                                        nearest = targetMidi;
                                     }
                                 });
                             });
                             nextMidi = nearest;
+                            isChordTone = true; // We just fixed it!
                         }
 
+                        // 2. Passing Tones
                         const beatPos = (t - currentTime) / base16th;
                         const isOffbeat = (Math.abs(beatPos % 2) > 0.01);
-                        if (isOffbeat && !isChordTone && ticksToPlay < 4 && Math.random() < (valPassing / 100)) {
-                            nextMidi += (Math.random() > 0.5 ? 1 : -1);
+
+                        if (isOffbeat && isChordTone && ticksToPlay < 4 && Math.random() < (valPassing / 100)) {
+
+                            // If the 'Passing Tones' slider is pushed past 60%, unlock Jazz Chromaticism
+                            if (valPassing > 0.6 && Math.random() < 0.5) {
+                                // Chromatic Approach: Force a half-step below or above the target!
+                                // (This bypasses the diatonic scale intentionally to create jazz tension)
+                                nextMidi += (Math.random() > 0.5 ? 1 : -1);
+                            } else {
+                                // Standard Diatonic Step (Pop / Classical)
+                                let currentIdx = scaleArray.indexOf(nextMidi);
+                                if (currentIdx !== -1) {
+                                    let stepDirection = Math.random() > 0.5 ? 1 : -1;
+                                    let passingIdx = Math.max(0, Math.min(scaleArray.length - 1, currentIdx + stepDirection));
+                                    nextMidi = scaleArray[passingIdx];
+                                }
+                            }
                         }
 
                         lastPlayedMelodyMidi = nextMidi; 
 
-                        const swingDelay = isOffbeat ? (base16th * valSwing * 0.6) : 0;
+                        // --- SYNCOPATED ANTICIPATION (THE "PUSH") ---
+                        let swingDelay = isOffbeat ? (base16th * valSwing * 0.6) : 0;
+                        let finalNoteDur = noteDur * 0.96;
+
+                        // If it's a strong downbeat, and 'Swing' is high, occasionally push the note a 16th early!
+                        // This creates professional, forward-leaning momentum.
+                        if (!isOffbeat && beatPos % 4 === 0 && valSwing > 0.4 && Math.random() < (valSwing / 2)) {
+                            swingDelay = -base16th; // Push ahead of the beat
+                            finalNoteDur += base16th; // Sustain it over the bar line so it connects
+                        }
 
                         const freq = masterTune * Math.pow(2, (nextMidi - 69) / 12);
-                        bufferNote([freq], t + swingDelay, noteDur * 0.96, true);
+                        bufferNote([freq], t + swingDelay, finalNoteDur, true);
                     }
 
                     t += noteDur;
