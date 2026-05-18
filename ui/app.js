@@ -3875,14 +3875,20 @@ document.getElementById('echo')?.addEventListener('input', e => {
         const themeB = buildTheme(secondaryCell, valLeaps, valContour);
         const themeC = buildTheme(tertiaryCell, valLeaps, valContour);
 
+        const mask = scaleMasks[currentScale] || scaleMasks['major'];
+        let fullScaleMidi = [];
+        for (let oct = 3; oct <= 6; oct++) {
+            mask.forEach(interval => fullScaleMidi.push(currentKeyCenter + interval + (oct * 12)));
+        }
+
         // ========================================================
         // 2. BAR ITERATOR
         // ========================================================
         for (let b = 0; b < lengthBars; b++) {
-            
+
             const barStartTime = currentTime;
             let midiArray = [];
-            
+
             // --- TEMPORAL CONTEXT CHECK ---
             const activeDomain = typeof studio !== 'undefined' ? studio.lastSelectedDomain : 'arranger';
             const targetTrackIdx = activeDomain === 'looper' ? studio.activeLooperTrack : (studio.activeArrangerTrack - 8);
@@ -3895,19 +3901,11 @@ document.getElementById('echo')?.addEventListener('input', e => {
                 midiArray = existingChord;
                 previousChordMidis = [...midiArray];
             } else {
-            // --- THE DIATONIC HARMONY FIX (True Modal Stacking) ---
+                // --- THE DIATONIC HARMONY FIX (True Modal Stacking) ---
                 const stepIndex = b % romanBase.length;
                 let degree = romanBase[stepIndex];
-                
-                const mask = scaleMasks[currentScale] || scaleMasks['major'];
-                
-                // Build a 3-octave array of the active scale to stack thirds safely
-                let fullScaleMidi = [];
-                for (let oct = 3; oct <= 6; oct++) {
-                    mask.forEach(interval => fullScaleMidi.push(currentKeyCenter + interval + (oct * 12)));
-                }
 
-                // Find the base root index inside our mapped scale
+                // Find the base root index inside our globally mapped scale
                 let rootIdx = (degree - 1) % mask.length;
                 while (fullScaleMidi[rootIdx] < 48) rootIdx += mask.length; // Anchor near C4
 
@@ -4301,10 +4299,9 @@ document.getElementById('echo')?.addEventListener('input', e => {
 
                 // 3. THE CHORD-SCALE FIX (Jazz Secret)
                 let chordMidis = targetFreqs.map(f => Math.round(12 * Math.log2(f / masterTune) + 69)).sort((a, b) => a - b);
-                const mask = scaleMasks[currentScale] || scaleMasks['all'];
-                
-                // Build a set of scale notes, but dynamically force the current chord's notes into it
-                // so the melody flawlessly outlines borrowed chords!
+
+                // Build a set of scale notes using our global mask, but dynamically force 
+                // the current chord's notes into it so the melody flawlessly outlines borrowed chords!
                 const activeScalePCs = new Set(mask.map(interval => (currentKeyCenter + interval) % 12));
                 chordMidis.forEach(cm => activeScalePCs.add(cm % 12));
                 
